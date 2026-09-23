@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SoundBPM - Diário musical, catálogo de álbuns, notícias e avaliações de faixas.">
+    <title>SoundBPM • O diário e catálogo para suas avaliações musicais</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo-area">
+                <a href="#" class="logo-link">
+                    <img src="logo.png" alt="SoundBPM Logo" class="brand-logo">
+                    <span class="logo">Sound<span>BPM</span></span>
+                </a>
+            </div>
+
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#explore" class="nav-link active">Início</a></li>
+                    <li><a href="#trending" class="nav-link">Álbuns</a></li>
+                    <li><a href="#news" class="nav-link">Notícias</a></li>
+                    <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
+                    <li><a href="#community" class="nav-link">Diário</a></li>
+                </ul>
+            </nav>
+
+            <div class="header-right">
+                <div class="header-search">
+                    <input type="text" placeholder="Buscar álbuns, artistas...">
+                </div>
+                <button id="open-login-modal" class="btn-login-nav">Entrar</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <section id="explore" class="hero-carousel-section">
+            <div class="hero-bg-backdrop"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content-wrapper">
+                <div class="hero-badge">Álbum em Destaque Rotativo</div>
+                <h1>Avalie álbuns, catalogue faixas e compartilhe seu gosto musical.</h1>
+                <p>Mantenha um diário de tudo o que você ouve, dê notas detalhadas faixa por faixa gerando a média automática do disco, ou avalie álbuns inteiros instantaneamente.</p>
+                <div class="hero-actions">
+                    <button class="btn-primary-gold">Comece seu Diário Grátis</button>
+                    <button class="btn-secondary-dark">Explorar Catálogo</button>
+                </div>
+                <div class="hero-stats-row">
+                    <div class="stat-box">
+                        <strong>54.290</strong>
+                        <span>Álbuns catalogados</span>
+                    </div>
+                    <div class="stat-box">
+                        <strong>1.4M</strong>
+                        <span>Avaliações registradas</span>
+                    </div>
+                    <div class="stat-box">
+                        <strong>3</strong>
+                        <span>Plataformas integradas</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="trending" class="section-container">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Álbuns Populares Esta Semana</h2>
+                    <p>Os discos mais comentados e avaliados pela comunidade nos últimos 7 dias.</p>
+                </div>
+                <a href="#" class="view-more-link">Ver todos &rarr;</a>
+            </div>
+
+            <div class="poster-grid">
+                <div class="poster-card">
+                    <div class="poster-image-wrap">
+                        <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=500&q=80" alt="After Hours">
+                        <div class="poster-overlay-actions">
+                            <button class="action-icon-btn" title="Avaliar">★</button>
+                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
+                        </div>
+                    </div>
+                    <div class="poster-info">
+                        <h3>After Hours</h3>
+                        <span class="poster-artist">The Weeknd</span>
+                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.8</span></div>
+                    </div>
+                </div>
+
+                <div class="poster-card">
+                    <div class="poster-image-wrap">
+                        <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=500&q=80" alt="Blonde">
+                        <div class="poster-overlay-actions">
+                            <button class="action-icon-btn" title="Avaliar">★</button>
+                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
+                        </div>
+                    </div>
+                    <div class="poster-info">
+                        <h3>Blonde</h3>
+                        <span class="poster-artist">Frank Ocean</span>
+                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.9</span></div>
+                    </div>
+                </div>
+
+                <div class="poster-card">
+                    <div class="poster-image-wrap">
+                        <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=500&q=80" alt="IGOR">
+                        <div class="poster-overlay-actions">
+                            <button class="action-icon-btn" title="Avaliar">★</button>
+                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
+                        </div>
+                    </div>
+                    <div class="poster-info">
+                        <h3>IGOR</h3>
+                        <span class="poster-artist">Tyler, The Creator</span>
+                        <div class="poster-rating-stars">★★★★☆ <span class="numeric-score">4.6</span></div>
+                    </div>
+                </div>
+
+                <div class="poster-card">
+                    <div class="poster-image-wrap">
+                        <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=500&q=80" alt="SMITHEREENS">
+                        <div class="poster-overlay-actions">
+                            <button class="action-icon-btn" title="Avaliar">★</button>
+                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
+                        </div>
+                    </div>
+                    <div class="poster-info">
+                        <h3>SMITHEREENS</h3>
+                        <span class="poster-artist">Joji</span>
+                        <div class="poster-rating-stars">★★★★☆ <span class="numeric-score">4.5</span></div>
+                    </div>
+                </div>
+
+                <div class="poster-card">
+                    <div class="poster-image-wrap">
+                        <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=500&q=80" alt="Random Access Memories">
+                        <div class="poster-overlay-actions">
+                            <button class="action-icon-btn" title="Avaliar">★</button>
+                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
+                        </div>
+                    </div>
+                    <div class="poster-info">
+                        <h3>Random Access</h3>
+                        <span class="poster-artist">Daft Punk</span>
+                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.9</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="news" class="section-container bg-tinted">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Notícias Diárias do Mundo da Música</h2>
+                    <p>Atualizações, análises de mercado, entrevistas exclusivas e bastidores da indústria.</p>
+                </div>
+                <a href="#" class="view-more-link">Ver todas as notícias &rarr;</a>
+            </div>
+
+            <div class="news-grid">
+                <article class="news-card">
+                    <div class="news-tag">Indústria</div>
+                    <h3>Como o formato de áudio espacial está redefinindo a mixagem de álbuns modernos</h3>
+                    <p class="news-snippet">Engenheiros de som discutem os desafios e inovações na entrega de masterizações imersivas para plataformas de streaming este ano.</p>
+                    <div class="news-meta">
+                        <span>Há 3 horas</span>
+                        <span>Por Redação SoundBPM</span>
+                    </div>
+                </article>
+
+                <article class="news-card">
+                    <div class="news-tag">Lançamento</div>
+                    <h3>Artista surpresa anuncia novo LP conceitual com estreia marcada para a próxima sexta-feira</h3>
+                    <p class="news-snippet">Após meses de especulação e teasers enigmáticos nas redes sociais, o projeto gráfico e tracklist oficial foram divulgados.</p>
+                    <div class="news-meta">
+                        <span>Há 7 horas</span>
+                        <span>Por Equipe Editorial</span>
+                    </div>
+                </article>
+
+                <article class="news-card">
+                    <div class="news-tag">Tecnologia</div>
+                    <h3>Integrações multiplataforma ganham novas ferramentas de importação de histórico e estatísticas</h3>
+                    <p class="news-snippet">Usuários agora podem sincronizar suas avaliações de forma unificada entre diferentes ecossistemas de streaming de áudio.</p>
+                    <div class="news-meta">
+                        <span>Ontem</span>
+                        <span>Por Portal SoundBPM</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section id="upcoming" class="section-container">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Próximos Lançamentos & Álbuns Anunciados</h2>
+                    <p>Fique por dentro dos discos que chegam às plataformas nas próximas semanas.</p>
+                </div>
+                <a href="#" class="view-more-link">Calendário completo &rarr;</a>
+            </div>
+
+            <div class="upcoming-grid">
+                <div class="upcoming-card">
+                    <div class="upcoming-date-badge">16 OUT</div>
+                    <div class="upcoming-details">
+                        <h4>Midnight Reflections</h4>
+                        <span class="upcoming-artist">The Midnight Echo</span>
+                        <p>Álbum de estúdio • 12 faixas confirmadas</p>
+                    </div>
+                    <button class="btn-notify">Lembre-me</button>
+                </div>
+
+                <div class="upcoming-card">
+                    <div class="upcoming-date-badge">23 OUT</div>
+                    <div class="upcoming-details">
+                        <h4>Neon Horizons</h4>
+                        <span class="upcoming-artist">Aura & The Lights</span>
+                        <p>EP Experimental • Produção executiva independente</p>
+                    </div>
+                    <button class="btn-notify">Lembre-me</button>
+                </div>
+
+                <div class="upcoming-card">
+                    <div class="upcoming-date-badge">06 NOV</div>
+                    <div class="upcoming-details">
+                        <h4>Chronicles of Tomorrow</h4>
+                        <span class="upcoming-artist">Synthetics</span>
+                        <p>Álbum Duplo • Edição limitada em vinil</p>
+                    </div>
+                    <button class="btn-notify">Lembre-me</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="community" class="section-container bg-tinted">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Atividade Recente no Diário da Comunidade</h2>
+                    <p>Veja as últimas avaliações detalhadas publicadas pelos membros cadastrados.</p>
+                </div>
+                <a href="#" class="view-more-link">Ver diário global &rarr;</a>
+            </div>
+
+            <div class="diary-stream">
+                <div class="diary-item">
+                    <div class="diary-avatar"></div>
+                    <div class="diary-content">
+                        <div class="diary-top-line">
+                            <strong>Mariana Costa</strong> avaliou <strong>After Hours</strong>
+                            <span class="diary-stars">★★★★★</span>
+                        </div>
+                        <p class="diary-review-text">"Uma das melhores introduções de disco da década. A consistência da produção do início ao fim é impecável."</p>
+                        <span class="diary-date">Registrado ontem</span>
+                    </div>
+                </div>
+
+                <div class="diary-item">
+                    <div class="diary-avatar"></div>
+                    <div class="diary-content">
+                        <div class="diary-top-line">
+                            <strong>Gabriel Martins</strong> avaliou <strong>Blonde</strong>
+                            <span class="diary-stars">★★★★★</span>
+                        </div>
+                        <p class="diary-review-text">"Ouvi o álbum inteiro com fones de ouvido no escuro. A experiência é transcendental, cada faixa tem uma textura única."</p>
+                        <span class="diary-date">Registrado há 2 dias</span>
+                    </div>
+                </div>
+
+                <div class="diary-item">
+                    <div class="diary-avatar"></div>
+                    <div class="diary-content">
+                        <div class="diary-top-line">
+                            <strong>Larissa Souza</strong> avaliou <strong>IGOR</strong>
+                            <span class="diary-stars">★★★★☆</span>
+                        </div>
+                        <p class="diary-review-text">"O conceito visual e sonoro criado pelo Tyler neste projeto é monumental. Destaque absoluto para 'EARFQUAKE'."</p>
+                        <span class="diary-date">Registrado há 3 dias</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <div class="logo-area">
+                    <a href="#" class="logo-link">
+                        <img src="logo.png" alt="SoundBPM Logo" class="brand-logo-footer">
+                        <span class="logo">Sound<span>BPM</span></span>
+                    </a>
+                </div>
+                <p>O diário e catálogo definitivo para entusiastas catalogarem discografias, avaliarem faixas e acompanharem notícias musicais.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Plataforma</h4>
+                <ul>
+                    <li><a href="#explore">Início</a></li>
+                    <li><a href="#trending">Álbuns</a></li>
+                    <li><a href="#news">Notícias</a></li>
+                    <li><a href="#upcoming">Lançamentos</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Integrações</h4>
+                <ul>
+                    <li><a href="#">Spotify Connect</a></li>
+                    <li><a href="#">Apple Music Kit</a></li>
+                    <li><a href="#">SoundCloud SDK</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Institucional</h4>
+                <ul>
+                    <li><a href="#">Termos de Uso</a></li>
+                    <li><a href="#">Política de Privacidade</a></li>
+                    <li><a href="#">Contato e Suporte</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 SoundBPM. Todos os direitos reservados. Estética e layout inspirados em plataformas de catálogo cultural.</p>
+        </div>
+    </footer>
+
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button class="close-modal">&times;</button>
+            <h2>Entrar no SoundBPM</h2>
+            <p>Conecte sua conta para registrar diários, salvar listas e avaliar álbuns.</p>
+            <div class="login-options">
+                <button class="btn-login-option">Conectar com Spotify</button>
+                <button class="btn-login-option">Conectar com Apple Music</button>
+                <button class="btn-login-option">Conectar com SoundCloud</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
