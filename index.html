@@ -24,6 +24,7 @@
             <nav class="main-nav">
                 <ul>
                     <li><a href="#explore" class="nav-link active">Início</a></li>
+                    <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Meu Painel</a></li>
                     <li><a href="#trending" class="nav-link">Álbuns</a></li>
                     <li><a href="#news" class="nav-link">Notícias</a></li>
                     <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
@@ -33,7 +34,7 @@
 
             <div class="header-right">
                 <div class="header-search">
-                    <input type="text" placeholder="Buscar álbuns, artistas...">
+                    <input type="text" id="search-input" placeholder="Buscar álbuns, artistas...">
                 </div>
                 <button id="open-login-modal" class="btn-login-nav">Entrar</button>
             </div>
@@ -43,12 +44,12 @@
     <main class="main-content">
 
         <section id="explore" class="hero-carousel-section">
-            <div class="hero-bg-backdrop"></div>
+            <div class="hero-bg-backdrop" id="hero-backdrop"></div>
             <div class="hero-overlay"></div>
             <div class="hero-content-wrapper">
                 <div class="hero-badge">Álbum em Destaque Rotativo</div>
-                <h1>Avalie álbuns, catalogue faixas e compartilhe seu gosto musical.</h1>
-                <p>Mantenha um diário de tudo o que você ouve, dê notas detalhadas faixa por faixa gerando a média automática do disco, ou avalie álbuns inteiros instantaneamente.</p>
+                <h1 id="hero-title">Avalie álbuns, catalogue faixas e compartilhe seu gosto musical.</h1>
+                <p id="hero-desc">Mantenha um diário de tudo o que você ouve, dê notas detalhadas faixa por faixa gerando a média automática do disco, ou avalie álbuns inteiros instantaneamente.</p>
                 <div class="hero-actions">
                     <button class="btn-primary-gold">Comece seu Diário Grátis</button>
                     <button class="btn-secondary-dark">Explorar Catálogo</button>
@@ -63,9 +64,55 @@
                         <span>Avaliações registradas</span>
                     </div>
                     <div class="stat-box">
-                        <strong>3</strong>
-                        <span>Plataformas integradas</span>
+                        <strong>Spotify</strong>
+                        <span>API Conectada</span>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="dashboard" class="section-container" style="display: none;">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Seu Painel de Integração</h2>
+                    <p>Dados sincronizados diretamente da sua conta de streaming.</p>
+                </div>
+            </div>
+
+            <!-- Estado: Deslogado -->
+            <div id="dashboard-logged-out" style="text-align: center; padding: 4rem 1rem;">
+                <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒 Painel Trancado</h3>
+                <p style="margin-bottom: 2rem; color: var(--text-muted);">Para visualizar seu histórico e recomendações personalizadas, conecte-se ao seu aplicativo de música favorito.</p>
+                <button class="btn-primary-gold" onclick="document.getElementById('login-modal').classList.add('active')">Conectar Conta Agora</button>
+            </div>
+
+            <!-- Estado: Logado -->
+            <div id="dashboard-logged-in" style="display: none;">
+                <div class="dashboard-grid">
+                    <!-- Ouvidos Recentemente -->
+                    <div class="dash-block">
+                        <h3>🎧 Ouvidos Recentemente</h3>
+                        <p class="dash-sub">Importado do seu histórico. Clique para tocar ou avaliar:</p>
+                        <div class="dash-items" id="recent-scrobbles">
+                            <!-- JS populates -->
+                            <p style="color: var(--text-muted);">Carregando histórico...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Recomendações -->
+                    <div class="dash-block">
+                        <h3>✨ Feito para Você</h3>
+                        <p class="dash-sub">Baseado no que você mais ouve:</p>
+                        <div class="dash-items" id="personal-recs">
+                            <!-- JS populates -->
+                            <p style="color: var(--text-muted);">Analisando algoritmos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sync-action">
+                    <button id="btn-sync-library" class="btn-primary-gold">Sincronizar Meus Álbuns Salvos</button>
+                    <button id="btn-export-playlist" class="btn-secondary-dark">Criar Playlist "Favoritos" no Spotify</button>
                 </div>
             </div>
         </section>
@@ -73,87 +120,14 @@
         <section id="trending" class="section-container">
             <div class="section-header-flex">
                 <div>
-                    <h2>Álbuns Populares Esta Semana</h2>
-                    <p>Os discos mais comentados e avaliados pela comunidade nos últimos 7 dias.</p>
+                    <h2 id="section-main-title">Álbuns Populares Esta Semana</h2>
+                    <p id="section-main-subtitle">Os discos mais recentes e recomendados do catálogo.</p>
                 </div>
                 <a href="#" class="view-more-link">Ver todos &rarr;</a>
             </div>
 
-            <div class="poster-grid">
-                <div class="poster-card">
-                    <div class="poster-image-wrap">
-                        <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=500&q=80" alt="After Hours">
-                        <div class="poster-overlay-actions">
-                            <button class="action-icon-btn" title="Avaliar">★</button>
-                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
-                        </div>
-                    </div>
-                    <div class="poster-info">
-                        <h3>After Hours</h3>
-                        <span class="poster-artist">The Weeknd</span>
-                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.8</span></div>
-                    </div>
-                </div>
-
-                <div class="poster-card">
-                    <div class="poster-image-wrap">
-                        <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=500&q=80" alt="Blonde">
-                        <div class="poster-overlay-actions">
-                            <button class="action-icon-btn" title="Avaliar">★</button>
-                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
-                        </div>
-                    </div>
-                    <div class="poster-info">
-                        <h3>Blonde</h3>
-                        <span class="poster-artist">Frank Ocean</span>
-                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.9</span></div>
-                    </div>
-                </div>
-
-                <div class="poster-card">
-                    <div class="poster-image-wrap">
-                        <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=500&q=80" alt="IGOR">
-                        <div class="poster-overlay-actions">
-                            <button class="action-icon-btn" title="Avaliar">★</button>
-                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
-                        </div>
-                    </div>
-                    <div class="poster-info">
-                        <h3>IGOR</h3>
-                        <span class="poster-artist">Tyler, The Creator</span>
-                        <div class="poster-rating-stars">★★★★☆ <span class="numeric-score">4.6</span></div>
-                    </div>
-                </div>
-
-                <div class="poster-card">
-                    <div class="poster-image-wrap">
-                        <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=500&q=80" alt="SMITHEREENS">
-                        <div class="poster-overlay-actions">
-                            <button class="action-icon-btn" title="Avaliar">★</button>
-                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
-                        </div>
-                    </div>
-                    <div class="poster-info">
-                        <h3>SMITHEREENS</h3>
-                        <span class="poster-artist">Joji</span>
-                        <div class="poster-rating-stars">★★★★☆ <span class="numeric-score">4.5</span></div>
-                    </div>
-                </div>
-
-                <div class="poster-card">
-                    <div class="poster-image-wrap">
-                        <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=500&q=80" alt="Random Access Memories">
-                        <div class="poster-overlay-actions">
-                            <button class="action-icon-btn" title="Avaliar">★</button>
-                            <button class="action-icon-btn" title="Adicionar à Lista">＋</button>
-                        </div>
-                    </div>
-                    <div class="poster-info">
-                        <h3>Random Access</h3>
-                        <span class="poster-artist">Daft Punk</span>
-                        <div class="poster-rating-stars">★★★★★ <span class="numeric-score">4.9</span></div>
-                    </div>
-                </div>
+            <div class="poster-grid" id="trending-albums-grid">
+                <!-- Os álbuns reais do Spotify aparecem aqui -->
             </div>
         </section>
 
@@ -322,9 +296,9 @@
             <div class="footer-col">
                 <h4>Institucional</h4>
                 <ul>
-                    <li><a href="#">Termos de Uso</a></li>
-                    <li><a href="#">Política de Privacidade</a></li>
-                    <li><a href="#">Contato e Suporte</a></li>
+                    <li><a href="#termos">Termos de Uso</a></li>
+                    <li><a href="#privacidade">Política de Privacidade</a></li>
+                    <li><a href="#contato">Contato e Suporte</a></li>
                 </ul>
             </div>
         </div>
@@ -339,12 +313,32 @@
             <h2>Entrar no SoundBPM</h2>
             <p>Conecte sua conta para registrar diários, salvar listas e avaliar álbuns.</p>
             <div class="login-options">
-                <button class="btn-login-option">Conectar com Spotify</button>
+                <button class="btn-login-option" id="spotify-login-btn">Conectar com Spotify</button>
                 <button class="btn-login-option">Conectar com Apple Music</button>
                 <button class="btn-login-option">Conectar com SoundCloud</button>
+                <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+                    <button class="btn-login-option" id="simulate-login-btn" style="width: 100%; border-color: var(--accent-gold); color: var(--accent-gold);">Testar Integrações (Simulador)</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <div id="web-player" class="web-player hidden">
+        <div class="player-info">
+            <img src="logo.png" id="player-img" alt="Capa">
+            <div class="player-text">
+                <h4 id="player-track">Nenhuma faixa selecionada</h4>
+                <p id="player-artist">SoundBPM Player</p>
+            </div>
+        </div>
+        <div class="player-controls">
+            <button>⏮</button>
+            <button class="play-btn">▶</button>
+            <button>⏭</button>
+        </div>
+        <div class="player-logo">Web Playback Ativo</div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
