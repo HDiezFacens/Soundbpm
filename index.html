@@ -23,9 +23,9 @@
 
             <nav class="main-nav">
                 <ul>
-                    <li><a href="#explore" class="nav-link active">Início</a></li>
+                    <li><a href="#explore" id="nav-home-link" class="nav-link active">Início</a></li>
                     <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Meu Painel</a></li>
-                    <li><a href="#trending" class="nav-link">Álbuns</a></li>
+                    <li><a href="#albums-page" id="nav-albums-link" class="nav-link">Álbuns</a></li>
                     <li><a href="#news" class="nav-link">Notícias</a></li>
                     <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
                     <li><a href="#community" class="nav-link">Diário</a></li>
@@ -114,6 +114,24 @@
                     <button id="btn-sync-library" class="btn-primary-gold">Sincronizar Meus Álbuns Salvos</button>
                     <button id="btn-export-playlist" class="btn-secondary-dark">Criar Playlist "Favoritos" no Spotify</button>
                 </div>
+            </div>
+        </section>
+
+        <!-- Página Dedicada de Álbuns -->
+        <section id="albums-page" class="section-container" style="display: none; padding-top: 4rem;">
+            <div class="section-header-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+                <div>
+                    <h2>Catálogo Completo</h2>
+                    <p>Explore uma infinidade de álbuns e lançamentos do mundo todo.</p>
+                </div>
+                <div style="width: 100%;">
+                    <input type="text" id="albums-page-search" placeholder="Pesquisar álbuns, artistas ou gêneros..." style="width: 100%; padding: 1rem; font-size: 1.1rem; border-radius: 8px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                </div>
+            </div>
+
+            <div class="poster-grid" id="albums-page-grid" style="margin-top: 2rem;">
+                <!-- JS populates -->
+                <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Carregando catálogo...</p>
             </div>
         </section>
 

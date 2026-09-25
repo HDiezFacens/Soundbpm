@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 localStorage.setItem('spotify_access_token', data.access_token);
                 window.history.replaceState({}, document.title, REDIRECT_URI);
                 updateLoginButtonState();
-                showDashboardUI();
+                navigateTo('dashboard');
                 populateDashboard();
             } else {
                 console.error("Erro ao obter o token:", data);
@@ -130,11 +130,72 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    async function fetchRealTrendingAlbums() {
+        // Como o feed RSS da Apple bloqueia acesso direto pelo navegador (CORS),
+        // a melhor forma de ter uma vitrine "nível Letterboxd" sem um backend próprio 
+        // é buscar álbuns aclamados ("Cult Classics" e Mega Lançamentos) sob demanda.
+        
+        const letterboxdCore = [
+            { query: "blonde frank ocean", synopsis: "Uma obra-prima atmosférica e introspectiva que redefiniu o R&B contemporâneo com sua vulnerabilidade." },
+            { query: "to pimp a butterfly kendrick", synopsis: "Um épico denso de jazz-rap que explora de forma brilhante a cultura afro-americana e o peso da fama." },
+            { query: "igor tyler the creator", synopsis: "Uma jornada caótica e genial sobre desilusão amorosa, misturando neo-soul, rap e sintetizadores." },
+            { query: "brat charli xcx", synopsis: "Um mergulho frenético e hiperativo na cultura clubber, recheado de vulnerabilidade e batidas ácidas." },
+            { query: "ok computer radiohead", synopsis: "O marco do rock alternativo que previu a alienação e a ansiedade da era digital." },
+            { query: "in rainbows radiohead", synopsis: "Quente, melancólico e ritmicamente complexo, um dos registros mais intimistas da banda." },
+            { query: "the dark side of the moon", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
+            { query: "currents tame impala", synopsis: "Uma viagem psicodélica e dançante sobre a aceitação de mudanças pessoais inescapáveis." },
+            { query: "hit me hard and soft billie eilish", synopsis: "Vocais sussurrados e produções expansivas que flutuam entre o sombrio e o pop brilhante." },
+            { query: "renaissance beyonce", synopsis: "Uma celebração eufórica e contínua da cultura dance, house e disco underground." },
+            { query: "norman fucking rockwell lana", synopsis: "O grande romance americano moderno contado através de baladas poéticas e melancólicas." },
+            { query: "my beautiful dark twisted fantasy", synopsis: "Um espetáculo maximalista e grandioso sobre o ego, a fama e a genialidade em colapso." },
+            { query: "after hours weeknd", synopsis: "Uma odisseia noturna e cinematográfica pelas luzes neons e excessos de Las Vegas." },
+            { query: "melodrama lorde", synopsis: "Um retrato teatral, eufórico e de cortar o coração sobre a solidão das festas e o fim da juventude." },
+            { query: "rumours fleetwood mac", synopsis: "Um clássico atemporal forjado no meio de corações partidos e melodias perfeitas." },
+            { query: "discovery daft punk", synopsis: "Uma viagem nostálgica de french house e disco que moldou a música eletrônica moderna." },
+            { query: "abbey road the beatles", synopsis: "O grande canto do cisne da banda, trazendo medleys lendários e produção impecável." },
+            { query: "nevermind nirvana", synopsis: "O trovão grunge que destruiu o hair metal e deu voz à angústia da Geração X." },
+            { query: "the miseducation of lauryn hill", synopsis: "A fusão definitiva de hip-hop, soul e R&B embalada por letras maduras e pessoais." },
+            { query: "good kid maad city", synopsis: "Um curta-metragem sonoro sobre a juventude, os perigos e as tentações nas ruas de Compton." },
+            { query: "folklore taylor swift", synopsis: "Um refúgio indie-folk repleto de narrativas ficcionais, triângulos amorosos e texturas acústicas." },
+            { query: "punisher phoebe bridgers", synopsis: "Folk indie assombrado e poético, perfeito para madrugadas existenciais." },
+            { query: "souvlaki slowdive", synopsis: "Paredes de guitarras enevoadas e vocais etéreos criando a essência definitiva do shoegaze." },
+            { query: "homogenic bjork", synopsis: "Batidas vulcânicas eletrônicas e cordas sinfônicas em uma carta de amor islandesa." }
+        ];
+        
+        // Sorteia 10 álbuns clássicos/populares toda vez que a página carrega
+        const shuffled = letterboxdCore.sort(() => 0.5 - Math.random()).slice(0, 10);
+        
+        try {
+            // Dispara as buscas em paralelo (limit=1 para pegar exatamente o álbum correto)
+            const results = await Promise.all(shuffled.map(obj => 
+                fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(obj.query)}&entity=album&limit=1`).then(r => r.json())
+            ));
+            
+            let finalAlbums = [];
+            results.forEach((res, index) => {
+                if (res.results && res.results.length > 0) {
+                    const item = res.results[0];
+                    finalAlbums.push({
+                        name: item.collectionName,
+                        artists: [{ name: item.artistName }],
+                        images: [{ url: item.artworkUrl100.replace('100x100bb', '600x600bb') }],
+                        release_date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 'Desconhecido',
+                        synopsis: shuffled[index].synopsis
+                    });
+                }
+            });
+            return finalAlbums;
+        } catch (e) {
+            console.error("Falha ao carregar álbuns do momento", e);
+            return await fetchCatalogData("hits"); // Fallback
+        }
+    }
+
     async function loadPopularContent() {
         if (sectionMainTitle) sectionMainTitle.textContent = "Álbuns Populares & Destaques";
         if (sectionMainSubtitle) sectionMainSubtitle.textContent = "Os principais álbuns catalogados para você ouvir e avaliar.";
 
-        const albums = await fetchCatalogData("pop");
+        const albums = await fetchRealTrendingAlbums();
         
         if (albums && albums.length > 0) {
             renderAlbums(albums);
@@ -200,7 +261,11 @@ document.addEventListener("DOMContentLoaded", () => {
             heroTitle.innerHTML = `Destaque Atual: <span style="color: var(--accent-gold);">${album.name}</span>`;
         }
         if (heroDesc) {
-            heroDesc.textContent = `Ouça o álbum de ${artists}. Lançado em ${album.release_date}. Avalie e catalogue no SoundBPM.`;
+            if (album.synopsis) {
+                heroDesc.textContent = `"${album.synopsis}" — Lançado em ${album.release_date}.`;
+            } else {
+                heroDesc.textContent = `Ouça o álbum de ${artists}. Lançado em ${album.release_date}. Avalie e catalogue no SoundBPM.`;
+            }
         }
     }
 
@@ -226,19 +291,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadPopularContent();
 
-    // Lógica do Dashboard e Simulação
+    // Elementos DOM
     const simulateBtn = document.getElementById("simulate-login-btn");
-    const navDashboardItem = document.getElementById("nav-dashboard-item");
-    const dashboardSection = document.getElementById("dashboard");
-    const exploreSection = document.getElementById("explore");
     const webPlayer = document.getElementById("web-player");
-    
-    function showDashboardUI() {
-        if (navDashboardItem) navDashboardItem.style.display = "inline-block";
-        if (exploreSection) exploreSection.style.display = "none";
-        if (dashboardSection) dashboardSection.style.display = "block";
-        if (webPlayer) webPlayer.classList.remove("hidden");
-    }
+
+    // Lógica de SPA (Single Page Application)
+    const homeSections = ["explore", "trending", "news", "upcoming", "community"];
+    const allPages = ["dashboard", "albums-page"];
+
+    window.navigateTo = function(pageId) {
+        // Se for "home", mostra as sections da home e esconde o resto
+        if (pageId === "home") {
+            homeSections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = "block"; // Ou o display padrão de cada um
+            });
+            allPages.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = "none";
+            });
+        } else {
+            // Esconde tudo da home e as outras páginas
+            homeSections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = "none";
+            });
+            allPages.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = (id === pageId) ? "block" : "none";
+            });
+        }
+        
+        // Mantém o web player sempre visível se tiver logado (já tratado em outras partes)
+        if (webPlayer && localStorage.getItem("spotify_access_token")) {
+            webPlayer.classList.remove("hidden");
+        }
+        
+        window.scrollTo(0, 0);
+    };
 
     async function fetchFromSpotify(endpoint) {
         const token = localStorage.getItem("spotify_access_token");
@@ -359,20 +449,94 @@ document.addEventListener("DOMContentLoaded", () => {
         if (playerImg) playerImg.src = image;
     };
     
-    // Vincula evento de clique no Menu de Navegação para o Painel
+    // Roteamento pelo Menu de Navegação
+    const navHomeLink = document.getElementById("nav-home-link");
     const dashLink = document.getElementById("nav-dashboard-link");
+    const navAlbumsLink = document.getElementById("nav-albums-link");
+
+    if (navHomeLink) {
+        navHomeLink.addEventListener("click", (e) => {
+            // Se preferir manter hash na URL, não dar preventDefault
+            navigateTo("home");
+        });
+    }
+
     if (dashLink) {
         dashLink.addEventListener("click", (e) => {
-            showDashboardUI();
+            navigateTo("dashboard");
             populateDashboard();
         });
     }
 
+    if (navAlbumsLink) {
+        navAlbumsLink.addEventListener("click", (e) => {
+            navigateTo("albums-page");
+            loadAlbumsPageContent("__TRENDING__"); // Carrega lançamentos por padrão
+        });
+    }
+
+    // Lógica da Página de Álbuns (Busca dedicada)
+    const albumsPageSearch = document.getElementById("albums-page-search");
+    const albumsPageGrid = document.getElementById("albums-page-grid");
+    
+    async function loadAlbumsPageContent(query) {
+        if (!albumsPageGrid) return;
+        albumsPageGrid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Carregando...</p>";
+        
+        let data;
+        if (query === "__TRENDING__") {
+            data = await fetchRealTrendingAlbums();
+        } else {
+            data = await fetchCatalogData(query);
+        }
+        
+        albumsPageGrid.innerHTML = "";
+        if (!data || data.length === 0) {
+            albumsPageGrid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Nenhum álbum encontrado.</p>";
+            return;
+        }
+        
+        data.forEach(album => {
+            const card = document.createElement("div");
+            card.className = "poster-card";
+            card.innerHTML = `
+                <div class="poster-image-wrap">
+                    <img src="${album.images[0].url}" alt="${album.name}">
+                    <div class="poster-overlay-actions">
+                        <button class="action-icon-btn" title="Avaliar">★</button>
+                        <button class="action-icon-btn" title="Tocar Faixa" onclick="playMockTrack('${album.name.replace(/'/g, "\\'")}', '${album.artists[0].name.replace(/'/g, "\\'")}', '${album.images[0].url}')">▶</button>
+                    </div>
+                </div>
+                <div class="poster-info">
+                    <h3>${album.name}</h3>
+                    <span class="poster-artist">${album.artists[0].name}</span>
+                    <div class="poster-rating-stars">★★★★★ <span class="numeric-score">${(Math.random() * 0.4 + 4.6).toFixed(1)}</span></div>
+                </div>
+            `;
+            albumsPageGrid.appendChild(card);
+        });
+    }
+
+    if (albumsPageSearch) {
+        let timeoutId;
+        albumsPageSearch.addEventListener("input", (e) => {
+            clearTimeout(timeoutId);
+            const query = e.target.value.trim();
+            if (query.length > 2) {
+                timeoutId = setTimeout(() => {
+                    loadAlbumsPageContent(query);
+                }, 500);
+            } else if (query.length === 0) {
+                loadAlbumsPageContent("__TRENDING__");
+            }
+        });
+    }
+
     // Se o usuário já tiver um token (simulado ou real) e recarregou a página, 
-    // podemos mostrar o painel diretamente se desejado (descomentar)
+    // podemos restaurar a sessão no painel (opcional)
     let currentToken = localStorage.getItem("spotify_access_token");
     if (currentToken) {
-        // showDashboardUI();
+        // navigateTo("dashboard");
         // populateDashboard();
     }
 });
