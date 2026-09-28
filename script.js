@@ -3,18 +3,86 @@ document.addEventListener("DOMContentLoaded", () => {
     const openLoginBtn = document.getElementById("open-login-modal");
     const closeLoginBtn = document.querySelector(".close-modal");
 
+    const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";
+    const REDIRECT_URI = window.location.origin;
+    const SCOPES = "user-read-private user-read-email user-read-recently-played user-top-read user-library-read playlist-modify-public streaming";
+
     if (openLoginBtn && modal) {
-        openLoginBtn.addEventListener("click", () => modal.classList.add("active"));
+        openLoginBtn.addEventListener("click", () => {
+            const token = localStorage.getItem("spotify_access_token");
+            if (token) {
+                if (confirm("Deseja desconectar a sua conta?")) {
+                    localStorage.removeItem("spotify_access_token");
+                    resetLoginButtonState();
+                    window.location.reload();
+                }
+            } else {
+                modal.classList.add("active");
+            }
+        });
         closeLoginBtn.addEventListener("click", () => modal.classList.remove("active"));
         modal.addEventListener("click", (e) => {
             if (e.target === modal) modal.classList.remove("active");
         });
     }
 
-    const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";
-    const REDIRECT_URI = window.location.origin;
-    // Adicionadas permissões avançadas (scopes) para histórico, recomendações, biblioteca e player
-    const SCOPES = "user-read-private user-read-email user-read-recently-played user-top-read user-library-read playlist-modify-public streaming";
+    function updateLoginButtonState() {
+        if (openLoginBtn) {
+            openLoginBtn.textContent = "Conectado";
+            openLoginBtn.style.borderColor = "var(--accent-gold)";
+            openLoginBtn.style.color = "var(--accent-gold)";
+        }
+    }
+
+    function resetLoginButtonState() {
+        if (openLoginBtn) {
+            openLoginBtn.textContent = "Entrar";
+            openLoginBtn.style.borderColor = "";
+            openLoginBtn.style.color = "";
+        }
+    }
+
+    async function verifySession() {
+        let token = localStorage.getItem("spotify_access_token");
+        if (!token) {
+            resetLoginButtonState();
+            return;
+        }
+
+        if (token === "simulated_token") {
+            updateLoginButtonState();
+            return;
+        }
+
+        try {
+            const response = await fetch("https://api.spotify.com/v1/me", {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                localStorage.removeItem("spotify_access_token");
+                resetLoginButtonState();
+            } else {
+                updateLoginButtonState();
+            }
+        } catch (error) {
+            resetLoginButtonState();
+        }
+    }
+
+    verifySession();
+
+    const simulateBtn = document.getElementById("simulate-login-btn");
+    const webPlayer = document.getElementById("web-player");
+    if (simulateBtn) {
+        simulateBtn.addEventListener("click", () => {
+            localStorage.setItem("spotify_access_token", "simulated_token");
+            if (modal) modal.classList.remove("active");
+            updateLoginButtonState();
+            navigateTo('dashboard');
+            populateDashboard();
+            if (webPlayer) webPlayer.classList.remove("hidden");
+        });
+    }
 
     function generateRandomString(length) {
         let text = '';
@@ -90,18 +158,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(error => console.error("Erro na requisição do token:", error));
     }
 
-    // Atualiza botão de login se já estiver logado (visual)
-    function updateLoginButtonState() {
-        let token = localStorage.getItem("spotify_access_token");
-        if (token && openLoginBtn) {
-            openLoginBtn.textContent = "Conectado";
-            openLoginBtn.style.borderColor = "var(--accent-gold)";
-            openLoginBtn.style.color = "var(--accent-gold)";
-        }
-    }
-
-    updateLoginButtonState();
-
     const trendingGrid = document.getElementById("trending-albums-grid");
     const sectionMainTitle = document.getElementById("section-main-title");
     const sectionMainSubtitle = document.getElementById("section-main-subtitle");
@@ -117,11 +173,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) throw new Error("Erro na API do iTunes");
             const data = await response.json();
             
-            // Mapeia os dados do iTunes para o formato que as funções de renderização esperam
             return data.results.map(item => ({
                 name: item.collectionName,
                 artists: [{ name: item.artistName }],
-                images: [{ url: item.artworkUrl100.replace('100x100bb', '600x600bb') }], // Pega imagem em alta resolução
+                images: [{ url: item.artworkUrl100.replace('100x100bb', '600x600bb') }],
                 release_date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 'Desconhecido'
             }));
         } catch (error) {
@@ -131,10 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchRealTrendingAlbums() {
-        // Como o feed RSS da Apple bloqueia acesso direto pelo navegador (CORS),
-        // a melhor forma de ter uma vitrine "nível Letterboxd" sem um backend próprio 
-        // é buscar álbuns aclamados ("Cult Classics" e Mega Lançamentos) sob demanda.
-        
         const letterboxdCore = [
             { query: "blonde frank ocean", synopsis: "Uma obra-prima atmosférica e introspectiva que redefiniu o R&B contemporâneo com sua vulnerabilidade." },
             { query: "to pimp a butterfly kendrick", synopsis: "Um épico denso de jazz-rap que explora de forma brilhante a cultura afro-americana e o peso da fama." },
@@ -162,11 +213,9 @@ document.addEventListener("DOMContentLoaded", () => {
             { query: "homogenic bjork", synopsis: "Batidas vulcânicas eletrônicas e cordas sinfônicas em uma carta de amor islandesa." }
         ];
         
-        // Sorteia 10 álbuns clássicos/populares toda vez que a página carrega
         const shuffled = letterboxdCore.sort(() => 0.5 - Math.random()).slice(0, 10);
         
         try {
-            // Dispara as buscas em paralelo (limit=1 para pegar exatamente o álbum correto)
             const results = await Promise.all(shuffled.map(obj => 
                 fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(obj.query)}&entity=album&limit=1`).then(r => r.json())
             ));
@@ -187,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return finalAlbums;
         } catch (e) {
             console.error("Falha ao carregar álbuns do momento", e);
-            return await fetchCatalogData("hits"); // Fallback
+            return await fetchCatalogData("hits");
         }
     }
 
@@ -291,27 +340,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadPopularContent();
 
-    // Elementos DOM
-    const simulateBtn = document.getElementById("simulate-login-btn");
-    const webPlayer = document.getElementById("web-player");
-
-    // Lógica de SPA (Single Page Application)
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
     const allPages = ["dashboard", "albums-page"];
 
     window.navigateTo = function(pageId) {
-        // Se for "home", mostra as sections da home e esconde o resto
         if (pageId === "home") {
             homeSections.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.style.display = "block"; // Ou o display padrão de cada um
+                if (el) el.style.display = "block";
             });
             allPages.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = "none";
             });
         } else {
-            // Esconde tudo da home e as outras páginas
             homeSections.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = "none";
@@ -322,7 +364,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
         
-        // Mantém o web player sempre visível se tiver logado (já tratado em outras partes)
         if (webPlayer && localStorage.getItem("spotify_access_token")) {
             webPlayer.classList.remove("hidden");
         }
@@ -366,7 +407,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (recsContainer) recsContainer.innerHTML = "<p>Carregando...</p>";
         
         if (token && token !== "simulated_token") {
-            // DADOS REAIS DO SPOTIFY
             const recentData = await fetchFromSpotify("me/player/recently-played?limit=5");
             const topData = await fetchFromSpotify("me/top/tracks?limit=5");
             
@@ -408,7 +448,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
-            // DADOS SIMULADOS (ITUNES)
             const scrobblesData = await fetchCatalogData("lofi");
             const recsData = await fetchCatalogData("indie");
             
@@ -438,7 +477,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Toca faixa simulada no Web Player
     window.playMockTrack = function(track, artist, image) {
         const playerTrack = document.getElementById("player-track");
         const playerArtist = document.getElementById("player-artist");
@@ -449,33 +487,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (playerImg) playerImg.src = image;
     };
     
-    // Roteamento pelo Menu de Navegação
     const navHomeLink = document.getElementById("nav-home-link");
     const dashLink = document.getElementById("nav-dashboard-link");
     const navAlbumsLink = document.getElementById("nav-albums-link");
 
     if (navHomeLink) {
-        navHomeLink.addEventListener("click", (e) => {
-            // Se preferir manter hash na URL, não dar preventDefault
-            navigateTo("home");
-        });
+        navHomeLink.addEventListener("click", () => navigateTo("home"));
     }
 
     if (dashLink) {
-        dashLink.addEventListener("click", (e) => {
+        dashLink.addEventListener("click", () => {
             navigateTo("dashboard");
             populateDashboard();
         });
     }
 
     if (navAlbumsLink) {
-        navAlbumsLink.addEventListener("click", (e) => {
+        navAlbumsLink.addEventListener("click", () => {
             navigateTo("albums-page");
-            loadAlbumsPageContent("__TRENDING__"); // Carrega lançamentos por padrão
+            loadAlbumsPageContent("__TRENDING__");
         });
     }
 
-    // Lógica da Página de Álbuns (Busca dedicada)
     const albumsPageSearch = document.getElementById("albums-page-search");
     const albumsPageGrid = document.getElementById("albums-page-grid");
     
@@ -530,13 +563,5 @@ document.addEventListener("DOMContentLoaded", () => {
                 loadAlbumsPageContent("__TRENDING__");
             }
         });
-    }
-
-    // Se o usuário já tiver um token (simulado ou real) e recarregou a página, 
-    // podemos restaurar a sessão no painel (opcional)
-    let currentToken = localStorage.getItem("spotify_access_token");
-    if (currentToken) {
-        // navigateTo("dashboard");
-        // populateDashboard();
     }
 });
