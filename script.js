@@ -210,26 +210,26 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/=+$/, '');
     }
 
-    const spotifyLoginBtn = document.getElementById("spotify-login-btn");
-    if (spotifyLoginBtn) {
-        spotifyLoginBtn.addEventListener("click", async () => {
-            const codeVerifier = generateRandomString(64);
-            const codeChallenge = await generateCodeChallenge(codeVerifier);
-            localStorage.setItem('code_verifier', codeVerifier);
+    const dashboardSpotifyBtn = document.getElementById("dashboard-spotify-connect-btn");
+if (dashboardSpotifyBtn) {
+    dashboardSpotifyBtn.addEventListener("click", async () => {
+        const codeVerifier = generateRandomString(64);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        localStorage.setItem('code_verifier', codeVerifier);
 
-            const authUrl = new URL("https://accounts.spotify.com/authorize");
-            const params = {
-                response_type: 'code',
-                client_id: SPOTIFY_CLIENT_ID,
-                scope: SCOPES,
-                code_challenge_method: 'S256',
-                code_challenge: codeChallenge,
-                redirect_uri: REDIRECT_URI,
-            };
-            authUrl.search = new URLSearchParams(params).toString();
-            window.location.href = authUrl.toString();
-        });
-    }
+        const authUrl = new URL("https://accounts.spotify.com/authorize");
+        const params = {
+            response_type: 'code',
+            client_id: SPOTIFY_CLIENT_ID,
+            scope: SCOPES,
+            code_challenge_method: 'S256',
+            code_challenge: codeChallenge,
+            redirect_uri: REDIRECT_URI,
+        };
+        authUrl.search = new URLSearchParams(params).toString();
+        window.location.href = authUrl.toString();
+    });
+}
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
@@ -493,19 +493,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function populateDashboard() {
+   async function populateDashboard() {
         const scrobblesContainer = document.getElementById("recent-scrobbles");
         const recsContainer = document.getElementById("personal-recs");
-        const token = localStorage.getItem("spotify_access_token");
+        
+        
+        const localUser = localStorage.getItem("soundbpm_user");
+        const spotifyToken = localStorage.getItem("spotify_access_token");
         
         const loggedOutView = document.getElementById("dashboard-logged-out");
         const loggedInView = document.getElementById("dashboard-logged-in");
 
-        if (!token) {
+        
+        if (!localUser) {
             if (loggedOutView) loggedOutView.style.display = "block";
             if (loggedInView) loggedInView.style.display = "none";
             return;
         } else {
+            
             if (loggedOutView) loggedOutView.style.display = "none";
             if (loggedInView) loggedInView.style.display = "block";
         }
@@ -513,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (scrobblesContainer) scrobblesContainer.innerHTML = "<p>Carregando...</p>";
         if (recsContainer) recsContainer.innerHTML = "<p>Carregando...</p>";
         
-        if (token && token !== "simulated_token") {
+        if (spotifyToken && spotifyToken !== "simulated_token") {
             const recentData = await fetchFromSpotify("me/player/recently-played?limit=5");
             const topData = await fetchFromSpotify("me/top/tracks?limit=5");
             
@@ -533,7 +538,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>`;
                 }).join('');
             } else if (scrobblesContainer) {
-                scrobblesContainer.innerHTML = "<p style='color: var(--text-muted);'>Nenhum histórico recente encontrado no seu Spotify.</p>";
+                scrobblesContainer.innerHTML = "<p style='color: var(--text-muted);'>Nenhum histórico recente encontrado. Conecte o seu Spotify abaixo para carregar.</p>";
             }
 
             if (topData && topData.items && recsContainer) {
@@ -555,6 +560,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
+            // Se está logado no site mas sem Spotify conectado, mostra prévias do catálogo
             const scrobblesData = await fetchCatalogData("lofi");
             const recsData = await fetchCatalogData("indie");
             

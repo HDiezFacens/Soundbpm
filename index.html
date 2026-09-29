@@ -110,10 +110,11 @@
                     </div>
                 </div>
 
-                <div class="sync-action">
-                    <button id="btn-sync-library" class="btn-primary-gold">Sincronizar Meus Álbuns Salvos</button>
-                    <button id="btn-export-playlist" class="btn-secondary-dark">Criar Playlist "Favoritos" no Spotify</button>
-                </div>
+                <div class="sync-action" style="flex-wrap: wrap;">
+    <button id="dashboard-spotify-connect-btn" class="btn-primary-gold" style="background-color: #1db954; color: #fff;">Conectar com Spotify</button>
+    <button id="btn-sync-library" class="btn-primary-gold">Sincronizar Meus Álbuns Salvos</button>
+    <button id="btn-export-playlist" class="btn-secondary-dark">Criar Playlist "Favoritos" no Spotify</button>
+</div>
             </div>
         </section>
 
@@ -362,12 +363,11 @@
             </form>
 
             <div style="border-top: 1px solid var(--border-subtle); padding-top: 1.2rem; text-align: center;">
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ou use uma integração externa (Opcional):</p>
-                <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn-login-option" id="spotify-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem;">Spotify Connect</button>
-                    <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
-                </div>
-            </div>
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ferramenta de Teste:</p>
+    <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+        <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
+    </div>
+</div>
         </div>
     </div>
 
