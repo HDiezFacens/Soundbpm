@@ -1,10 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const SUPABASE_URL = "https://mfpjuyqcieqtcdbkvgwu.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_0yXhFfS--QMrzTIJATHvUA_wfealgxV";
+    
+    let supabase = null;
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+        console.error("SDK do Supabase não carregado corretamente.");
+    }
+
+    const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";
+    const REDIRECT_URI = window.location.href.split('?')[0].replace(/#.*$/, '');
+    const SCOPES = "user-read-private user-read-email user-read-recently-played user-top-read user-library-read playlist-modify-public streaming";
+
     const tabLoginBtn = document.getElementById("tab-login-btn");
     const tabRegisterBtn = document.getElementById("tab-register-btn");
     const usernameFieldWrap = document.getElementById("username-field-wrap");
     const authSubmitBtn = document.getElementById("auth-submit-btn");
     const authForm = document.getElementById("auth-form");
-
     let isRegisterMode = false;
 
     if (tabLoginBtn && tabRegisterBtn) {
@@ -32,43 +45,72 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (authForm) {
-        authForm.addEventListener("submit", (e) => {
+        authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+            if (!supabase) {
+                alert("Supabase não inicializado.");
+                return;
+            }
+
             const email = document.getElementById("auth-email").value;
             const password = document.getElementById("auth-password").value;
-            const username = document.getElementById("auth-username") ? document.getElementById("auth-username").value : "Mófilo";
-            const avatarInput = document.getElementById("auth-avatar");
-            const avatar = avatarInput && avatarInput.value ? avatarInput.value : "";
+            const usernameField = document.getElementById("auth-username");
+            const avatarField = document.getElementById("auth-avatar");
+            
+            const username = usernameField && usernameField.value ? usernameField.value : "Mófilo";
+            const avatar = avatarField && avatarField.value ? avatarField.value : "";
 
             if (isRegisterMode) {
-                localStorage.setItem("soundbpm_user", JSON.stringify({ email, username, avatar }));
-                alert("Conta criada com sucesso!");
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            username: username,
+                            avatar: avatar
+                        }
+                    }
+                });
+
+                if (error) {
+                    alert("Erro ao criar conta: " + error.message);
+                    return;
+                }
+                
+                alert("Conta criada com sucesso! Verifique sua sessão.");
             } else {
-                // Ao logar, mantém ou define dados básicos se não existirem
-                const existing = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
-                localStorage.setItem("soundbpm_user", JSON.stringify({ email, username: existing.username || username, avatar: existing.avatar || avatar }));
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    alert("Erro ao entrar: " + error.message);
+                    return;
+                }
+
                 alert("Login efetuado com sucesso!");
             }
 
             if (modal) modal.classList.remove("active");
-            updateLoginButtonState();
+            checkSupabaseSession();
             navigateTo('dashboard');
             populateDashboard();
         });
     }
 
-    // --- CONTROLE DO MODAL DE LOGIN (ABRIR E FECHAR) ---
     const modal = document.getElementById("login-modal");
     const openLoginBtn = document.getElementById("open-login-modal");
     const closeLoginBtn = document.querySelector(".close-modal");
 
     if (openLoginBtn && modal) {
-        openLoginBtn.addEventListener("click", () => {
+        openLoginBtn.addEventListener("click", async () => {
             const localUser = localStorage.getItem("soundbpm_user");
             const spotifyToken = localStorage.getItem("spotify_access_token");
 
             if (localUser || spotifyToken) {
                 if (confirm("Deseja encerrar a sessão da sua conta?")) {
+                    if (supabase) await supabase.auth.signOut();
                     localStorage.removeItem("soundbpm_user");
                     localStorage.removeItem("spotify_access_token");
                     resetLoginButtonState();
@@ -91,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (openLoginBtn) {
             const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
             const displayName = localUser.username || "Meu Perfil";
-            // Usa uma imagem padrão se o usuário não tiver definido uma foto
             const avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
 
             openLoginBtn.innerHTML = `
@@ -115,36 +156,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function verifySession() {
-        const localUser = localStorage.getItem("soundbpm_user");
-        let token = localStorage.getItem("spotify_access_token");
+    async function checkSupabaseSession() {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const spotifyToken = localStorage.getItem("spotify_access_token");
 
-        if (localUser || token === "simulated_token") {
-            updateLoginButtonState();
-            return;
-        }
-
-        if (!token) {
-            resetLoginButtonState();
-            return;
-        }
-
-        try {
-            const response = await fetch("https://api.spotify.com/v1/me", {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) {
-                localStorage.removeItem("spotify_access_token");
-                resetLoginButtonState();
-            } else {
-                updateLoginButtonState();
+        if (session || spotifyToken === "simulated_token") {
+            if (session) {
+                const userMeta = session.user.user_metadata;
+                localStorage.setItem("soundbpm_user", JSON.stringify({
+                    email: session.user.email,
+                    username: userMeta.username || "Mófilo",
+                    avatar: userMeta.avatar || ""
+                }));
             }
-        } catch (error) {
+            updateLoginButtonState();
+        } else {
             resetLoginButtonState();
         }
     }
 
-    verifySession();
+    checkSupabaseSession();
 
     const simulateBtn = document.getElementById("simulate-login-btn");
     const webPlayer = document.getElementById("web-player");
