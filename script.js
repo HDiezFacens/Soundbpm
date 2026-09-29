@@ -1,17 +1,75 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const tabLoginBtn = document.getElementById("tab-login-btn");
+    const tabRegisterBtn = document.getElementById("tab-register-btn");
+    const usernameFieldWrap = document.getElementById("username-field-wrap");
+    const authSubmitBtn = document.getElementById("auth-submit-btn");
+    const authForm = document.getElementById("auth-form");
+
+    let isRegisterMode = false;
+
+    if (tabLoginBtn && tabRegisterBtn) {
+        tabLoginBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            isRegisterMode = false;
+            tabLoginBtn.style.color = "var(--accent-gold)";
+            tabLoginBtn.style.fontWeight = "700";
+            tabRegisterBtn.style.color = "var(--text-muted)";
+            tabRegisterBtn.style.fontWeight = "600";
+            if (usernameFieldWrap) usernameFieldWrap.style.display = "none";
+            if (authSubmitBtn) authSubmitBtn.textContent = "Entrar na Conta";
+        });
+
+        tabRegisterBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            isRegisterMode = true;
+            tabRegisterBtn.style.color = "var(--accent-gold)";
+            tabRegisterBtn.style.fontWeight = "700";
+            tabLoginBtn.style.color = "var(--text-muted)";
+            tabLoginBtn.style.fontWeight = "600";
+            if (usernameFieldWrap) usernameFieldWrap.style.display = "block";
+            if (authSubmitBtn) authSubmitBtn.textContent = "Criar Conta Gratuita";
+        });
+    }
+
+    if (authForm) {
+        authForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("auth-email").value;
+            const password = document.getElementById("auth-password").value;
+            const username = document.getElementById("auth-username") ? document.getElementById("auth-username").value : "Mófilo";
+            const avatarInput = document.getElementById("auth-avatar");
+            const avatar = avatarInput && avatarInput.value ? avatarInput.value : "";
+
+            if (isRegisterMode) {
+                localStorage.setItem("soundbpm_user", JSON.stringify({ email, username, avatar }));
+                alert("Conta criada com sucesso!");
+            } else {
+                // Ao logar, mantém ou define dados básicos se não existirem
+                const existing = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+                localStorage.setItem("soundbpm_user", JSON.stringify({ email, username: existing.username || username, avatar: existing.avatar || avatar }));
+                alert("Login efetuado com sucesso!");
+            }
+
+            if (modal) modal.classList.remove("active");
+            updateLoginButtonState();
+            navigateTo('dashboard');
+            populateDashboard();
+        });
+    }
+
+    // --- CONTROLE DO MODAL DE LOGIN (ABRIR E FECHAR) ---
     const modal = document.getElementById("login-modal");
     const openLoginBtn = document.getElementById("open-login-modal");
     const closeLoginBtn = document.querySelector(".close-modal");
 
-    const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";
-    const REDIRECT_URI = window.location.href.split('?')[0].replace(/#.*$/, '');
-    const SCOPES = "user-read-private user-read-email user-read-recently-played user-top-read user-library-read playlist-modify-public streaming";
-
     if (openLoginBtn && modal) {
         openLoginBtn.addEventListener("click", () => {
-            const token = localStorage.getItem("spotify_access_token");
-            if (token) {
-                if (confirm("Deseja desconectar a sua conta?")) {
+            const localUser = localStorage.getItem("soundbpm_user");
+            const spotifyToken = localStorage.getItem("spotify_access_token");
+
+            if (localUser || spotifyToken) {
+                if (confirm("Deseja encerrar a sessão da sua conta?")) {
+                    localStorage.removeItem("soundbpm_user");
                     localStorage.removeItem("spotify_access_token");
                     resetLoginButtonState();
                     window.location.reload();
@@ -20,7 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 modal.classList.add("active");
             }
         });
-        closeLoginBtn.addEventListener("click", () => modal.classList.remove("active"));
+        
+        if (closeLoginBtn) {
+            closeLoginBtn.addEventListener("click", () => modal.classList.remove("active"));
+        }
         modal.addEventListener("click", (e) => {
             if (e.target === modal) modal.classList.remove("active");
         });
@@ -28,9 +89,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateLoginButtonState() {
         if (openLoginBtn) {
-            openLoginBtn.textContent = "Conectado";
+            const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+            const displayName = localUser.username || "Meu Perfil";
+            // Usa uma imagem padrão se o usuário não tiver definido uma foto
+            const avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+
+            openLoginBtn.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.6rem; background: transparent; border: none; padding: 0;">
+                    <img src="${avatarUrl}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-gold);">
+                    <span style="font-weight: 600; color: var(--text-main);">${displayName}</span>
+                </div>
+            `;
             openLoginBtn.style.borderColor = "var(--accent-gold)";
-            openLoginBtn.style.color = "var(--accent-gold)";
+            openLoginBtn.style.background = "var(--bg-card)";
+            openLoginBtn.style.padding = "0.3rem 0.8rem";
+            openLoginBtn.style.borderRadius = "20px";
         }
     }
 
@@ -43,14 +116,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function verifySession() {
+        const localUser = localStorage.getItem("soundbpm_user");
         let token = localStorage.getItem("spotify_access_token");
-        if (!token) {
-            resetLoginButtonState();
+
+        if (localUser || token === "simulated_token") {
+            updateLoginButtonState();
             return;
         }
 
-        if (token === "simulated_token") {
-            updateLoginButtonState();
+        if (!token) {
+            resetLoginButtonState();
             return;
         }
 

@@ -328,14 +328,44 @@
     <div id="login-modal" class="modal-overlay">
         <div class="modal-card">
             <button class="close-modal">&times;</button>
-            <h2>Entrar no SoundBPM</h2>
-            <p>Conecte sua conta para registrar diários, salvar listas e avaliar álbuns.</p>
-            <div class="login-options">
-                <button class="btn-login-option" id="spotify-login-btn">Conectar com Spotify</button>
-                <button class="btn-login-option">Conectar com Apple Music</button>
-                <button class="btn-login-option">Conectar com SoundCloud</button>
-                <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-                    <button class="btn-login-option" id="simulate-login-btn" style="width: 100%; border-color: var(--accent-gold); color: var(--accent-gold);">Testar Integrações (Simulador)</button>
+            
+            <!-- Abas de Alternância -->
+            <div class="modal-header-tabs" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                <button id="tab-login-btn" class="modal-tab active" style="background: none; border: none; color: var(--accent-gold); font-weight: 700; font-size: 1.1rem; cursor: pointer;">Entrar</button>
+                <button id="tab-register-btn" class="modal-tab" style="background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 1.1rem; cursor: pointer;">Criar Conta</button>
+            </div>
+
+            <form id="auth-form">
+                
+                <div id="username-field-wrap" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Nome de Usuário</label>
+                        <input type="text" id="auth-username" placeholder="Seu apelido no SoundBPM" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Link da Foto de Perfil (Opcional)</label>
+                        <input type="url" id="auth-avatar" placeholder="https://exemplo.com/sua-foto.jpg" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">E-mail</label>
+                    <input type="email" id="auth-email" required placeholder="seu@email.com" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Senha</label>
+                    <input type="password" id="auth-password" required placeholder="Sua senha segura" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <button type="submit" id="auth-submit-btn" class="btn-primary-gold" style="width: 100%; padding: 0.9rem; margin-bottom: 1rem;">Entrar na Conta</button>
+            </form>
+
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 1.2rem; text-align: center;">
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ou use uma integração externa (Opcional):</p>
+                <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn-login-option" id="spotify-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem;">Spotify Connect</button>
+                    <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
                 </div>
             </div>
         </div>
