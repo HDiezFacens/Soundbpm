@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeLoginBtn = document.querySelector(".close-modal");
 
     const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";
-    const REDIRECT_URI = window.location.origin;
+    const REDIRECT_URI = window.location.href.split('?')[0].replace(/#.*$/, '');
     const SCOPES = "user-read-private user-read-email user-read-recently-played user-top-read user-library-read playlist-modify-public streaming";
 
     if (openLoginBtn && modal) {
@@ -490,6 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const navHomeLink = document.getElementById("nav-home-link");
     const dashLink = document.getElementById("nav-dashboard-link");
     const navAlbumsLink = document.getElementById("nav-albums-link");
+    const exploreCatalogBtn = document.getElementById("explore-catalog-btn"); 
 
     if (navHomeLink) {
         navHomeLink.addEventListener("click", () => navigateTo("home"));
@@ -504,6 +505,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (navAlbumsLink) {
         navAlbumsLink.addEventListener("click", () => {
+            navigateTo("albums-page");
+            loadAlbumsPageContent("__TRENDING__");
+        });
+    }
+
+    if (exploreCatalogBtn) {
+        exploreCatalogBtn.addEventListener("click", () => {
             navigateTo("albums-page");
             loadAlbumsPageContent("__TRENDING__");
         });
