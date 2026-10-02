@@ -383,5 +383,52 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
+
+    <!-- Modal de Avaliação / Resenha -->
+    <div id="review-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 520px; text-align: left; max-height: 90vh; overflow-y: auto;">
+            <button class="close-modal" id="close-review-modal">&times;</button>
+            <h3 id="review-modal-title" style="margin-bottom: 0.2rem; color: var(--accent-gold); font-size: 1.2rem;">Nome do Álbum</h3>
+            <p id="review-modal-artist" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+            
+            <!-- Abas de Escolha de Avaliação -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                <button type="button" id="tab-review-general" class="review-tab active" style="background:none; border:none; color:var(--accent-gold); font-weight:700; cursor:pointer; font-size: 0.9rem;">⭐ Nota Única & Resenha</button>
+                <button type="button" id="tab-review-tracks" class="review-tab" style="background:none; border:none; color:var(--text-muted); font-weight:600; cursor:pointer; font-size: 0.9rem;">🎵 Avaliar Faixa a Faixa</button>
+            </div>
+
+            <form id="review-form">
+                <!-- Modo Geral -->
+                <div id="review-mode-general">
+                    <div style="margin-bottom: 1.2rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Nota do Álbum (Estrelas)</label>
+                        <div id="star-rating-selector" style="font-size: 2rem; cursor: pointer; color: var(--accent-orange); letter-spacing: 5px;">
+                            ★★★★★
+                        </div>
+                        <input type="hidden" id="review-rating-value" value="5">
+                    </div>
+                </div>
+
+                <!-- Modo Faixa a Faixa -->
+                <div id="review-mode-tracks" style="display: none; margin-bottom: 1.2rem;">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Dê uma nota de 1 a 5 para cada faixa. A nota geral do álbum será calculada automaticamente pela média!</p>
+                    <div id="tracks-rating-container" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 220px; overflow-y: auto; padding-right: 0.5rem;">
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Carregando faixas do álbum...</p>
+                    </div>
+                    <div style="margin-top: 1rem; background: var(--bg-base); padding: 0.75rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.9rem; font-weight: 600;">Média Calculada:</span>
+                        <span id="calculated-average-stars" style="color: var(--accent-orange); font-size: 1.1rem;">★★★★★ (5.0)</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Sua Resenha para o Diário</label>
+                    <textarea id="review-text-input" rows="3" placeholder="Escreva o que achou da sonoridade, produção..." style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main); font-family: inherit; resize: vertical;"></textarea>
+                </div>
+
+                <button type="submit" id="submit-review-btn" class="btn-primary-gold" style="width: 100%; padding: 0.9rem;">Salvar no Diário</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

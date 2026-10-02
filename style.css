@@ -965,3 +965,11 @@ ul {
         display: none;
     }
 }
+
+/* Seletor de estrelas interativo no modal (Movido para o escopo global) */
+#star-rating-selector span {
+    transition: transform 0.1s ease;
+}
+#star-rating-selector span:hover {
+    transform: scale(1.15);
+}
