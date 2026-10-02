@@ -61,23 +61,50 @@ document.addEventListener("DOMContentLoaded", () => {
             const avatar = avatarField && avatarField.value ? avatarField.value : "";
 
             if (isRegisterMode) {
+                const submitBtn = document.getElementById("auth-submit-btn");
+                const oldText = submitBtn.textContent;
+                submitBtn.textContent = "Criando conta...";
+                submitBtn.disabled = true;
+
                 const { data, error } = await supabase.auth.signUp({
                     email: email,
-                    password: password,
-                    options: {
-                        data: {
-                            username: username,
-                            avatar: avatar
-                        }
-                    }
+                    password: password
                 });
 
                 if (error) {
                     alert("Erro ao criar conta: " + error.message);
+                    submitBtn.textContent = oldText;
+                    submitBtn.disabled = false;
                     return;
                 }
                 
-                alert("Conta criada com sucesso! Verifique sua sessão.");
+                if (data.user) {
+                    const userId = data.user.id;
+                    let avatarUrl = "";
+                    
+                    if (avatarField && avatarField.files && avatarField.files.length > 0) {
+                        const file = avatarField.files[0];
+                        const fileExt = file.name.split('.').pop();
+                        const filePath = `${userId}-${Math.random()}.${fileExt}`;
+                        
+                        const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+                        if (!uploadError) {
+                            const { data: pubData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+                            avatarUrl = pubData.publicUrl;
+                        } else {
+                            console.error("Erro no upload da foto:", uploadError);
+                        }
+                    }
+
+                    // Insere o perfil na tabela profiles
+                    await supabase.from('profiles').upsert([
+                        { id: userId, username: username, avatar_url: avatarUrl, bio: "Explorando o mundo da música." }
+                    ]);
+                }
+                
+                submitBtn.textContent = oldText;
+                submitBtn.disabled = false;
+                alert("Conta criada com sucesso!");
             } else {
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email: email,
@@ -105,16 +132,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (openLoginBtn && modal) {
         openLoginBtn.addEventListener("click", async () => {
-            const localUser = localStorage.getItem("soundbpm_user");
-            const spotifyToken = localStorage.getItem("spotify_access_token");
-
-            if (localUser || spotifyToken) {
-                if (confirm("Deseja encerrar a sessão da sua conta?")) {
-                    if (supabase) await supabase.auth.signOut();
-                    localStorage.removeItem("soundbpm_user");
-                    localStorage.removeItem("spotify_access_token");
-                    resetLoginButtonState();
-                    window.location.reload();
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    navigateTo("profile-page");
+                    loadUserProfile();
+                } else {
+                    modal.classList.add("active");
                 }
             } else {
                 modal.classList.add("active");
@@ -129,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function updateLoginButtonState() {
+    async function updateLoginButtonState() {
         if (openLoginBtn) {
             const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
             const displayName = localUser.username || "Meu Perfil";
@@ -159,18 +183,21 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkSupabaseSession() {
         if (!supabase) return;
         const { data: { session } } = await supabase.auth.getSession();
-        const spotifyToken = localStorage.getItem("spotify_access_token");
 
-        if (session || spotifyToken === "simulated_token") {
-            if (session) {
-                const userMeta = session.user.user_metadata;
-                localStorage.setItem("soundbpm_user", JSON.stringify({
-                    email: session.user.email,
-                    username: userMeta.username || "Mófilo",
-                    avatar: userMeta.avatar || ""
-                }));
-            }
-            updateLoginButtonState();
+        if (session) {
+            // Busca dados reais do perfil, não o user_metadata (que pode estar desatualizado)
+            const { data: profile } = await supabase
+                .from("profiles").select("username, avatar_url").eq("id", session.user.id).single();
+
+            const username = profile?.username || session.user.email?.split("@")[0] || "Meu Perfil";
+            const avatar   = profile?.avatar_url || "";
+
+            localStorage.setItem("soundbpm_user", JSON.stringify({
+                email: session.user.email,
+                username: username,
+                avatar: avatar
+            }));
+            await updateLoginButtonState();
         } else {
             resetLoginButtonState();
         }
@@ -448,7 +475,7 @@ if (dashboardSpotifyBtn) {
     loadPopularContent();
 
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-    const allPages = ["dashboard", "albums-page"];
+    const allPages = ["dashboard", "albums-page", "profile-page"];
 
     window.navigateTo = function(pageId) {
         if (pageId === "home") {
@@ -682,6 +709,257 @@ if (dashboardSpotifyBtn) {
                 }, 500);
             } else if (query.length === 0) {
                 loadAlbumsPageContent("__TRENDING__");
+            }
+        });
+    }
+
+    // Lógica do Meu Perfil
+    window.loadUserProfile = async function() {
+        const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+        const displayName = localUser.username || "Meu Perfil";
+        const avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+        
+        const usernameDisplay = document.getElementById("profile-username-display");
+        const avatarImg = document.getElementById("profile-avatar-img");
+        const bioDisplay = document.getElementById("profile-bio-display");
+        
+        if (usernameDisplay) usernameDisplay.textContent = displayName;
+        if (avatarImg) avatarImg.src = avatarUrl;
+        
+        if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                if (profile) {
+                    if (bioDisplay) bioDisplay.textContent = profile.bio || "Membro do SoundBPM.";
+                    if (usernameDisplay) usernameDisplay.textContent = profile.username || displayName;
+                    if (avatarImg && profile.avatar_url) avatarImg.src = profile.avatar_url;
+                }
+                
+                // Carregar favoritos
+                const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', session.user.id);
+                const favGrid = document.getElementById("profile-favorites-grid");
+                if (favGrid) {
+                    if (favs && favs.length > 0) {
+                        favGrid.innerHTML = favs.map(f => `
+                            <div class="poster-card" style="width: 150px;">
+                                <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
+                                <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
+                            </div>
+                        `).join('');
+                    } else {
+                        favGrid.innerHTML = "<p style='color: var(--text-muted); grid-column: 1/-1;'>Nenhum álbum favoritado ainda.</p>";
+                    }
+                }
+
+                // Adicionar botão de logout no perfil se não existir
+                if (!document.getElementById("btn-logout-profile")) {
+                    const logoutBtn = document.createElement("button");
+                    logoutBtn.id = "btn-logout-profile";
+                    logoutBtn.className = "btn-secondary-dark";
+                    logoutBtn.textContent = "Sair da Conta";
+                    logoutBtn.style.marginTop = "2rem";
+                    logoutBtn.onclick = async () => {
+                        await supabase.auth.signOut();
+                        localStorage.removeItem("soundbpm_user");
+                        localStorage.removeItem("spotify_access_token");
+                        window.location.reload();
+                    };
+                    document.getElementById("profile-page").appendChild(logoutBtn);
+                }
+            }
+        }
+    };
+
+    // Lógica de Notícias (Português) e Lançamentos Reais
+    async function loadNewsAndUpcoming() {
+        const newsContainer = document.getElementById("news-grid-container");
+        const upcomingContainer = document.getElementById("upcoming-grid-container");
+
+        if (newsContainer) {
+            try {
+                // RSS do G1 Música convertido pra JSON
+                const rssUrl = "https://g1.globo.com/rss/g1/pop-arte/musica/";
+                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.status === "ok" && data.items) {
+                    newsContainer.innerHTML = data.items.slice(0, 3).map(item => {
+                        const date = new Date(item.pubDate);
+                        const dataFormatada = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+                        return `
+                        <article class="news-card">
+                            <div class="news-tag">News</div>
+                            <h3><a href="${item.link}" target="_blank" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
+                            <p class="news-snippet">${item.description.replace(/<[^>]+>/g, '').substring(0, 100)}...</p>
+                            <div class="news-meta">
+                                <span>${dataFormatada}</span>
+                                <span>G1 Música</span>
+                            </div>
+                        </article>
+                        `;
+                    }).join('');
+                }
+            } catch(e) {
+                console.error("Erro ao carregar notícias:", e);
+                newsContainer.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Não foi possível carregar as notícias mais recentes.</p>";
+            }
+        }
+
+        if (upcomingContainer) {
+            try {
+                // Apple Music Top Albums BR via RSS2JSON (aceita CORS e retorna dados reais)
+                const itunesRss = "https://itunes.apple.com/br/rss/topalbums/limit=5/xml";
+                const rssApi = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(itunesRss)}&api_key=&order_by=pubDate`;
+                const resp = await fetch(rssApi);
+                const rssData = await resp.json();
+
+                let upcomingHtml = "";
+
+                if (rssData.status === "ok" && rssData.items && rssData.items.length > 0) {
+                    rssData.items.slice(0, 4).forEach(item => {
+                        const imgMatch = item.description ? item.description.match(/src="([^"]+)"/) : null;
+                        const imgUrl = imgMatch ? imgMatch[1].replace("55x55", "170x170") : "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=170&h=170&fit=crop";
+                        upcomingHtml += `
+                        <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center;">
+                            <img src="${imgUrl}" style="width: 80px; height: 80px; border-radius: 4px; object-fit: cover;">
+                            <div class="upcoming-details">
+                                <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
+                                <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.9rem;">${item.author || "Artista"}</span>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--accent-gold);">🔥 Top Charts Brasil</p>
+                            </div>
+                            <a href="${item.link}" target="_blank" class="btn-notify" style="margin-left: auto; text-decoration: none;">Ouvir</a>
+                        </div>`;
+                    });
+                    upcomingContainer.innerHTML = upcomingHtml;
+                } else {
+                    throw new Error("RSS sem dados");
+                }
+            } catch(e) {
+                // Fallback com álbuns reais verificáveis via iTunes Search
+                console.warn("RSS falhou, usando fallback de busca:", e);
+                const fallbackQueries = [
+                    { q: "sabrina carpenter short n sweet", label: "🔥 Hot agora" },
+                    { q: "kendrick lamar gnx",              label: "🔥 Hot agora" },
+                    { q: "chappell roan rise and fall",     label: "📈 Em alta" },
+                    { q: "charli xcx brat",                 label: "📈 Em alta" }
+                ];
+                const fallbackResults = await Promise.all(
+                    fallbackQueries.map(item =>
+                        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(item.q)}&entity=album&limit=1&country=br`)
+                            .then(r => r.json())
+                            .then(d => ({ ...d, label: item.label }))
+                            .catch(() => null)
+                    )
+                );
+                let html = "";
+                fallbackResults.forEach(res => {
+                    if (!res || !res.results || !res.results[0]) return;
+                    const a = res.results[0];
+                    const cover = a.artworkUrl100.replace("100x100", "170x170");
+                    html += `
+                    <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center;">
+                        <img src="${cover}" style="width: 80px; height: 80px; border-radius: 4px; object-fit: cover;">
+                        <div class="upcoming-details">
+                            <h4 style="margin: 0 0 0.25rem 0;">${a.collectionName}</h4>
+                            <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.9rem;">${a.artistName}</span>
+                            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--accent-gold);">${res.label} • ${new Date(a.releaseDate).getFullYear()}</p>
+                        </div>
+                        <a href="${a.collectionViewUrl}" target="_blank" class="btn-notify" style="margin-left: auto; text-decoration: none;">Ver</a>
+                    </div>`;
+                });
+                upcomingContainer.innerHTML = html || "<p style='color: var(--text-muted);'>Erro ao carregar lançamentos.</p>";
+            }
+        }
+    }
+    loadNewsAndUpcoming();
+
+    // ── Editar Perfil (event delegation - funciona mesmo com display:none) ──
+    const editProfileModal = document.getElementById("edit-profile-modal");
+    const closeEditProfile = document.getElementById("close-edit-profile");
+    const editProfileForm  = document.getElementById("edit-profile-form");
+
+    // Delegar clique no botão "Editar Perfil" no nível do documento
+    document.addEventListener("click", async (e) => {
+        if (e.target && e.target.id === "btn-edit-profile") {
+            if (!supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await supabase
+                .from("profiles").select("*").eq("id", session.user.id).single();
+
+            if (profile) {
+                const uInput = document.getElementById("edit-profile-username");
+                const bInput = document.getElementById("edit-profile-bio");
+                if (uInput) uInput.value = profile.username || "";
+                if (bInput) bInput.value = profile.bio || "";
+            }
+            if (editProfileModal) editProfileModal.classList.add("active");
+        }
+    });
+
+    if (closeEditProfile && editProfileModal) {
+        closeEditProfile.addEventListener("click", () => editProfileModal.classList.remove("active"));
+        editProfileModal.addEventListener("click", e => {
+            if (e.target === editProfileModal) editProfileModal.classList.remove("active");
+        });
+    }
+
+    if (editProfileForm) {
+        editProfileForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (!supabase) return;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { alert("Você precisa estar logado."); return; }
+
+            const submitBtn = document.getElementById("edit-profile-submit");
+            submitBtn.textContent = "Salvando...";
+            submitBtn.disabled = true;
+
+            const newUsername = document.getElementById("edit-profile-username").value.trim();
+            const newBio      = document.getElementById("edit-profile-bio").value.trim();
+            const avatarFile  = document.getElementById("edit-profile-avatar").files[0];
+
+            let updatedFields = { id: session.user.id, username: newUsername, bio: newBio };
+
+            // Upload nova foto se selecionada
+            if (avatarFile) {
+                const ext      = avatarFile.name.split(".").pop();
+                const filePath = `${session.user.id}-${Date.now()}.${ext}`;
+                const { error: upErr } = await supabase.storage
+                    .from("avatars").upload(filePath, avatarFile, { upsert: true });
+                if (!upErr) {
+                    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
+                    updatedFields.avatar_url = pub.publicUrl;
+                } else {
+                    console.error("Erro no upload:", upErr);
+                    alert("Erro ao fazer upload da foto: " + upErr.message);
+                }
+            }
+
+            // Usa upsert para garantir que sempre funciona (insert ou update)
+            const { error } = await supabase.from("profiles").upsert([updatedFields]);
+
+            submitBtn.textContent = "Salvar Alterações";
+            submitBtn.disabled = false;
+
+            if (error) {
+                alert("Erro ao salvar: " + error.message);
+            } else {
+                // Atualiza localStorage com dados novos
+                const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+                localUser.username = newUsername;
+                if (updatedFields.avatar_url) localUser.avatar = updatedFields.avatar_url;
+                localStorage.setItem("soundbpm_user", JSON.stringify(localUser));
+
+                if (editProfileModal) editProfileModal.classList.remove("active");
+
+                // Recarrega dados do perfil na página e atualiza navbar
+                await loadUserProfile();
+                updateLoginButtonState();
             }
         });
     }
