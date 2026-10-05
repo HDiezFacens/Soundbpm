@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (authForm) {
+   if (authForm) {
         authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             if (!supabase) {
@@ -58,28 +58,45 @@ document.addEventListener("DOMContentLoaded", () => {
             const avatarField = document.getElementById("auth-avatar");
             
             const username = usernameField && usernameField.value ? usernameField.value : "Mófilo";
-            const avatar = avatarField && avatarField.value ? avatarField.value : "";
+            const submitBtn = document.getElementById("auth-submit-btn");
+            const oldText = submitBtn.textContent;
 
             if (isRegisterMode) {
-                const submitBtn = document.getElementById("auth-submit-btn");
-                const oldText = submitBtn.textContent;
                 submitBtn.textContent = "Criando conta...";
                 submitBtn.disabled = true;
 
-                const { data, error } = await supabase.auth.signUp({
+                // 1. Criar a conta
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                     email: email,
                     password: password
                 });
 
-                if (error) {
-                    alert("Erro ao criar conta: " + error.message);
+                if (signUpError) {
+                    alert("Erro ao criar conta: " + signUpError.message);
                     submitBtn.textContent = oldText;
                     submitBtn.disabled = false;
                     return;
                 }
+
+                // 2. Fazer login automático imediato para garantir sessão ativa e evitar re-login
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (signInError) {
+                    alert("Conta criada, mas faça login para continuar.");
+                    submitBtn.textContent = oldText;
+                    submitBtn.disabled = false;
+                    if (modal) modal.classList.remove("active");
+                    return;
+                }
+
+                // 3. Obter a sessão ativa para salvar o perfil de primeira
+                const { data: { session } } = await supabase.auth.getSession();
                 
-                if (data.user) {
-                    const userId = data.user.id;
+                if (session && session.user) {
+                    const userId = session.user.id;
                     let avatarUrl = "";
                     
                     if (avatarField && avatarField.files && avatarField.files.length > 0) {
@@ -91,24 +108,35 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (!uploadError) {
                             const { data: pubData } = supabase.storage.from('avatars').getPublicUrl(filePath);
                             avatarUrl = pubData.publicUrl;
-                        } else {
-                            console.error("Erro no upload da foto:", uploadError);
                         }
                     }
 
+                    // 4. Salvar perfil na tabela profiles
                     await supabase.from('profiles').upsert([
                         { id: userId, username: username, avatar_url: avatarUrl, bio: "Explorando o mundo da música." }
                     ]);
+
+                    localStorage.setItem("soundbpm_user", JSON.stringify({
+                        email: email,
+                        username: username,
+                        avatar: avatarUrl
+                    }));
                 }
                 
                 submitBtn.textContent = oldText;
                 submitBtn.disabled = false;
-                alert("Conta criada com sucesso!");
+                alert("Conta criada e login efetuado com sucesso!");
             } else {
+                submitBtn.textContent = "Entrando...";
+                submitBtn.disabled = true;
+
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
+
+                submitBtn.textContent = oldText;
+                submitBtn.disabled = false;
 
                 if (error) {
                     alert("Erro ao entrar: " + error.message);
@@ -119,11 +147,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (modal) modal.classList.remove("active");
-            checkSupabaseSession();
-            navigateTo('dashboard');
-            populateDashboard();
+            await checkSupabaseSession();
+            await updateLoginButtonState();
+            navigateTo('profile-page'); // <-- Vai direto para a aba de perfil!
+            loadUserProfile();          // <-- Carrega as informações na hora!
         });
     }
+     
 
     const modal = document.getElementById("login-modal");
     const openLoginBtn = document.getElementById("open-login-modal");
@@ -791,11 +821,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (typeof loadUserProfile === 'function') loadUserProfile();
     };
 
-    // Lógica do Meu Perfil
-    window.loadUserProfile = async function() {
+   window.loadUserProfile = async function() {
         const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
-        const displayName = localUser.username || "Meu Perfil";
-        const avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+        let displayName = localUser.username || "Meu Perfil";
+        let avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
         
         const usernameDisplay = document.getElementById("profile-username-display");
         const avatarImg = document.getElementById("profile-avatar-img");
@@ -810,10 +839,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
                 if (profile) {
                     if (bioDisplay) bioDisplay.textContent = profile.bio || "Membro do SoundBPM.";
-                    if (usernameDisplay) usernameDisplay.textContent = profile.username || displayName;
-                    if (avatarImg && profile.avatar_url) avatarImg.src = profile.avatar_url;
+                    if (profile.username) {
+                        displayName = profile.username;
+                        usernameDisplay.textContent = displayName;
+                    }
+                    if (profile.avatar_url) {
+                        avatarUrl = profile.avatar_url;
+                        avatarImg.src = avatarUrl;
+                    }
                 }
                 
+                // Carregar favoritos no perfil
                 const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', session.user.id);
                 const favGrid = document.getElementById("profile-favorites-grid");
                 if (favGrid) {
@@ -829,6 +865,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
+                // Carregar Diário de Resenhas na página de Perfil
+                const { data: profileReviews } = await supabase.from('reviews').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+                const profileReviewsList = document.getElementById("profile-reviews-list");
+                if (profileReviewsList) {
+                    if (profileReviews && profileReviews.length > 0) {
+                        profileReviewsList.innerHTML = profileReviews.map(r => {
+                            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
+                            const date = new Date(r.created_at).toLocaleDateString('pt-BR');
+                            return `
+                            <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start;">
+                                <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <strong>${r.album_name}</strong>
+                                        <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
+                                    </div>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
+                                    <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
+                                </div>
+                            </div>`;
+                        }).join('');
+                    } else {
+                        profileReviewsList.innerHTML = "<p style='color: var(--text-muted);'>Nenhuma resenha escrita ainda.</p>";
+                    }
+                }
+
+                // Adicionar botão de logout no perfil se não existir
                 if (!document.getElementById("btn-logout-profile")) {
                     const logoutBtn = document.createElement("button");
                     logoutBtn.id = "btn-logout-profile";
@@ -846,6 +909,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
+   
 
     // Lógica de Notícias e Lançamentos
     async function loadNewsAndUpcoming() {
