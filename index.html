@@ -51,8 +51,8 @@
                 <h1 id="hero-title">Avalie álbuns, catalogue faixas e compartilhe seu gosto musical.</h1>
                 <p id="hero-desc">Mantenha um diário de tudo o que você ouve, dê notas detalhadas faixa por faixa gerando a média automática do disco, ou avalie álbuns inteiros instantaneamente.</p>
                 <div class="hero-actions">
-    <button class="btn-primary-gold">Comece seu Diário Grátis</button>
-    <button class="btn-secondary-dark" id="explore-catalog-btn">Explorar Catálogo</button>
+                    <button class="btn-primary-gold">Comece seu Diário Grátis</button>
+                    <button class="btn-secondary-dark" id="explore-catalog-btn">Explorar Catálogo</button>
                 </div>
                 <div class="hero-stats-row">
                     <div class="stat-box">
@@ -71,57 +71,18 @@
             </div>
         </section>
 
-        <section id="dashboard" class="section-container" style="display: none;">
-            <div class="section-header-flex">
-                <div>
-                    <h2>Seu Painel de Integração</h2>
-                    <p>Dados sincronizados diretamente da sua conta de streaming.</p>
-                </div>
+        <!-- Meu Painel / Fila de Desejos -->
+        <section id="dashboard" class="section-container" style="display: none; padding-top: 4rem;">
+            <div class="section-header" style="margin-bottom: 2rem;">
+                <h2>Meu Painel • Fila de Desejos</h2>
+                <p style="color: var(--text-muted);">Organize aqui os álbuns que você salvou para escutar e resenhar em breve.</p>
             </div>
 
-            <!-- Estado: Deslogado -->
-            <div id="dashboard-logged-out" style="text-align: center; padding: 4rem 1rem;">
-                <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒 Painel Trancado</h3>
-                <p style="margin-bottom: 2rem; color: var(--text-muted);">Crie uma conta ou entre para ver seus álbuns favoritos e resenhas.</p>
-                <button class="btn-primary-gold" onclick="document.getElementById('login-modal').classList.add('active')">Entrar ou Criar Conta</button>
-            </div>
-
-            <!-- Estado: Logado -->
-            <div id="dashboard-logged-in" style="display: none;">
-
-                <!-- Meus Favoritos -->
-                <h3 style="margin-bottom: 1.2rem; border-left: 4px solid var(--accent-gold); padding-left: 0.8rem;">❤️ Meus Álbuns Favoritos</h3>
-                <div class="poster-grid" id="dashboard-favorites-grid" style="margin-bottom: 2.5rem;">
-                    <p style="color: var(--text-muted); grid-column: 1/-1;">Nenhum álbum favoritado ainda. Explore o catálogo e clique em ♥ para favoritar!</p>
-                </div>
-
-                <!-- Diário de Resenhas -->
-                <h3 style="margin-bottom: 1.2rem; border-left: 4px solid var(--accent-gold); padding-left: 0.8rem;">📓 Meu Diário de Resenhas</h3>
-                <div id="dashboard-reviews-list" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.5rem;">
-                    <p style="color: var(--text-muted);">Nenhuma resenha ainda. Avalie um álbum para começar seu diário!</p>
-                </div>
-
-                <!-- Spotify (Secundário) -->
-                <details style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem;">
-                    <summary style="cursor: pointer; font-weight: 600; color: var(--text-muted);">🎵 Integração com Spotify (opcional)</summary>
-                    <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                        <button id="dashboard-spotify-connect-btn" class="btn-primary-gold" style="background-color: #1db954; color: #fff;">Conectar com Spotify</button>
-                        <button id="simulate-login-btn" class="btn-secondary-dark">Modo Simulação</button>
-                    </div>
-                    <div class="dashboard-grid" style="margin-top: 1.5rem;">
-                        <div class="dash-block">
-                            <h3>🎧 Ouvidos Recentemente</h3>
-                            <div class="dash-items" id="recent-scrobbles"><p style="color: var(--text-muted);">Conecte o Spotify para ver.</p></div>
-                        </div>
-                        <div class="dash-block">
-                            <h3>✨ Feito para Você</h3>
-                            <div class="dash-items" id="personal-recs"><p style="color: var(--text-muted);">Conecte o Spotify para ver.</p></div>
-                        </div>
-                    </div>
-                </details>
+            <!-- Lista de Backlog -->
+            <div id="dashboard-backlog-list" style="display: flex; flex-direction: column; gap: 1rem; max-width: 800px;">
+                <p style="color: var(--text-muted);">Carregando sua fila de desejos...</p>
             </div>
         </section>
-
 
         <!-- Página de Perfil -->
         <section id="profile-page" class="section-container" style="display: none; padding-top: 4rem;">
@@ -206,7 +167,7 @@
                     <h2>Notícias Diárias do Mundo da Música</h2>
                     <p>Atualizações, análises de mercado, entrevistas exclusivas e bastidores da indústria.</p>
                 </div>
-                <a href="#" class="view-more-link">Ver todas as notícias &rarr;</a>
+                <a href="#news" id="view-all-news-link" class="view-more-link">Ver todas as notícias &rarr;</a>
             </div>
 
             <div class="news-grid" id="news-grid-container">
@@ -220,7 +181,7 @@
                     <h2>Lançamentos Recentes & Destaques</h2>
                     <p>Fique por dentro dos discos mais badalados que acabaram de chegar às plataformas.</p>
                 </div>
-                <a href="#" class="view-more-link">Ver catálogo &rarr;</a>
+                <a href="#upcoming" class="view-more-link">Ver catálogo &rarr;</a>
             </div>
 
             <div class="upcoming-grid" id="upcoming-grid-container">
@@ -357,11 +318,11 @@
             </form>
 
             <div style="border-top: 1px solid var(--border-subtle); padding-top: 1.2rem; text-align: center;">
-    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ferramenta de Teste:</p>
-    <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-        <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
-    </div>
-</div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ferramenta de Teste:</p>
+                <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
+                </div>
+            </div>
         </div>
     </div>
 

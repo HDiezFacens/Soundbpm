@@ -422,7 +422,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ── Renderizador Universal de Cards ──
     window.createAlbumCardHTML = function(album) {
         const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : '');
         const artistName = album.artists ? album.artists.map(a => a.name).join(', ') : (album.artistName || 'Artista Desconhecido');
@@ -440,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="poster-overlay-actions">
                         <button class="action-icon-btn" title="Avaliar Álbum" onclick="openReviewModal('${safeName}', '${safeArtist}', '${safeImage}', '${collectionId}')">★</button>
                         <button class="action-icon-btn btn-fav-action" title="Favoritar" onclick="toggleFavorite('${safeName}', '${safeArtist}', '${safeImage}', this)">♥</button>
+                        <button class="action-icon-btn" title="Adicionar à Fila de Desejos" onclick="addToBacklog('${safeName}', '${safeArtist}', '${safeImage}')">＋</button>
                         <button class="action-icon-btn" title="Tocar" onclick="playMockTrack('${safeName}', '${safeArtist}', '${safeImage}')">▶</button>
                     </div>
                 </div>
@@ -545,6 +545,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         window.scrollTo(0, 0);
+    };
+
+    // Função para adicionar álbuns à Fila de Desejos
+    window.addToBacklog = async function(albumName, artistName, coverUrl) {
+        if (!supabase) { alert("Supabase não inicializado."); return; }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert("Você precisa estar logado para adicionar álbuns à fila!");
+            document.getElementById('login-modal').classList.add('active');
+            return;
+        }
+
+        const { error } = await supabase.from('backlog').insert([
+            { user_id: session.user.id, album_name: albumName, artist_name: artistName, cover_url: coverUrl }
+        ]);
+
+        if (error) {
+            alert("Erro ao adicionar à fila: " + error.message);
+        } else {
+            alert("Álbum adicionado à Fila de Desejos com sucesso! 🎧");
+        }
     };
 
     async function fetchFromSpotify(endpoint) {
@@ -723,13 +744,12 @@ document.addEventListener("DOMContentLoaded", () => {
         navHomeLink.addEventListener("click", () => navigateTo("home"));
     }
 
-    if (dashLink) {
+   if (dashLink) {
         dashLink.addEventListener("click", () => {
             navigateTo("dashboard");
-            populateDashboard();
+            loadDashboardBacklog(); // Carrega a fila de desejos limpa
         });
     }
-
     if (navAlbumsLink) {
         navAlbumsLink.addEventListener("click", () => {
             navigateTo("albums-page");
@@ -817,9 +837,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             alert("Adicionado aos favoritos com sucesso!");
         }
-        populateDashboard();
-        if (typeof loadUserProfile === 'function') loadUserProfile();
+       if (typeof loadUserProfile === 'function') loadUserProfile();
     };
+  
 
    window.loadUserProfile = async function() {
         const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
@@ -910,10 +930,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
    
+// ── Lógica de Notícias (Com expansão para ver todas) ──
+    let allNewsItems = [];
+    let showingAllNews = false;
 
-    // Lógica de Notícias e Lançamentos
     async function loadNewsAndUpcoming() {
         const newsContainer = document.getElementById("news-grid-container");
+        const viewAllNewsLink = document.getElementById("view-all-news-link");
         const upcomingContainer = document.getElementById("upcoming-grid-container");
 
         if (newsContainer) {
@@ -923,22 +946,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 const response = await fetch(apiUrl);
                 const data = await response.json();
                 
-                if (data.status === "ok" && data.items) {
-                    newsContainer.innerHTML = data.items.slice(0, 3).map(item => {
-                        const date = new Date(item.pubDate);
-                        const dataFormatada = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
-                        return `
-                        <article class="news-card">
-                            <div class="news-tag">News</div>
-                            <h3><a href="${item.link}" target="_blank" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
-                            <p class="news-snippet">${item.description.replace(/<[^>]+>/g, '').substring(0, 100)}...</p>
-                            <div class="news-meta">
-                                <span>${dataFormatada}</span>
-                                <span>G1 Música</span>
-                            </div>
-                        </article>
-                        `;
-                    }).join('');
+                if (data.status === "ok" && data.items && data.items.length > 0) {
+                    allNewsItems = data.items;
+                    renderNewsList(3); // Inicia mostrando apenas 3
+
+                    // Configurar clique para expandir/recolher todas as notícias
+                    if (viewAllNewsLink) {
+                        viewAllNewsLink.addEventListener("click", (e) => {
+                            e.preventDefault();
+                            showingAllNews = !showingAllNews;
+                            
+                            if (showingAllNews) {
+                                renderNewsList(allNewsItems.length); // Mostra todas
+                                viewAllNewsLink.textContent = "Mostrar menos ←";
+                            } else {
+                                renderNewsList(3); // Mostra só 3 novamente
+                                viewAllNewsLink.textContent = "Ver todas as notícias →";
+                            }
+
+                            document.getElementById("news").scrollIntoView({ behavior: "smooth" });
+                        });
+                    }
                 }
             } catch(e) {
                 console.error("Erro ao carregar notícias:", e);
@@ -946,6 +974,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+        function renderNewsList(limit) {
+            if (!newsContainer) return;
+            newsContainer.innerHTML = allNewsItems.slice(0, limit).map(item => {
+                const date = new Date(item.pubDate);
+                const dataFormatada = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+                return `
+                <article class="news-card">
+                    <div class="news-tag">News</div>
+                    <h3><a href="${item.link}" target="_blank" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
+                    <p class="news-snippet">${item.description.replace(/<[^>]+>/g, '').substring(0, 100)}...</p>
+                    <div class="news-meta">
+                        <span>${dataFormatada}</span>
+                        <span>G1 Música</span>
+                    </div>
+                </article>
+                `;
+            }).join('');
+        }
+
+        // Bloco de Lançamentos (Mantido igual)
         if (upcomingContainer) {
             try {
                 const itunesRss = "https://itunes.apple.com/br/rss/topalbums/limit=5/xml";
@@ -1317,9 +1365,85 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Resenha registrada com sucesso no seu diário!");
                 reviewModal.classList.remove("active");
                 document.getElementById("review-text-input").value = "";
-                populateDashboard();
-                if (typeof loadUserProfile === 'function') loadUserProfile();
-            }
+               if (typeof loadUserProfile === 'function') loadUserProfile();
+    }
         });
     }
+    // ── Interceptador Global de Links Internos (#secoes) ──
+    document.addEventListener("click", (e) => {
+        const link = e.target.closest("a");
+        if (link && link.getAttribute("href")) {
+            const href = link.getAttribute("href");
+            if (href.startsWith("#") && href.length > 1) {
+                const targetId = href.substring(1);
+                const homeSections = ["explore", "trending", "news", "upcoming", "community"];
+                
+                if (homeSections.includes(targetId)) {
+                    e.preventDefault();
+                    navigateTo("home"); // Garante que estamos na home e exibe as seções
+                    setTimeout(() => {
+                        const targetEl = document.getElementById(targetId);
+                        if (targetEl) {
+                            targetEl.scrollIntoView({ behavior: "smooth" });
+                        }
+                    }, 50);
+                }
+            }
+        }
+    });
+    // ── Carregar e Gerenciar a Fila de Desejos (Painel) ──
+    window.loadDashboardBacklog = async function() {
+        const backlogContainer = document.getElementById("dashboard-backlog-list");
+        if (!backlogContainer || !supabase) return;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            backlogContainer.innerHTML = "<p style='color: var(--text-muted);'>Faça login para ver sua fila de desejos.</p>";
+            return;
+        }
+
+        const { data: backlogItems, error } = await supabase
+            .from('backlog')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Erro ao carregar backlog:", error);
+            backlogContainer.innerHTML = "<p style='color: var(--text-muted);'>Erro ao carregar sua fila.</p>";
+            return;
+        }
+
+        if (backlogItems && backlogItems.length > 0) {
+            backlogContainer.innerHTML = backlogItems.map(item => `
+                <div class="backlog-item" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <img src="${item.cover_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=100&h=100&fit=crop'}" style="width: 70px; height: 70px; border-radius: 6px; object-fit: cover;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; color: var(--text-main);">${item.album_name}</h4>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">${item.artist_name}</span>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button onclick="removeFromBacklog('${item.id}')" class="btn-secondary-dark" style="padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); border-radius: 4px;">Remover</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            backlogContainer.innerHTML = `
+                <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 8px;">
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Sua fila de desejos está vazia.</p>
+                    <a href="#explore" onclick="navigateTo('home')" style="color: var(--accent-orange); text-decoration: none; font-weight: 600;">Explorar álbuns para adicionar &rarr;</a>
+                </div>`;
+        }
+    };
+
+    // Função global para remover item da fila
+    window.removeFromBacklog = async function(id) {
+        if (!supabase) return;
+        const { error } = await supabase.from('backlog').delete().eq('id', id);
+        if (!error) {
+            loadDashboardBacklog();
+        } else {
+            alert("Erro ao remover item da fila.");
+        }
+    };
 });
