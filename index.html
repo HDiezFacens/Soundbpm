@@ -24,7 +24,7 @@
             <nav class="main-nav">
                 <ul>
                     <li><a href="#explore" id="nav-home-link" class="nav-link active">Início</a></li>
-                    <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Meu Painel</a></li>
+                    <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Minha Lista</a></li>
                     <li><a href="#albums-page" id="nav-albums-link" class="nav-link">Álbuns</a></li>
                     <li><a href="#news" class="nav-link">Notícias</a></li>
                     <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
@@ -51,7 +51,7 @@
                 <h1 id="hero-title">Avalie álbuns, catalogue faixas e compartilhe seu gosto musical.</h1>
                 <p id="hero-desc">Mantenha um diário de tudo o que você ouve, dê notas detalhadas faixa por faixa gerando a média automática do disco, ou avalie álbuns inteiros instantaneamente.</p>
                 <div class="hero-actions">
-                    <button class="btn-primary-gold">Comece seu Diário Grátis</button>
+                    <button class="btn-primary-gold" id="hero-start-diary-btn">Comece seu Diário Grátis</button>
                     <button class="btn-secondary-dark" id="explore-catalog-btn">Explorar Catálogo</button>
                 </div>
                 <div class="hero-stats-row">
@@ -64,23 +64,58 @@
                         <span>Avaliações registradas</span>
                     </div>
                     <div class="stat-box">
-                        <strong>Spotify</strong>
-                        <span>API Conectada</span>
+                        <strong>Comunidade</strong>
+                        <span>Ativa & Global</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Meu Painel / Fila de Desejos -->
+        <!-- Minha Lista / Fila de Desejos (Foco Principal) -->
         <section id="dashboard" class="section-container" style="display: none; padding-top: 4rem;">
             <div class="section-header" style="margin-bottom: 2rem;">
-                <h2>Meu Painel • Fila de Desejos</h2>
+                <h2>Minha Lista • Fila de Desejos</h2>
                 <p style="color: var(--text-muted);">Organize aqui os álbuns que você salvou para escutar e resenhar em breve.</p>
             </div>
 
-            <!-- Lista de Backlog -->
-            <div id="dashboard-backlog-list" style="display: flex; flex-direction: column; gap: 1rem; max-width: 800px;">
-                <p style="color: var(--text-muted);">Carregando sua fila de desejos...</p>
+            <!-- FOCO PRINCIPAL: Fila de Desejos (Backlog) -->
+            <div style="margin-bottom: 3.5rem;">
+                <div id="dashboard-backlog-list" style="display: flex; flex-direction: column; gap: 1rem; max-width: 800px;">
+                    <p style="color: var(--text-muted);">Carregando sua fila de desejos...</p>
+                </div>
+            </div>
+
+            <!-- OPÇÃO SECUNDÁRIA: Integração e Atividade do Spotify -->
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 2.5rem;">
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.2rem; color: var(--text-muted); margin-bottom: 0.3rem;">Atividade & Conexão Spotify</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Recurso secundário para visualizar histórico e recomendações da plataforma.</p>
+                </div>
+
+                <!-- Banner de Conexão Spotify -->
+                <div id="spotify-connect-banner" style="background: var(--bg-card); padding: 1.2rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-subtle);">
+                    <div>
+                        <h4 style="margin: 0 0 0.2rem 0; color: var(--accent-gold); font-size: 0.95rem;">Conecte sua conta do Spotify</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Veja seus álbuns ouvidos recentemente e receba recomendações.</p>
+                    </div>
+                    <button id="dashboard-spotify-connect-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;">Conectar Spotify</button>
+                </div>
+
+                <!-- Secundário: Ouvidos Recentemente -->
+                <div style="margin-bottom: 2.5rem;">
+                    <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted);">Ouvidos Recentemente</h4>
+                    <div id="recent-scrobbles" class="poster-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Nenhum histórico carregado.</p>
+                    </div>
+                </div>
+
+                <!-- Secundário: Recomendações -->
+                <div>
+                    <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted);">Recomendações</h4>
+                    <div id="personal-recs" class="poster-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">Nenhuma recomendação carregada.</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -157,7 +192,7 @@
             </div>
 
             <div class="poster-grid" id="trending-albums-grid">
-                <!-- Os álbuns reais do Spotify aparecem aqui -->
+                <!-- Os álbuns aparecem aqui -->
             </div>
         </section>
 
@@ -262,9 +297,7 @@
             <div class="footer-col">
                 <h4>Integrações</h4>
                 <ul>
-                    <li><a href="#">Spotify Connect</a></li>
-                    <li><a href="#">Apple Music Kit</a></li>
-                    <li><a href="#">SoundCloud SDK</a></li>
+                    <li><a href="#" id="footer-spotify-connect">Spotify Connect</a></li>
                 </ul>
             </div>
             <div class="footer-col">
@@ -285,7 +318,6 @@
         <div class="modal-card">
             <button class="close-modal">&times;</button>
             
-            <!-- Abas de Alternância -->
             <div class="modal-header-tabs" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
                 <button id="tab-login-btn" class="modal-tab active" style="background: none; border: none; color: var(--accent-gold); font-weight: 700; font-size: 1.1rem; cursor: pointer;">Entrar</button>
                 <button id="tab-register-btn" class="modal-tab" style="background: none; border: none; color: var(--text-muted); font-weight: 600; font-size: 1.1rem; cursor: pointer;">Criar Conta</button>
@@ -352,14 +384,12 @@
             <h3 id="review-modal-title" style="margin-bottom: 0.2rem; color: var(--accent-gold); font-size: 1.2rem;">Nome do Álbum</h3>
             <p id="review-modal-artist" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
             
-            <!-- Abas de Escolha de Avaliação -->
             <div style="display: flex; gap: 1rem; margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
                 <button type="button" id="tab-review-general" class="review-tab active" style="background:none; border:none; color:var(--accent-gold); font-weight:700; cursor:pointer; font-size: 0.9rem;">⭐ Nota Única & Resenha</button>
                 <button type="button" id="tab-review-tracks" class="review-tab" style="background:none; border:none; color:var(--text-muted); font-weight:600; cursor:pointer; font-size: 0.9rem;">🎵 Avaliar Faixa a Faixa</button>
             </div>
 
             <form id="review-form">
-                <!-- Modo Geral -->
                 <div id="review-mode-general">
                     <div style="margin-bottom: 1.2rem;">
                         <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Nota do Álbum (Estrelas)</label>
@@ -370,7 +400,6 @@
                     </div>
                 </div>
 
-                <!-- Modo Faixa a Faixa -->
                 <div id="review-mode-tracks" style="display: none; margin-bottom: 1.2rem;">
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Dê uma nota de 1 a 5 para cada faixa. A nota geral do álbum será calculada automaticamente pela média!</p>
                     <div id="tracks-rating-container" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 220px; overflow-y: auto; padding-right: 0.5rem;">

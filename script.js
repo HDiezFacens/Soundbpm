@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Limpa simulações antigas para que o site nunca abra simulado por padrão
+    if (localStorage.getItem("spotify_access_token") === "simulated_token") {
+        localStorage.removeItem("spotify_access_token");
+    }
+
     const SUPABASE_URL = "https://mfpjuyqcieqtcdbkvgwu.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_0yXhFfS--QMrzTIJATHvUA_wfealgxV";
     
@@ -44,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-   if (authForm) {
+    if (authForm) {
         authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             if (!supabase) {
@@ -65,7 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 submitBtn.textContent = "Criando conta...";
                 submitBtn.disabled = true;
 
-                // 1. Criar a conta
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                     email: email,
                     password: password
@@ -78,7 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // 2. Fazer login automático imediato para garantir sessão ativa e evitar re-login
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
@@ -92,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // 3. Obter a sessão ativa para salvar o perfil de primeira
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (session && session.user) {
@@ -111,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
 
-                    // 4. Salvar perfil na tabela profiles
                     await supabase.from('profiles').upsert([
                         { id: userId, username: username, avatar_url: avatarUrl, bio: "Explorando o mundo da música." }
                     ]);
@@ -149,11 +150,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (modal) modal.classList.remove("active");
             await checkSupabaseSession();
             await updateLoginButtonState();
-            navigateTo('profile-page'); // <-- Vai direto para a aba de perfil!
-            loadUserProfile();          // <-- Carrega as informações na hora!
+            navigateTo('profile-page');
+            loadUserProfile(); 
         });
     }
-     
 
     const modal = document.getElementById("login-modal");
     const openLoginBtn = document.getElementById("open-login-modal");
@@ -182,6 +182,112 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Botão "Comece seu Diário Grátis" com validação inteligente
+    const heroStartBtn = document.getElementById("hero-start-diary-btn");
+    if (heroStartBtn) {
+        heroStartBtn.addEventListener("click", async () => {
+            let isLoggedIn = false;
+            if (supabase) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) isLoggedIn = true;
+            }
+            const localUser = localStorage.getItem("soundbpm_user");
+            const spotifyToken = localStorage.getItem("spotify_access_token");
+
+            if (isLoggedIn || localUser || (spotifyToken && spotifyToken !== "simulated_token")) {
+                navigateTo("albums-page");
+                loadAlbumsPageContent("__TRENDING__");
+            } else {
+                if (modal) modal.classList.add("active");
+            }
+        });
+    }
+
+    // Funções Spotify PKCE
+    async function generateRandomString(length) {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < length; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
+    }
+
+    async function generateCodeChallenge(codeVerifier) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(codeVerifier);
+        const digest = await window.crypto.subtle.digest('SHA-256', data);
+        return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+    }
+
+    async function connectToSpotify() {
+        const codeVerifier = await generateRandomString(64);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+        localStorage.setItem('code_verifier', codeVerifier);
+
+        const authUrl = new URL("https://accounts.spotify.com/authorize");
+        const params = {
+            response_type: 'code',
+            client_id: SPOTIFY_CLIENT_ID,
+            scope: SCOPES,
+            code_challenge_method: 'S256',
+            code_challenge: codeChallenge,
+            redirect_uri: REDIRECT_URI,
+        };
+        authUrl.search = new URLSearchParams(params).toString();
+        window.location.href = authUrl.toString();
+    }
+
+    const dashboardSpotifyBtn = document.getElementById("dashboard-spotify-connect-btn");
+    if (dashboardSpotifyBtn) {
+        dashboardSpotifyBtn.addEventListener("click", connectToSpotify);
+    }
+
+    const footerSpotify = document.getElementById("footer-spotify-connect");
+    if (footerSpotify) {
+        footerSpotify.addEventListener("click", (e) => {
+            e.preventDefault();
+            connectToSpotify();
+        });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+        const codeVerifier = localStorage.getItem('code_verifier');
+        
+        fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: SPOTIFY_CLIENT_ID,
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: REDIRECT_URI,
+                code_verifier: codeVerifier,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.access_token) {
+                localStorage.setItem('spotify_access_token', data.access_token);
+                window.history.replaceState({}, document.title, REDIRECT_URI);
+                updateLoginButtonState();
+                navigateTo('dashboard');
+                populateDashboard();
+            } else {
+                console.error("Erro ao obter o token:", data);
+            }
+        })
+        .catch(error => console.error("Erro na requisição do token:", error));
+    }
+
     async function updateLoginButtonState() {
         if (openLoginBtn) {
             const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
@@ -206,6 +312,9 @@ document.addEventListener("DOMContentLoaded", () => {
             openLoginBtn.textContent = "Entrar";
             openLoginBtn.style.borderColor = "";
             openLoginBtn.style.color = "";
+            openLoginBtn.style.background = "";
+            openLoginBtn.style.padding = "";
+            openLoginBtn.style.borderRadius = "";
         }
     }
 
@@ -244,80 +353,6 @@ document.addEventListener("DOMContentLoaded", () => {
             populateDashboard();
             if (webPlayer) webPlayer.classList.remove("hidden");
         });
-    }
-
-    function generateRandomString(length) {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < length; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
-    }
-
-    async function generateCodeChallenge(codeVerifier) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(codeVerifier);
-        const digest = await window.crypto.subtle.digest('SHA-256', data);
-        return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-    }
-
-    const dashboardSpotifyBtn = document.getElementById("dashboard-spotify-connect-btn");
-    if (dashboardSpotifyBtn) {
-        dashboardSpotifyBtn.addEventListener("click", async () => {
-            const codeVerifier = generateRandomString(64);
-            const codeChallenge = await generateCodeChallenge(codeVerifier);
-            localStorage.setItem('code_verifier', codeVerifier);
-
-            const authUrl = new URL("https://accounts.spotify.com/authorize");
-            const params = {
-                response_type: 'code',
-                client_id: SPOTIFY_CLIENT_ID,
-                scope: SCOPES,
-                code_challenge_method: 'S256',
-                code_challenge: codeChallenge,
-                redirect_uri: REDIRECT_URI,
-            };
-            authUrl.search = new URLSearchParams(params).toString();
-            window.location.href = authUrl.toString();
-        });
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-
-    if (code) {
-        const codeVerifier = localStorage.getItem('code_verifier');
-        
-        fetch('https://accounts.spotify.com/api/token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                client_id: SPOTIFY_CLIENT_ID,
-                grant_type: 'authorization_code',
-                code: code,
-                redirect_uri: REDIRECT_URI,
-                code_verifier: codeVerifier,
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.access_token) {
-                localStorage.setItem('spotify_access_token', data.access_token);
-                window.history.replaceState({}, document.title, REDIRECT_URI);
-                updateLoginButtonState();
-                navigateTo('dashboard');
-                populateDashboard();
-            } else {
-                console.error("Erro ao obter o token:", data);
-            }
-        })
-        .catch(error => console.error("Erro na requisição do token:", error));
     }
 
     const trendingGrid = document.getElementById("trending-albums-grid");
@@ -547,7 +582,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.scrollTo(0, 0);
     };
 
-    // Função para adicionar álbuns à Fila de Desejos
     window.addToBacklog = async function(albumName, artistName, coverUrl) {
         if (!supabase) { alert("Supabase não inicializado."); return; }
         const { data: { session } } = await supabase.auth.getSession();
@@ -583,147 +617,87 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function populateDashboard() {
+    window.populateDashboard = async function() {
         const scrobblesContainer = document.getElementById("recent-scrobbles");
         const recsContainer = document.getElementById("personal-recs");
+        const connectBanner = document.getElementById("spotify-connect-banner");
         
-        const localUser = localStorage.getItem("soundbpm_user");
         const spotifyToken = localStorage.getItem("spotify_access_token");
-        
-        const loggedOutView = document.getElementById("dashboard-logged-out");
-        const loggedInView = document.getElementById("dashboard-logged-in");
 
-        if (!localUser) {
-            if (loggedOutView) loggedOutView.style.display = "block";
-            if (loggedInView) loggedInView.style.display = "none";
-            return;
-        } else {
-            if (loggedOutView) loggedOutView.style.display = "none";
-            if (loggedInView) loggedInView.style.display = "block";
+        if (connectBanner) {
+            if (spotifyToken && spotifyToken !== "simulated_token") {
+                connectBanner.style.display = "none";
+            } else {
+                connectBanner.style.display = "flex";
+            }
         }
 
-        if (scrobblesContainer) scrobblesContainer.innerHTML = "<p>Carregando...</p>";
-        if (recsContainer) recsContainer.innerHTML = "<p>Carregando...</p>";
+        if (scrobblesContainer) scrobblesContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando...</p>";
+        if (recsContainer) recsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando...</p>";
         
         if (spotifyToken && spotifyToken !== "simulated_token") {
-            const recentData = await fetchFromSpotify("me/player/recently-played?limit=5");
-            const topData = await fetchFromSpotify("me/top/tracks?limit=5");
+            const recentData = await fetchFromSpotify("me/player/recently-played?limit=4");
+            const topData = await fetchFromSpotify("me/top/tracks?limit=4");
             
             if (recentData && recentData.items && scrobblesContainer) {
                 scrobblesContainer.innerHTML = recentData.items.map(item => {
                     const track = item.track;
-                    const imageUrl = track.album.images[0] ? track.album.images[0].url : 'logo.png';
+                    const imageUrl = track.album.images[0] ? track.album.images[0].url : './Logo.png';
                     const trackName = track.name.replace(/'/g, "\\'");
                     const artistName = track.artists[0].name.replace(/'/g, "\\'");
                     return `
-                    <div class="dash-item" onclick="playMockTrack('${trackName}', '${artistName}', '${imageUrl}')">
-                        <img src="${imageUrl}" alt="${track.name}">
-                        <div class="dash-item-info">
-                            <h4>${track.name}</h4>
-                            <p>${track.artists[0].name}</p>
+                    <div class="poster-card" onclick="playMockTrack('${trackName}', '${artistName}', '${imageUrl}')" style="cursor: pointer;">
+                        <div class="poster-image-wrap">
+                            <img src="${imageUrl}" alt="${track.name}">
+                        </div>
+                        <div class="poster-info">
+                            <h3 style="font-size: 0.95rem;">${track.name}</h3>
+                            <span class="poster-artist">${track.artists[0].name}</span>
                         </div>
                     </div>`;
                 }).join('');
             } else if (scrobblesContainer) {
-                scrobblesContainer.innerHTML = "<p style='color: var(--text-muted);'>Nenhum histórico recente encontrado. Conecte o seu Spotify abaixo para carregar.</p>";
+                scrobblesContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Nenhum histórico recente encontrado.</p>";
             }
 
             if (topData && topData.items && recsContainer) {
                 recsContainer.innerHTML = topData.items.map(track => {
-                    const imageUrl = track.album.images[0] ? track.album.images[0].url : 'logo.png';
+                    const imageUrl = track.album.images[0] ? track.album.images[0].url : './Logo.png';
                     const trackName = track.name.replace(/'/g, "\\'");
                     const artistName = track.artists[0].name.replace(/'/g, "\\'");
                     return `
-                    <div class="dash-item" onclick="playMockTrack('${trackName}', '${artistName}', '${imageUrl}')">
-                        <img src="${imageUrl}" alt="${track.name}">
-                        <div class="dash-item-info">
-                            <h4>${track.name}</h4>
-                            <p>${track.artists[0].name}</p>
+                    <div class="poster-card" onclick="playMockTrack('${trackName}', '${artistName}', '${imageUrl}')" style="cursor: pointer;">
+                        <div class="poster-image-wrap">
+                            <img src="${imageUrl}" alt="${track.name}">
+                        </div>
+                        <div class="poster-info">
+                            <h3 style="font-size: 0.95rem;">${track.name}</h3>
+                            <span class="poster-artist">${track.artists[0].name}</span>
                         </div>
                     </div>`;
                 }).join('');
             } else if (recsContainer) {
-                recsContainer.innerHTML = "<p style='color: var(--text-muted);'>Sem dados suficientes para recomendações.</p>";
+                recsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Sem dados suficientes para recomendações.</p>";
             }
 
         } else {
+            // Opção Secundária (Fallback) de Catálogo (Lofi / Indie)
             const scrobblesData = await fetchCatalogData("lofi");
             const recsData = await fetchCatalogData("indie");
             
             if (scrobblesContainer && scrobblesData.length) {
-                scrobblesContainer.innerHTML = scrobblesData.slice(0, 3).map(album => `
-                    <div class="dash-item" onclick="playMockTrack('${album.name.replace(/'/g, "\\'")}', '${album.artists[0].name.replace(/'/g, "\\'")}', '${album.images[0].url}')">
-                        <img src="${album.images[0].url}" alt="${album.name}">
-                        <div class="dash-item-info">
-                            <h4>${album.name}</h4>
-                            <p>${album.artists[0].name}</p>
-                        </div>
-                    </div>
-                `).join('');
+                scrobblesContainer.innerHTML = scrobblesData.slice(0, 4).map(album => createAlbumCardHTML(album)).join('');
             }
             
             if (recsContainer && recsData.length) {
-                recsContainer.innerHTML = recsData.slice(0, 3).map(album => `
-                    <div class="dash-item" onclick="playMockTrack('${album.name.replace(/'/g, "\\'")}', '${album.artists[0].name.replace(/'/g, "\\'")}', '${album.images[0].url}')">
-                        <img src="${album.images[0].url}" alt="${album.name}">
-                        <div class="dash-item-info">
-                            <h4>${album.name}</h4>
-                            <p>${album.artists[0].name}</p>
-                        </div>
-                    </div>
-                `).join('');
+                recsContainer.innerHTML = recsData.slice(0, 4).map(album => createAlbumCardHTML(album)).join('');
             }
         }
 
-        if (!supabase) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', session.user.id);
-        const favGrid = document.getElementById("dashboard-favorites-grid");
-        if (favGrid) {
-            if (favs && favs.length > 0) {
-                favGrid.innerHTML = favs.map(f => `
-                    <div class="poster-card">
-                        <div class="poster-image-wrap">
-                            <img src="${f.cover_url}" alt="${f.album_name}">
-                        </div>
-                        <div class="poster-info">
-                            <h3>${f.album_name}</h3>
-                            <span class="poster-artist">${f.artist_name}</span>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                favGrid.innerHTML = `<p style="color: var(--text-muted); grid-column: 1/-1;">Nenhum álbum favoritado ainda. Explore o catálogo e clique em ♥ para favoritar!</p>`;
-            }
+        if (typeof loadDashboardBacklog === 'function') {
+            loadDashboardBacklog();
         }
-
-        const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-        const reviewsList = document.getElementById("dashboard-reviews-list");
-        if (reviewsList) {
-            if (reviews && reviews.length > 0) {
-                reviewsList.innerHTML = reviews.map(r => {
-                    const stars = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
-                    const date = new Date(r.created_at).toLocaleDateString('pt-BR');
-                    return `
-                    <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start;">
-                        <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <strong>${r.album_name}</strong>
-                                <span style="color: var(--accent-orange);">${stars}</span>
-                            </div>
-                            <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
-                            <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
-                        </div>
-                    </div>`;
-                }).join('');
-            } else {
-                reviewsList.innerHTML = `<p style="color: var(--text-muted);">Nenhuma resenha ainda. Avalie um álbum para começar seu diário!</p>`;
-            }
-        }
-    }
+    };
 
     window.playMockTrack = function(track, artist, image) {
         const playerTrack = document.getElementById("player-track");
@@ -744,12 +718,13 @@ document.addEventListener("DOMContentLoaded", () => {
         navHomeLink.addEventListener("click", () => navigateTo("home"));
     }
 
-   if (dashLink) {
+    if (dashLink) {
         dashLink.addEventListener("click", () => {
             navigateTo("dashboard");
-            loadDashboardBacklog(); // Carrega a fila de desejos limpa
+            populateDashboard();
         });
     }
+
     if (navAlbumsLink) {
         navAlbumsLink.addEventListener("click", () => {
             navigateTo("albums-page");
@@ -804,7 +779,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ── Lógica de Favoritos ──
     window.toggleFavorite = async function(albumName, artistName, coverUrl, btnEl) {
         if (!supabase) { alert("Supabase não inicializado."); return; }
         const { data: { session } } = await supabase.auth.getSession();
@@ -840,8 +814,7 @@ document.addEventListener("DOMContentLoaded", () => {
        if (typeof loadUserProfile === 'function') loadUserProfile();
     };
   
-
-   window.loadUserProfile = async function() {
+    window.loadUserProfile = async function() {
         const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
         let displayName = localUser.username || "Meu Perfil";
         let avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
@@ -869,13 +842,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
                 
-                // Carregar favoritos no perfil
                 const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', session.user.id);
                 const favGrid = document.getElementById("profile-favorites-grid");
                 if (favGrid) {
                     if (favs && favs.length > 0) {
                         favGrid.innerHTML = favs.map(f => `
-                            <div class="poster-card" style="width: 150px;">
+                            <div class="poster-card" style="width: 150px; position: relative;">
+                                <button onclick="removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2; transition: background 0.2s;">&times;</button>
                                 <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
                                 <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
                             </div>
@@ -885,7 +858,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // Carregar Diário de Resenhas na página de Perfil
                 const { data: profileReviews } = await supabase.from('reviews').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
                 const profileReviewsList = document.getElementById("profile-reviews-list");
                 if (profileReviewsList) {
@@ -894,7 +866,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
                             const date = new Date(r.created_at).toLocaleDateString('pt-BR');
                             return `
-                            <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start;">
+                            <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative;">
                                 <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
                                 <div style="flex: 1;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -904,6 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
                                     <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
                                 </div>
+                                <button onclick="removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem; padding: 0 0.4rem; transition: color 0.2s;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
                             </div>`;
                         }).join('');
                     } else {
@@ -911,7 +884,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // Adicionar botão de logout no perfil se não existir
                 if (!document.getElementById("btn-logout-profile")) {
                     const logoutBtn = document.createElement("button");
                     logoutBtn.id = "btn-logout-profile";
@@ -929,8 +901,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
+
+    window.removeProfileFavorite = async function(id) {
+        if (!supabase) return;
+        const { error } = await supabase.from('favorites').delete().eq('id', id);
+        if (!error) {
+            loadUserProfile();
+        } else {
+            alert("Erro ao remover favorito: " + error.message);
+        }
+    };
+
+    window.removeProfileReview = async function(id) {
+        if (!supabase) return;
+        if (!confirm("Tens a certeza de que pretendes excluir esta resenha?")) return;
+        const { error } = await supabase.from('reviews').delete().eq('id', id);
+        if (!error) {
+            loadUserProfile();
+        } else {
+            alert("Erro ao excluir resenha: " + error.message);
+        }
+    };
    
-// ── Lógica de Notícias (Com expansão para ver todas) ──
     let allNewsItems = [];
     let showingAllNews = false;
 
@@ -948,19 +940,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (data.status === "ok" && data.items && data.items.length > 0) {
                     allNewsItems = data.items;
-                    renderNewsList(3); // Inicia mostrando apenas 3
+                    renderNewsList(3);
 
-                    // Configurar clique para expandir/recolher todas as notícias
                     if (viewAllNewsLink) {
                         viewAllNewsLink.addEventListener("click", (e) => {
                             e.preventDefault();
                             showingAllNews = !showingAllNews;
                             
                             if (showingAllNews) {
-                                renderNewsList(allNewsItems.length); // Mostra todas
+                                renderNewsList(allNewsItems.length);
                                 viewAllNewsLink.textContent = "Mostrar menos ←";
                             } else {
-                                renderNewsList(3); // Mostra só 3 novamente
+                                renderNewsList(3);
                                 viewAllNewsLink.textContent = "Ver todas as notícias →";
                             }
 
@@ -993,7 +984,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }).join('');
         }
 
-        // Bloco de Lançamentos (Mantido igual)
         if (upcomingContainer) {
             try {
                 const itunesRss = "https://itunes.apple.com/br/rss/topalbums/limit=5/xml";
@@ -1025,9 +1015,9 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch(e) {
                 const fallbackQueries = [
                     { q: "sabrina carpenter short n sweet", label: "🔥 Hot agora" },
-                    { q: "kendrick lamar gnx",              label: "🔥 Hot agora" },
-                    { q: "chappell roan rise and fall",     label: "📈 Em alta" },
-                    { q: "charli xcx brat",                 label: "📈 Em alta" }
+                    { q: "kendrick lamar gnx",             label: "🔥 Hot agora" },
+                    { q: "chappell roan rise and fall",    label: "📈 Em alta" },
+                    { q: "charli xcx brat",                label: "📈 Em alta" }
                 ];
                 const fallbackResults = await Promise.all(
                     fallbackQueries.map(item =>
@@ -1059,7 +1049,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     loadNewsAndUpcoming();
 
-    // Editar Perfil Modals
     const editProfileModal = document.getElementById("edit-profile-modal");
     const closeEditProfile = document.getElementById("close-edit-profile");
     const editProfileForm  = document.getElementById("edit-profile-form");
@@ -1142,14 +1131,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-    // ── Sistema de Estrelas do Modo Geral (Corrigido para alinhar perfeitamente) ──
+
     const starSelector = document.getElementById("star-rating-selector");
     const ratingValueInput = document.getElementById("review-rating-value");
     
     function renderGeneralStars(val) {
         if (!starSelector) return;
         starSelector.innerHTML = "";
-        starSelector.style.letterSpacing = "2px"; // Mantém espaçamento limpo
+        starSelector.style.letterSpacing = "2px";
         
         for (let i = 1; i <= 5; i++) {
             let fillPercent = 0;
@@ -1179,7 +1168,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderGeneralStars(5);
     }
 
-    // ── Modal de Avaliação & Abas Geral/Faixas ──
     const reviewModal = document.getElementById("review-modal");
     const closeReviewModal = document.getElementById("close-review-modal");
     const reviewForm = document.getElementById("review-form");
@@ -1304,7 +1292,6 @@ document.addEventListener("DOMContentLoaded", () => {
         reviewModal.dataset.cover = coverUrl;
         reviewModal.dataset.collectionId = collectionId;
 
-        // Resetar para aba geral e 5 estrelas
         ratingValueInput.value = 5;
         renderGeneralStars(5);
 
@@ -1365,11 +1352,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Resenha registrada com sucesso no seu diário!");
                 reviewModal.classList.remove("active");
                 document.getElementById("review-text-input").value = "";
-               if (typeof loadUserProfile === 'function') loadUserProfile();
-    }
+                if (typeof loadUserProfile === 'function') loadUserProfile();
+            }
         });
     }
-    // ── Interceptador Global de Links Internos (#secoes) ──
+
     document.addEventListener("click", (e) => {
         const link = e.target.closest("a");
         if (link && link.getAttribute("href")) {
@@ -1380,7 +1367,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (homeSections.includes(targetId)) {
                     e.preventDefault();
-                    navigateTo("home"); // Garante que estamos na home e exibe as seções
+                    navigateTo("home");
                     setTimeout(() => {
                         const targetEl = document.getElementById(targetId);
                         if (targetEl) {
@@ -1391,7 +1378,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
-    // ── Carregar e Gerenciar a Fila de Desejos (Painel) ──
+
     window.loadDashboardBacklog = async function() {
         const backlogContainer = document.getElementById("dashboard-backlog-list");
         if (!backlogContainer || !supabase) return;
@@ -1436,7 +1423,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // Função global para remover item da fila
     window.removeFromBacklog = async function(id) {
         if (!supabase) return;
         const { error } = await supabase.from('backlog').delete().eq('id', id);
