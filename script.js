@@ -568,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPopularContent();
 
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-    const allPages = ["dashboard", "albums-page", "profile-page"];
+    const allPages = ["dashboard", "albums-page", "profile-page", "people-page"];
 
     window.navigateTo = function(pageId) {
         if (pageId === "home") {
@@ -1524,4 +1524,282 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Erro ao remover item da fila.");
         }
     };
+
+    // ══════════════════════════════════════════
+    // SOCIAL: NOTIFICAÇÕES, AMIGOS, BUSCA PERFIS
+    // ══════════════════════════════════════════
+
+    // ── Nav "Pessoas" ──
+    const navPeopleLink = document.getElementById("nav-people-link");
+    if (navPeopleLink) {
+        navPeopleLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo("people-page");
+            loadPeoplePage();
+        });
+    }
+
+    // ── Sino de Notificações ──
+    const bellWrap  = document.getElementById("notification-bell-wrap");
+    const bellBtn   = document.getElementById("notification-bell");
+    const notifPanel = document.getElementById("notifications-panel");
+    const markAllBtn = document.getElementById("mark-all-read-btn");
+
+    async function loadNotifications() {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Mostra o sino somente se logado
+        if (bellWrap) bellWrap.style.display = "flex";
+
+        const { data: notifs } = await supabase
+            .from("notifications")
+            .select("*, from_user:from_user_id(username, avatar_url)")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+        if (!notifs) return;
+
+        const unread = notifs.filter(n => !n.read).length;
+        const badge = document.getElementById("notification-badge");
+        if (badge) {
+            if (unread > 0) {
+                badge.textContent = unread > 9 ? "9+" : unread;
+                badge.style.display = "flex";
+            } else {
+                badge.style.display = "none";
+            }
+        }
+
+        const list = document.getElementById("notifications-list");
+        if (!list) return;
+        if (notifs.length === 0) {
+            list.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 1rem;">Nenhuma notificação.</p>`;
+            return;
+        }
+
+        list.innerHTML = notifs.map(n => {
+            const avatar = n.from_user?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces";
+            const time = new Date(n.created_at).toLocaleDateString("pt-BR");
+            const unreadStyle = n.read ? "" : "background: rgba(212,175,55,0.07); border-left: 3px solid var(--accent-gold);";
+            return `
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; ${unreadStyle}">
+                <img src="${avatar}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                <div style="flex: 1;">
+                    <p style="margin: 0 0 0.2rem 0; font-size: 0.9rem;">${n.message}</p>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">${time}</span>
+                </div>
+                ${n.type === "friend_request" && !n.read ? `<button class="btn-notify" onclick="acceptFriendRequest('${n.from_user_id}', '${n.id}')" style="font-size:0.75rem; padding:0.3rem 0.6rem; flex-shrink:0;">Aceitar</button>` : ""}
+            </div>`;
+        }).join("");
+    }
+
+    if (bellBtn && notifPanel) {
+        bellBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = notifPanel.style.display !== "none";
+            notifPanel.style.display = isOpen ? "none" : "block";
+            if (!isOpen) loadNotifications();
+        });
+        document.addEventListener("click", (e) => {
+            if (!notifPanel.contains(e.target) && e.target !== bellBtn) {
+                notifPanel.style.display = "none";
+            }
+        });
+    }
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener("click", async () => {
+            if (!supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            await supabase.from("notifications").update({ read: true }).eq("user_id", session.user.id);
+            loadNotifications();
+        });
+    }
+
+    // ── Página Pessoas ──
+    async function loadPeoplePage() {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const myId = session.user.id;
+
+        // Carrega amigos aceitos
+        const { data: friendships } = await supabase
+            .from("friendships")
+            .select("*, requester:requester_id(id, username, avatar_url), addressee:addressee_id(id, username, avatar_url)")
+            .or(`requester_id.eq.${myId},addressee_id.eq.${myId}`)
+            .eq("status", "accepted");
+
+        const friendsList = document.getElementById("friends-list");
+        if (friendsList) {
+            if (friendships && friendships.length > 0) {
+                friendsList.innerHTML = friendships.map(f => {
+                    const friend = f.requester_id === myId ? f.addressee : f.requester;
+                    const avatar = friend?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                    return `
+                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                        <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;">
+                            <strong>${friend?.username || "Usuário"}</strong>
+                        </div>
+                        <button class="btn-secondary-dark" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="removeFriend('${f.id}')">Remover</button>
+                    </div>`;
+                }).join("");
+            } else {
+                friendsList.innerHTML = `<p style="color: var(--text-muted);">Você ainda não tem amigos. Busque por usuários acima!</p>`;
+            }
+        }
+
+        // Carrega pedidos pendentes recebidos
+        const { data: requests } = await supabase
+            .from("friendships")
+            .select("*, requester:requester_id(id, username, avatar_url)")
+            .eq("addressee_id", myId)
+            .eq("status", "pending");
+
+        const reqList = document.getElementById("friend-requests-list");
+        if (reqList) {
+            if (requests && requests.length > 0) {
+                reqList.innerHTML = requests.map(r => {
+                    const avatar = r.requester?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                    return `
+                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid #e74c3c33;">
+                        <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;">
+                            <strong>${r.requester?.username || "Usuário"}</strong>
+                            <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">Quer ser seu amigo</p>
+                        </div>
+                        <button class="btn-primary-gold" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="acceptFriendRequest('${r.requester_id}', null, '${r.id}')">Aceitar</button>
+                        <button class="btn-secondary-dark" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="rejectFriendRequest('${r.id}')">Recusar</button>
+                    </div>`;
+                }).join("");
+            } else {
+                reqList.innerHTML = `<p style="color: var(--text-muted);">Nenhum pedido pendente.</p>`;
+            }
+        }
+    }
+
+    // ── Busca de Perfis ──
+    const peopleSearch = document.getElementById("people-search-input");
+    if (peopleSearch) {
+        let searchTimeout;
+        peopleSearch.addEventListener("input", (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            const resultsDiv = document.getElementById("people-search-results");
+            if (!query) { if (resultsDiv) resultsDiv.innerHTML = ""; return; }
+
+            searchTimeout = setTimeout(async () => {
+                if (!supabase) return;
+                const { data: { session } } = await supabase.auth.getSession();
+                const myId = session?.user?.id;
+
+                const { data: profiles } = await supabase
+                    .from("profiles")
+                    .select("id, username, avatar_url, bio")
+                    .ilike("username", `%${query}%`)
+                    .limit(8);
+
+                if (!resultsDiv) return;
+                if (!profiles || profiles.length === 0) {
+                    resultsDiv.innerHTML = `<p style="color: var(--text-muted);">Nenhum usuário encontrado.</p>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML = profiles.map(p => {
+                    if (p.id === myId) return ""; // oculta o próprio perfil
+                    const avatar = p.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                    return `
+                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                        <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1;">
+                            <strong>${p.username || "Usuário"}</strong>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${p.bio || ""}</p>
+                        </div>
+                        <button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="sendFriendRequest('${p.id}', this)">+ Adicionar</button>
+                    </div>`;
+                }).join("");
+            }, 400);
+        });
+    }
+
+    // ── Ações de Amizade ──
+    window.sendFriendRequest = async function(targetId, btn) {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { alert("Você precisa estar logado."); return; }
+
+        const { error } = await supabase.from("friendships").insert([{
+            requester_id: session.user.id,
+            addressee_id: targetId,
+            status: "pending"
+        }]);
+
+        if (error) {
+            if (error.code === "23505") { if (btn) btn.textContent = "Pedido Enviado ✓"; }
+            else alert("Erro: " + error.message);
+            return;
+        }
+
+        // Cria notificação para o destinatário
+        const { data: myProfile } = await supabase
+            .from("profiles").select("username").eq("id", session.user.id).single();
+
+        await supabase.from("notifications").insert([{
+            user_id: targetId,
+            from_user_id: session.user.id,
+            type: "friend_request",
+            message: `${myProfile?.username || "Alguém"} enviou um pedido de amizade para você.`
+        }]);
+
+        if (btn) { btn.textContent = "Pedido Enviado ✓"; btn.disabled = true; }
+    };
+
+    window.acceptFriendRequest = async function(fromUserId, notifId, friendshipId) {
+        if (!supabase) return;
+
+        if (friendshipId) {
+            await supabase.from("friendships").update({ status: "accepted" }).eq("id", friendshipId);
+        } else {
+            const { data: { session } } = await supabase.auth.getSession();
+            await supabase.from("friendships")
+                .update({ status: "accepted" })
+                .eq("requester_id", fromUserId)
+                .eq("addressee_id", session.user.id);
+        }
+
+        if (notifId) {
+            await supabase.from("notifications").update({ read: true }).eq("id", notifId);
+        }
+
+        loadNotifications();
+        loadPeoplePage();
+    };
+
+    window.rejectFriendRequest = async function(friendshipId) {
+        if (!supabase) return;
+        await supabase.from("friendships").delete().eq("id", friendshipId);
+        loadPeoplePage();
+    };
+
+    window.removeFriend = async function(friendshipId) {
+        if (!supabase) return;
+        if (!confirm("Remover este amigo?")) return;
+        await supabase.from("friendships").delete().eq("id", friendshipId);
+        loadPeoplePage();
+    };
+
+    // Carrega notificações ao iniciar se já estiver logado
+    (async () => {
+        if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) loadNotifications();
+        }
+    })();
+
 });
