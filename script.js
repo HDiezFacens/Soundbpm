@@ -150,8 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (modal) modal.classList.remove("active");
             await checkSupabaseSession();
             await updateLoginButtonState();
-            navigateTo('profile-page');
-            loadUserProfile(); 
+            openUserProfile(); 
         });
     }
 
@@ -164,8 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (supabase) {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
-                    navigateTo("profile-page");
-                    loadUserProfile();
+                    openUserProfile();
                 } else {
                     modal.classList.add("active");
                 }
@@ -182,7 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Botão "Comece seu Diário Grátis" com validação inteligente
     const heroStartBtn = document.getElementById("hero-start-diary-btn");
     if (heroStartBtn) {
         heroStartBtn.addEventListener("click", async () => {
@@ -203,7 +200,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Ligar o botão "Ver todos" de Álbuns Populares à página de Catálogo
     const viewAllTrendingLink = document.getElementById("view-all-trending-link");
     if (viewAllTrendingLink) {
         viewAllTrendingLink.addEventListener("click", (e) => {
@@ -213,7 +209,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Funções Spotify PKCE
     async function generateRandomString(length) {
         let text = '';
         const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -640,7 +635,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const spotifyToken = localStorage.getItem("spotify_access_token");
 
-        // Ligar o botão de simulação direto no banner
         const dashSimulateBtn = document.getElementById("dashboard-simulate-btn");
         if (dashSimulateBtn) {
             dashSimulateBtn.onclick = () => {
@@ -659,7 +653,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!spotifyToken) {
-            // Se não houver nenhum token escolhido, mantém limpo e à espera da ação do utilizador
             if (scrobblesContainer) {
                 scrobblesContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Conecte o Spotify ou ative o Modo Simulado acima para visualizar o histórico.</p>";
             }
@@ -719,7 +712,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
-            // Modo Simulado Ativo por escolha do utilizador
             const scrobblesData = await fetchCatalogData("lofi");
             const recsData = await fetchCatalogData("indie");
             
@@ -849,95 +841,107 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             alert("Adicionado aos favoritos com sucesso!");
         }
-       if (typeof loadUserProfile === 'function') loadUserProfile();
+        if (typeof loadUserProfile === 'function') loadUserProfile();
     };
   
-    window.loadUserProfile = async function() {
-        const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
-        let displayName = localUser.username || "Meu Perfil";
-        let avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+    window.loadUserProfile = async function(targetUserId = null) {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const myId = session?.user?.id;
         
+        const userIdToLoad = targetUserId || myId;
+        if (!userIdToLoad) {
+            alert("Faça login para ver seu perfil.");
+            return;
+        }
+
+        const isMyProfile = (userIdToLoad === myId);
+
         const usernameDisplay = document.getElementById("profile-username-display");
         const avatarImg = document.getElementById("profile-avatar-img");
         const bioDisplay = document.getElementById("profile-bio-display");
+        const editBtn = document.getElementById("btn-edit-profile");
+
+        if (editBtn) editBtn.style.display = isMyProfile ? "block" : "none";
+
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', userIdToLoad).single();
         
+        let displayName = profile?.username || "Usuário";
+        let avatarUrl = profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+        let bioText = profile?.bio || (isMyProfile ? "Explorando o mundo da música." : "Membro do SoundBPM.");
+
         if (usernameDisplay) usernameDisplay.textContent = displayName;
         if (avatarImg) avatarImg.src = avatarUrl;
-        
-        if (supabase) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                if (profile) {
-                    if (bioDisplay) bioDisplay.textContent = profile.bio || "Membro do SoundBPM.";
-                    if (profile.username) {
-                        displayName = profile.username;
-                        usernameDisplay.textContent = displayName;
-                    }
-                    if (profile.avatar_url) {
-                        avatarUrl = profile.avatar_url;
-                        avatarImg.src = avatarUrl;
-                    }
-                }
-                
-                const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', session.user.id);
-                const favGrid = document.getElementById("profile-favorites-grid");
-                if (favGrid) {
-                    if (favs && favs.length > 0) {
-                        favGrid.innerHTML = favs.map(f => `
-                            <div class="poster-card" style="width: 150px; position: relative;">
-                                <button onclick="removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2; transition: background 0.2s;">&times;</button>
-                                <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
-                                <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
-                            </div>
-                        `).join('');
-                    } else {
-                        favGrid.innerHTML = "<p style='color: var(--text-muted); grid-column: 1/-1;'>Nenhum álbum favoritado ainda.</p>";
-                    }
-                }
+        if (bioDisplay) bioDisplay.textContent = bioText;
 
-                const { data: profileReviews } = await supabase.from('reviews').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
-                const profileReviewsList = document.getElementById("profile-reviews-list");
-                if (profileReviewsList) {
-                    if (profileReviews && profileReviews.length > 0) {
-                        profileReviewsList.innerHTML = profileReviews.map(r => {
-                            const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
-                            const date = new Date(r.created_at).toLocaleDateString('pt-BR');
-                            return `
-                            <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative;">
-                                <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
-                                <div style="flex: 1;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <strong>${r.album_name}</strong>
-                                        <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
-                                    </div>
-                                    <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
-                                    <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
-                                </div>
-                                <button onclick="removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem; padding: 0 0.4rem; transition: color 0.2s;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
-                            </div>`;
-                        }).join('');
-                    } else {
-                        profileReviewsList.innerHTML = "<p style='color: var(--text-muted);'>Nenhuma resenha escrita ainda.</p>";
-                    }
-                }
-
-                if (!document.getElementById("btn-logout-profile")) {
-                    const logoutBtn = document.createElement("button");
-                    logoutBtn.id = "btn-logout-profile";
-                    logoutBtn.className = "btn-secondary-dark";
-                    logoutBtn.textContent = "Sair da Conta";
-                    logoutBtn.style.marginTop = "2rem";
-                    logoutBtn.onclick = async () => {
-                        await supabase.auth.signOut();
-                        localStorage.removeItem("soundbpm_user");
-                        localStorage.removeItem("spotify_access_token");
-                        window.location.reload();
-                    };
-                    document.getElementById("profile-page").appendChild(logoutBtn);
-                }
+        const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', userIdToLoad);
+        const favGrid = document.getElementById("profile-favorites-grid");
+        if (favGrid) {
+            if (favs && favs.length > 0) {
+                favGrid.innerHTML = favs.map(f => `
+                    <div class="poster-card" style="width: 150px; position: relative;">
+                        ${isMyProfile ? `<button onclick="removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2;">&times;</button>` : ''}
+                        <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
+                        <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
+                    </div>
+                `).join('');
+            } else {
+                favGrid.innerHTML = "<p style='color: var(--text-muted); grid-column: 1/-1;'>Nenhum álbum favoritado ainda.</p>";
             }
         }
+
+        const { data: profileReviews } = await supabase.from('reviews').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false });
+        const profileReviewsList = document.getElementById("profile-reviews-list");
+        if (profileReviewsList) {
+            if (profileReviews && profileReviews.length > 0) {
+                profileReviewsList.innerHTML = profileReviews.map(r => {
+                    const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
+                    const date = new Date(r.created_at).toLocaleDateString('pt-BR');
+                    return `
+                    <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative;">
+                        <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong>${r.album_name}</strong>
+                                <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
+                            <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
+                        </div>
+                        ${isMyProfile ? `<button onclick="removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem;">&times;</button>` : ''}
+                    </div>`;
+                }).join('');
+            } else {
+                profileReviewsList.innerHTML = "<p style='color: var(--text-muted);'>Nenhuma resenha escrita ainda.</p>";
+            }
+        }
+
+        let logoutBtn = document.getElementById("btn-logout-profile");
+        if (isMyProfile) {
+            if (!logoutBtn) {
+                logoutBtn = document.createElement("button");
+                logoutBtn.id = "btn-logout-profile";
+                logoutBtn.className = "btn-secondary-dark";
+                logoutBtn.textContent = "Sair da Conta";
+                logoutBtn.style.marginTop = "2rem";
+                logoutBtn.onclick = async () => {
+                    await supabase.auth.signOut();
+                    localStorage.removeItem("soundbpm_user");
+                    localStorage.removeItem("spotify_access_token");
+                    window.location.reload();
+                };
+                document.getElementById("profile-page").appendChild(logoutBtn);
+            } else {
+                logoutBtn.style.display = "block";
+            }
+        } else {
+            if (logoutBtn) logoutBtn.style.display = "none";
+        }
+    };
+
+    window.openUserProfile = function(userId = null) {
+        navigateTo("profile-page");
+        loadUserProfile(userId);
     };
 
     window.removeProfileFavorite = async function(id) {
@@ -966,7 +970,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let allUpcomingItems = [];
     let showingAllUpcoming = false;
 
-   async function loadNewsAndUpcoming() {
+    async function loadNewsAndUpcoming() {
         const newsContainer = document.getElementById("news-grid-container");
         const viewAllNewsLink = document.getElementById("view-all-news-link");
         const upcomingContainer = document.getElementById("upcoming-grid-container");
@@ -1113,7 +1117,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Mantém o botão sempre visível para permitir alternar a exibição
             if (currentViewMoreBtn) {
                 currentViewMoreBtn.style.display = "inline-block";
             }
@@ -1525,11 +1528,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // ══════════════════════════════════════════
-    // SOCIAL: NOTIFICAÇÕES, AMIGOS, BUSCA PERFIS
-    // ══════════════════════════════════════════
-
-    // ── Nav "Pessoas" ──
     const navPeopleLink = document.getElementById("nav-people-link");
     if (navPeopleLink) {
         navPeopleLink.addEventListener("click", (e) => {
@@ -1539,7 +1537,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ── Sino de Notificações ──
     const bellWrap  = document.getElementById("notification-bell-wrap");
     const bellBtn   = document.getElementById("notification-bell");
     const notifPanel = document.getElementById("notifications-panel");
@@ -1550,7 +1547,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Mostra o sino somente se logado
         if (bellWrap) bellWrap.style.display = "flex";
 
         const { data: notifs } = await supabase
@@ -1620,7 +1616,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ── Página Pessoas ──
     async function loadPeoplePage() {
         if (!supabase) return;
         const { data: { session } } = await supabase.auth.getSession();
@@ -1628,7 +1623,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const myId = session.user.id;
 
-        // Carrega amigos aceitos
         const { data: friendships } = await supabase
             .from("friendships")
             .select("*, requester:requester_id(id, username, avatar_url), addressee:addressee_id(id, username, avatar_url)")
@@ -1638,16 +1632,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const friendsList = document.getElementById("friends-list");
         if (friendsList) {
             if (friendships && friendships.length > 0) {
-                friendsList.innerHTML = friendships.map(f => {
+                const uniqueFriendsMap = new Map();
+                friendships.forEach(f => {
                     const friend = f.requester_id === myId ? f.addressee : f.requester;
+                    if (friend && !uniqueFriendsMap.has(friend.id)) {
+                        uniqueFriendsMap.set(friend.id, { friendshipId: f.id, friend });
+                    }
+                });
+
+                friendsList.innerHTML = Array.from(uniqueFriendsMap.values()).map(({ friendshipId, friend }) => {
                     const avatar = friend?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
                     return `
-                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${friend?.id}')">
                         <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
                         <div style="flex:1;">
-                            <strong>${friend?.username || "Usuário"}</strong>
+                            <strong style="color: var(--accent-gold);">${friend?.username || "Usuário"}</strong>
                         </div>
-                        <button class="btn-secondary-dark" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="removeFriend('${f.id}')">Remover</button>
+                        <button class="btn-secondary-dark" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); removeFriend('${friendshipId}')">Remover</button>
                     </div>`;
                 }).join("");
             } else {
@@ -1655,7 +1656,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Carrega pedidos pendentes recebidos
         const { data: requests } = await supabase
             .from("friendships")
             .select("*, requester:requester_id(id, username, avatar_url)")
@@ -1669,9 +1669,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const avatar = r.requester?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
                     return `
                     <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid #e74c3c33;">
-                        <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                        <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">
                         <div style="flex:1;">
-                            <strong>${r.requester?.username || "Usuário"}</strong>
+                            <strong style="color: var(--accent-gold); cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">${r.requester?.username || "Usuário"}</strong>
                             <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">Quer ser seu amigo</p>
                         </div>
                         <button class="btn-primary-gold" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="acceptFriendRequest('${r.requester_id}', null, '${r.id}')">Aceitar</button>
@@ -1684,7 +1684,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ── Busca de Perfis ──
     const peopleSearch = document.getElementById("people-search-input");
     if (peopleSearch) {
         let searchTimeout;
@@ -1712,47 +1711,57 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 resultsDiv.innerHTML = profiles.map(p => {
-                    if (p.id === myId) return ""; // oculta o próprio perfil
+                    if (p.id === myId) return "";
                     const avatar = p.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
                     return `
-                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${p.id}')">
                         <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
                         <div style="flex:1;">
-                            <strong>${p.username || "Usuário"}</strong>
+                            <strong style="color: var(--accent-gold);">${p.username || "Usuário"}</strong>
                             <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${p.bio || ""}</p>
                         </div>
-                        <button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="sendFriendRequest('${p.id}', this)">+ Adicionar</button>
+                        <button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); sendFriendRequest('${p.id}', this)">+ Adicionar</button>
                     </div>`;
                 }).join("");
             }, 400);
         });
     }
 
-    // ── Ações de Amizade ──
     window.sendFriendRequest = async function(targetId, btn) {
         if (!supabase) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { alert("Você precisa estar logado."); return; }
 
+        const myId = session.user.id;
+
+        const { data: existing } = await supabase
+            .from("friendships")
+            .select("*")
+            .or(`and(requester_id.eq.${myId},addressee_id.eq.${targetId}),and(requester_id.eq.${targetId},addressee_id.eq.${myId})`);
+
+        if (existing && existing.length > 0) {
+            alert("Já existe uma amizade ou pedido pendente com este usuário.");
+            if (btn) { btn.textContent = "Já Adicionado"; btn.disabled = true; }
+            return;
+        }
+
         const { error } = await supabase.from("friendships").insert([{
-            requester_id: session.user.id,
+            requester_id: myId,
             addressee_id: targetId,
             status: "pending"
         }]);
 
         if (error) {
-            if (error.code === "23505") { if (btn) btn.textContent = "Pedido Enviado ✓"; }
-            else alert("Erro: " + error.message);
+            alert("Erro: " + error.message);
             return;
         }
 
-        // Cria notificação para o destinatário
         const { data: myProfile } = await supabase
-            .from("profiles").select("username").eq("id", session.user.id).single();
+            .from("profiles").select("username").eq("id", myId).single();
 
         await supabase.from("notifications").insert([{
             user_id: targetId,
-            from_user_id: session.user.id,
+            from_user_id: myId,
             type: "friend_request",
             message: `${myProfile?.username || "Alguém"} enviou um pedido de amizade para você.`
         }]);
@@ -1794,7 +1803,6 @@ document.addEventListener("DOMContentLoaded", () => {
         loadPeoplePage();
     };
 
-    // Carrega notificações ao iniciar se já estiver logado
     (async () => {
         if (supabase) {
             const { data: { session } } = await supabase.auth.getSession();
