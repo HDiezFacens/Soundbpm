@@ -12,32 +12,37 @@
 </head>
 <body>
 
-    <header class="site-header">
-        <div class="header-container">
-            <div class="logo-area">
-                <a href="#" class="logo-link">
-                    <img src="./Logo.png" alt="SoundBPM Logo" class="brand-logo">
-                    <span class="logo">Sound<span>BPM</span></span>
+    <header class="site-header" style="position: sticky; top: 0; z-index: 1000; background: var(--bg-base); border-bottom: 1px solid var(--border-subtle); width: 100%;">
+        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; padding: 1rem 2rem; gap: 2rem;">
+            
+            <!-- Logotipo -->
+            <div class="logo-area" style="display: flex; align-items: center; flex-shrink: 0;">
+                <a href="#" class="logo-link" style="display: flex; align-items: center; gap: 0.6rem; text-decoration: none;">
+                    <img src="./Logo.png" alt="SoundBPM Logo" class="brand-logo" style="width: 34px; height: 34px; object-fit: contain;">
+                    <span class="logo" style="font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.5px;">Sound<span style="color: var(--accent-gold);">BPM</span></span>
                 </a>
             </div>
 
-            <nav class="main-nav">
-                <ul>
+            <!-- Menu de Navegação -->
+            <nav class="main-nav" style="display: flex; align-items: center;">
+                <ul style="display: flex; list-style: none; gap: 1.2rem; margin: 0; padding: 0; align-items: center; white-space: nowrap;">
                     <li><a href="#explore" id="nav-home-link" class="nav-link active">Início</a></li>
                     <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Minha Lista</a></li>
                     <li><a href="#albums-page" id="nav-albums-link" class="nav-link">Álbuns</a></li>
                     <li><a href="#news" class="nav-link">Notícias</a></li>
                     <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
-                    <li><a href="#community" class="nav-link">Diário</a></li>
+                    <li><a href="#community" class="nav-link">Diário da Comunidade</a></li>
                 </ul>
             </nav>
 
-            <div class="header-right">
+            <!-- Pesquisa e Perfil / Entrar -->
+            <div class="header-right" style="display: flex; align-items: center; gap: 1rem; flex-shrink: 0;">
                 <div class="header-search">
-                    <input type="text" id="search-input" placeholder="Buscar álbuns, artistas...">
+                    <input type="text" id="search-input" placeholder="Buscar álbuns, artistas..." style="padding: 0.5rem 0.8rem; border-radius: 20px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; width: 180px;">
                 </div>
                 <button id="open-login-modal" class="btn-login-nav">Entrar</button>
             </div>
+
         </div>
     </header>
 
@@ -93,14 +98,16 @@
                 </div>
 
                 <!-- Banner de Conexão Spotify -->
-                <div id="spotify-connect-banner" style="background: var(--bg-card); padding: 1.2rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-subtle);">
-                    <div>
-                        <h4 style="margin: 0 0 0.2rem 0; color: var(--accent-gold); font-size: 0.95rem;">Conecte sua conta do Spotify</h4>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Veja seus álbuns ouvidos recentemente e receba recomendações.</p>
-                    </div>
-                    <button id="dashboard-spotify-connect-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;">Conectar Spotify</button>
-                </div>
-
+<div id="spotify-connect-banner" style="background: var(--bg-card); padding: 1.2rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h4 style="margin: 0 0 0.2rem 0; color: var(--accent-gold); font-size: 0.95rem;">Conecte sua conta do Spotify</h4>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Veja seus álbuns ouvidos recentemente e receba recomendações.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <button id="dashboard-spotify-connect-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;">Conectar Spotify</button>
+        <button id="dashboard-simulate-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulado</button>
+    </div>
+</div>
                 <!-- Secundário: Ouvidos Recentemente -->
                 <div style="margin-bottom: 2.5rem;">
                     <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted);">Ouvidos Recentemente</h4>
@@ -188,7 +195,7 @@
                     <h2 id="section-main-title">Álbuns Populares Esta Semana</h2>
                     <p id="section-main-subtitle">Os discos mais recentes e recomendados do catálogo.</p>
                 </div>
-                <a href="#" class="view-more-link">Ver todos &rarr;</a>
+                <a href="#" id="view-all-trending-link" class="view-more-link">Ver todos &rarr;</a>
             </div>
 
             <div class="poster-grid" id="trending-albums-grid">
@@ -216,7 +223,7 @@
                     <h2>Lançamentos Recentes & Destaques</h2>
                     <p>Fique por dentro dos discos mais badalados que acabaram de chegar às plataformas.</p>
                 </div>
-                <a href="#upcoming" class="view-more-link">Ver catálogo &rarr;</a>
+                <a href="#" id="view-more-upcoming-link" class="view-more-link">Ver mais &rarr;</a>
             </div>
 
             <div class="upcoming-grid" id="upcoming-grid-container">

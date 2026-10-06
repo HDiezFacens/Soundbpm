@@ -203,6 +203,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Ligar o botão "Ver todos" de Álbuns Populares à página de Catálogo
+    const viewAllTrendingLink = document.getElementById("view-all-trending-link");
+    if (viewAllTrendingLink) {
+        viewAllTrendingLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo("albums-page");
+            loadAlbumsPageContent("__TRENDING__");
+        });
+    }
+
     // Funções Spotify PKCE
     async function generateRandomString(length) {
         let text = '';
@@ -384,34 +394,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchRealTrendingAlbums() {
-        const letterboxdCore = [
-            { query: "blonde frank ocean", synopsis: "Uma obra-prima atmosférica e introspectiva que redefiniu o R&B contemporâneo com sua vulnerabilidade." },
-            { query: "to pimp a butterfly kendrick", synopsis: "Um épico denso de jazz-rap que explora de forma brilhante a cultura afro-americana e o peso da fama." },
-            { query: "igor tyler the creator", synopsis: "Uma jornada caótica e genial sobre desilusão amorosa, misturando neo-soul, rap e sintetizadores." },
-            { query: "brat charli xcx", synopsis: "Um mergulho frenético e hiperativo na cultura clubber, recheado de vulnerabilidade e batidas ácidas." },
-            { query: "ok computer radiohead", synopsis: "O marco do rock alternativo que previu a alienação e a ansiedade da era digital." },
-            { query: "in rainbows radiohead", synopsis: "Quente, melancólico e ritmicamente complexo, um dos registros mais intimistas da banda." },
-            { query: "the dark side of the moon", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
-            { query: "currents tame impala", synopsis: "Uma viagem psicodélica e dançante sobre a aceitação de mudanças pessoais inescapáveis." },
-            { query: "hit me hard and soft billie eilish", synopsis: "Vocais sussurrados e produções expansivas que flutuam entre o sombrio e o pop brilhante." },
-            { query: "renaissance beyonce", synopsis: "Uma celebração eufórica e contínua da cultura dance, house e disco underground." },
-            { query: "norman fucking rockwell lana", synopsis: "O grande romance americano moderno contado através de baladas poéticas e melancólicas." },
-            { query: "my beautiful dark twisted fantasy", synopsis: "Um espetáculo maximalista e grandioso sobre o ego, a fama e a genialidade em colapso." },
-            { query: "after hours weeknd", synopsis: "Uma odisseia noturna e cinematográfica pelas luzes neons e excessos de Las Vegas." },
-            { query: "melodrama lorde", synopsis: "Um retrato teatral, eufórico e de cortar o coração sobre a solidão das festas e o fim da juventude." },
-            { query: "rumours fleetwood mac", synopsis: "Um clássico atemporal forjado no meio de corações partidos e melodias perfeitas." },
-            { query: "discovery daft punk", synopsis: "Uma viagem nostálgica de french house e disco que moldou a música eletrônica moderna." },
+        const acclaimedMasterpieces = [
+            { query: "the dark side of the moon pink floyd", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
             { query: "abbey road the beatles", synopsis: "O grande canto do cisne da banda, trazendo medleys lendários e produção impecável." },
+            { query: "thriller michael jackson", synopsis: "O álbum mais vendido de todos os tempos, redefinindo o pop com genialidade e refrões eternos." },
+            { query: "rumours fleetwood mac", synopsis: "Um clássico atemporal forjado no meio de corações partidos e harmonias vocais perfeitas." },
             { query: "nevermind nirvana", synopsis: "O trovão grunge que destruiu o hair metal e deu voz à angústia da Geração X." },
-            { query: "the miseducation of lauryn hill", synopsis: "A fusão definitiva de hip-hop, soul e R&B embalada por letras maduras e pessoais." },
-            { query: "good kid maad city", synopsis: "Um curta-metragem sonoro sobre a juventude, os perigos e as tentações nas ruas de Compton." },
-            { query: "folklore taylor swift", synopsis: "Um refúgio indie-folk repleto de narrativas ficcionais, triângulos amorosos e texturas acústicas." },
-            { query: "punisher phoebe bridgers", synopsis: "Folk indie assombrado e poético, perfeito para madrugadas existenciais." },
+            { query: "ok computer radiohead", synopsis: "O marco do rock alternativo que previu com precisão a alienação e a ansiedade da era digital." },
+            { query: "in rainbows radiohead", synopsis: "Quente, melancólico e ritmicamente complexo, um dos registros mais intimistas e brilhantes da banda." },
+            { query: "back to black amy winehouse", synopsis: "Soul e R&B visceral com uma honestidade brutal e letras de cortar o coração." },
+            { query: "discovery daft punk", synopsis: "Uma viagem nostálgica de french house e disco que moldou para sempre a música eletrônica moderna." },
+            { query: "good kid maad city kendrick", synopsis: "Um curta-metragem sonoro magistral sobre a juventude, os perigos e as tentações nas ruas de Compton." },
+            { query: "to pimp a butterfly kendrick", synopsis: "Um épico denso de jazz-rap que explora a cultura afro-americana, o racismo e o peso da fama." },
+            { query: "blonde frank ocean", synopsis: "Uma obra-prima atmosférica, minimalista e introspectiva que redefiniu os limites do R&B contemporâneo." },
+            { query: "igor tyler the creator", synopsis: "Uma jornada caótica, colorida e genial sobre desilusão amorosa, misturando neo-soul e sintetizadores." },
+            { query: "renaissance beyonce", synopsis: "Uma celebração eufórica, vibrante e contínua da cultura dance, house e disco underground." },
+            { query: "norman fucking rockwell lana del rey", synopsis: "O grande romance americano moderno contado através de baladas poéticas e melancólicas deslumbrantes." },
+            { query: "melodrama lorde", synopsis: "Um retrato teatral, eufórico e dolorosamente honesto sobre a solidão das festas e o fim da juventude." },
+            { query: "my beautiful dark twisted fantasy kanye", synopsis: "Um espetáculo maximalista e grandioso sobre o ego, a fama e a genialidade em colapso." },
+            { query: "after hours the weeknd", synopsis: "Uma odisseia noturna e cinematográfica pelas luzes de neon, excessos e desilusões de Las Vegas." },
+            { query: "astroworld travis scott", synopsis: "Um parque de diversões psicodélico do trap moderno com produções colossais e envolventes." },
+            { query: "future nostalgia dua lipa", synopsis: "Uma aula magistral de pop contemporâneo com influências marcantes da disco music dos anos 80." },
+            { query: "billie eilish when we all fall asleep", synopsis: "Pop sussurrado, sombrio e inovador gerado no quarto que conquistou o mundo." },
+            { query: "hit me hard and soft billie eilish", synopsis: "Vocais delicados e arranjos expansivos que flutuam entre o lamento melancólico e o brilho pop." },
+            { query: "brat charli xcx", synopsis: "Um mergulho frenético, clubber e hiperativo recheado de vulnerabilidade e batidas ácidas marcantes." },
+            { query: "folklore taylor swift", synopsis: "Um refúgio indie-folk repleto de narrativas ficcionais, atmosferas acústicas e pura poesia." },
+            { query: "punisher phoebe bridgers", synopsis: "Folk indie assombrado, melancólico e espirituoso, perfeito para madrugadas existenciais." },
             { query: "souvlaki slowdive", synopsis: "Paredes de guitarras enevoadas e vocais etéreos criando a essência definitiva do shoegaze." },
-            { query: "homogenic bjork", synopsis: "Batidas vulcânicas eletrônicas e cordas sinfônicas em uma carta de amor islandesa." }
+            { query: "homogenic bjork", synopsis: "A batida vulcânica da música eletrônica misturada com cordas sinfónicas numa carta de amor islandesa." },
+            { query: "channel orange frank ocean", synopsis: "R&B alternativo inovador com narrativas urbanas profundas e texturas sonoras luxuosas." },
+            { query: "blonde on blonde bob dylan", synopsis: "O cume poético do folk-rock com arranjos eletrizantes que mudaram a história da composição." },
+            { query: "what s going on marvin gaye", synopsis: "Uma obra-prima atemporal de soul protesto que questiona a humanidade, a guerra e a paz." }
         ];
         
-        const shuffled = letterboxdCore.sort(() => 0.5 - Math.random()).slice(0, 10);
+        const shuffled = acclaimedMasterpieces.sort(() => 0.5 - Math.random()).slice(0, 12);
         
         try {
             const results = await Promise.all(shuffled.map(obj => 
@@ -434,14 +450,14 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             return finalAlbums;
         } catch (e) {
-            console.error("Falha ao carregar álbuns do momento", e);
+            console.error("Falha ao carregar álbuns em destaque", e);
             return await fetchCatalogData("hits");
         }
     }
 
     async function loadPopularContent() {
-        if (sectionMainTitle) sectionMainTitle.textContent = "Álbuns Populares & Destaques";
-        if (sectionMainSubtitle) sectionMainSubtitle.textContent = "Os principais álbuns catalogados para você ouvir e avaliar.";
+        if (sectionMainTitle) sectionMainTitle.textContent = "Álbuns Populares & Obras-Primas";
+        if (sectionMainSubtitle) sectionMainSubtitle.textContent = "Os álbuns mais aclamados e influentes da história e da atualidade.";
 
         const albums = await fetchRealTrendingAlbums();
         
@@ -624,12 +640,34 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const spotifyToken = localStorage.getItem("spotify_access_token");
 
+        // Ligar o botão de simulação direto no banner
+        const dashSimulateBtn = document.getElementById("dashboard-simulate-btn");
+        if (dashSimulateBtn) {
+            dashSimulateBtn.onclick = () => {
+                localStorage.setItem("spotify_access_token", "simulated_token");
+                populateDashboard();
+                if (webPlayer) webPlayer.classList.remove("hidden");
+            };
+        }
+
         if (connectBanner) {
-            if (spotifyToken && spotifyToken !== "simulated_token") {
+            if (spotifyToken) {
                 connectBanner.style.display = "none";
             } else {
                 connectBanner.style.display = "flex";
             }
+        }
+
+        if (!spotifyToken) {
+            // Se não houver nenhum token escolhido, mantém limpo e à espera da ação do utilizador
+            if (scrobblesContainer) {
+                scrobblesContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Conecte o Spotify ou ative o Modo Simulado acima para visualizar o histórico.</p>";
+            }
+            if (recsContainer) {
+                recsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Conecte o Spotify ou ative o Modo Simulado acima para ver recomendações.</p>";
+            }
+            if (typeof loadDashboardBacklog === 'function') loadDashboardBacklog();
+            return;
         }
 
         if (scrobblesContainer) scrobblesContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando...</p>";
@@ -681,7 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } else {
-            // Opção Secundária (Fallback) de Catálogo (Lofi / Indie)
+            // Modo Simulado Ativo por escolha do utilizador
             const scrobblesData = await fetchCatalogData("lofi");
             const recsData = await fetchCatalogData("indie");
             
@@ -925,11 +963,14 @@ document.addEventListener("DOMContentLoaded", () => {
    
     let allNewsItems = [];
     let showingAllNews = false;
+    let allUpcomingItems = [];
+    let showingAllUpcoming = false;
 
-    async function loadNewsAndUpcoming() {
+   async function loadNewsAndUpcoming() {
         const newsContainer = document.getElementById("news-grid-container");
         const viewAllNewsLink = document.getElementById("view-all-news-link");
         const upcomingContainer = document.getElementById("upcoming-grid-container");
+        const viewMoreUpcomingLink = document.getElementById("view-more-upcoming-link");
 
         if (newsContainer) {
             try {
@@ -986,65 +1027,116 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (upcomingContainer) {
             try {
-                const itunesRss = "https://itunes.apple.com/br/rss/topalbums/limit=5/xml";
-                const rssApi = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(itunesRss)}&api_key=&order_by=pubDate`;
-                const resp = await fetch(rssApi);
-                const rssData = await resp.json();
-
-                let upcomingHtml = "";
-
-                if (rssData.status === "ok" && rssData.items && rssData.items.length > 0) {
-                    rssData.items.slice(0, 4).forEach(item => {
-                        const imgMatch = item.description ? item.description.match(/src="([^"]+)"/) : null;
-                        const imgUrl = imgMatch ? imgMatch[1].replace("55x55", "170x170") : "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=170&h=170&fit=crop";
-                        upcomingHtml += `
-                        <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center;">
-                            <img src="${imgUrl}" style="width: 80px; height: 80px; border-radius: 4px; object-fit: cover;">
-                            <div class="upcoming-details">
-                                <h4 style="margin: 0 0 0.25rem 0;">${item.title}</h4>
-                                <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.9rem;">${item.author || "Artista"}</span>
-                                <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--accent-gold);">🔥 Top Charts Brasil</p>
-                            </div>
-                            <a href="${item.link}" target="_blank" class="btn-notify" style="margin-left: auto; text-decoration: none;">Ouvir</a>
-                        </div>`;
-                    });
-                    upcomingContainer.innerHTML = upcomingHtml;
-                } else {
-                    throw new Error("RSS sem dados");
-                }
-            } catch(e) {
-                const fallbackQueries = [
-                    { q: "sabrina carpenter short n sweet", label: "🔥 Hot agora" },
-                    { q: "kendrick lamar gnx",             label: "🔥 Hot agora" },
-                    { q: "chappell roan rise and fall",    label: "📈 Em alta" },
-                    { q: "charli xcx brat",                label: "📈 Em alta" }
+                const randomQueryPool = [
+                    "pop album 2026", "indie album 2026", "hip hop album 2026", 
+                    "r&b album 2026", "rock album 2026", "electronic album 2026", 
+                    "latin album 2026", "alternative album 2026", "soul album 2026",
+                    "Taylor Swift 2026", "Sabrina Carpenter 2026", "Kendrick Lamar 2026",
+                    "Billie Eilish 2026", "Charli XCX 2026", "new music hits 2026"
                 ];
-                const fallbackResults = await Promise.all(
-                    fallbackQueries.map(item =>
-                        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(item.q)}&entity=album&limit=1&country=br`)
-                            .then(r => r.json())
-                            .then(d => ({ ...d, label: item.label }))
-                            .catch(() => null)
-                    )
+
+                const shuffledQueries = randomQueryPool.sort(() => 0.5 - Math.random()).slice(0, 6);
+
+                const fetchPromises = shuffledQueries.map(q => 
+                    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=album&limit=25&country=br`)
+                        .then(r => r.json())
+                        .catch(() => ({ results: [] }))
                 );
-                let html = "";
-                fallbackResults.forEach(res => {
-                    if (!res || !res.results || !res.results[0]) return;
-                    const a = res.results[0];
-                    const cover = a.artworkUrl100.replace("100x100", "170x170");
-                    html += `
-                    <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center;">
-                        <img src="${cover}" style="width: 80px; height: 80px; border-radius: 4px; object-fit: cover;">
-                        <div class="upcoming-details">
-                            <h4 style="margin: 0 0 0.25rem 0;">${a.collectionName}</h4>
-                            <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.9rem;">${a.artistName}</span>
-                            <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--accent-gold);">${res.label} • ${new Date(a.releaseDate).getFullYear()}</p>
-                        </div>
-                        <a href="${a.collectionViewUrl}" target="_blank" class="btn-notify" style="margin-left: auto; text-decoration: none;">Ver</a>
-                    </div>`;
+
+                const responses = await Promise.all(fetchPromises);
+                
+                let allAlbums = [];
+                responses.forEach(res => {
+                    if (res && res.results) {
+                        allAlbums.push(...res.results);
+                    }
                 });
-                upcomingContainer.innerHTML = html || "<p style='color: var(--text-muted);'>Erro ao carregar lançamentos.</p>";
+
+                const uniqueMap = new Map();
+                allAlbums.forEach(album => {
+                    if (album.collectionName && !uniqueMap.has(album.collectionName)) {
+                        uniqueMap.set(album.collectionName, album);
+                    }
+                });
+
+                let rawItems = Array.from(uniqueMap.values());
+
+                allUpcomingItems = rawItems.filter(album => {
+                    if (!album.releaseDate) return false;
+                    const year = new Date(album.releaseDate).getFullYear();
+                    return year === 2026;
+                });
+
+                allUpcomingItems.sort((a, b) => {
+                    const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+                    const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+                    return dateB - dateA;
+                });
+
+                renderUpcomingList(4);
+
+                if (viewMoreUpcomingLink) {
+                    const newLink = viewMoreUpcomingLink.cloneNode(true);
+                    viewMoreUpcomingLink.parentNode.replaceChild(newLink, viewMoreUpcomingLink);
+                    
+                    newLink.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        showingAllUpcoming = !showingAllUpcoming;
+                        
+                        if (showingAllUpcoming) {
+                            renderUpcomingList(allUpcomingItems.length);
+                            newLink.textContent = "Mostrar menos ←";
+                        } else {
+                            renderUpcomingList(4);
+                            newLink.textContent = "Ver mais →";
+                        }
+
+                        document.getElementById("upcoming").scrollIntoView({ behavior: "smooth" });
+                    });
+                }
+
+            } catch(e) {
+                console.error("Erro ao carregar lançamentos:", e);
+                upcomingContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; grid-column: 1/-1;'>Erro ao carregar o radar de lançamentos.</p>";
             }
+        }
+
+        function renderUpcomingList(limit) {
+            if (!upcomingContainer) return;
+            const itemsToDisplay = allUpcomingItems.slice(0, limit);
+            const currentViewMoreBtn = document.getElementById("view-more-upcoming-link");
+            
+            if (allUpcomingItems.length === 0) {
+                upcomingContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; grid-column: 1/-1;'>Nenhum lançamento recente encontrado para 2026.</p>";
+                upcomingContainer.style.display = "block";
+                if (currentViewMoreBtn) currentViewMoreBtn.style.display = "none";
+                return;
+            }
+
+            // Mantém o botão sempre visível para permitir alternar a exibição
+            if (currentViewMoreBtn) {
+                currentViewMoreBtn.style.display = "inline-block";
+            }
+
+            upcomingContainer.innerHTML = itemsToDisplay.map((a) => {
+                const cover = a.artworkUrl100 ? a.artworkUrl100.replace("100x100bb", "300x300bb") : './Logo.png';
+                const year = a.releaseDate ? new Date(a.releaseDate).getFullYear() : '2026';
+                
+                return `
+                <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <img src="${cover}" style="width: 75px; height: 75px; border-radius: 6px; object-fit: cover;">
+                    <div class="upcoming-details" style="flex: 1; min-width: 0;">
+                        <h4 style="margin: 0 0 0.2rem 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${a.collectionName}">${a.collectionName}</h4>
+                        <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.artistName}</span>
+                        <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: var(--accent-gold); font-weight: 600;">🔥 Lançamento Recente • ${year}</p>
+                    </div>
+                    <a href="${a.collectionViewUrl || '#'}" target="_blank" class="btn-notify" style="text-decoration: none; padding: 0.4rem 0.8rem; background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-main); border-radius: 4px; font-size: 0.8rem; white-space: nowrap;">Ouvir</a>
+                </div>`;
+            }).join('');
+
+            upcomingContainer.style.display = "grid";
+            upcomingContainer.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))";
+            upcomingContainer.style.gap = "1rem";
         }
     }
     loadNewsAndUpcoming();
