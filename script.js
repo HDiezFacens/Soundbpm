@@ -565,7 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
     const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page"];
 
-    window.navigateTo = function(pageId) {
+    window.navigateTo = function(pageId, pushHistory = true) {
         if (pageId === "home") {
             homeSections.forEach(id => {
                 const el = document.getElementById(id);
@@ -589,9 +589,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (webPlayer && localStorage.getItem("spotify_access_token")) {
             webPlayer.classList.remove("hidden");
         }
+
+        if (pushHistory) {
+            history.pushState({ page: pageId }, "", `#${pageId}`);
+        }
         
         window.scrollTo(0, 0);
     };
+
+    window.addEventListener("popstate", (event) => {
+        const pageId = event.state?.page || "home";
+        navigateTo(pageId, false);
+    });
 
     // NOVA FUNÇÃO: ABRIR PÁGINA DE DETALHES DO ÁLBUM (ESTILO LETTERBOXD)
     window.openAlbumPage = async function(collectionId, albumName, artistName, coverUrl) {
@@ -819,25 +828,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const exploreCatalogBtn = document.getElementById("explore-catalog-btn"); 
 
     if (navHomeLink) {
-        navHomeLink.addEventListener("click", () => navigateTo("home"));
+        navHomeLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo("home");
+        });
     }
 
     if (dashLink) {
-        dashLink.addEventListener("click", () => {
+        dashLink.addEventListener("click", (e) => {
+            e.preventDefault();
             navigateTo("dashboard");
             populateDashboard();
         });
     }
 
     if (navAlbumsLink) {
-        navAlbumsLink.addEventListener("click", () => {
+        navAlbumsLink.addEventListener("click", (e) => {
+            e.preventDefault();
             navigateTo("albums-page");
             loadAlbumsPageContent("__TRENDING__");
         });
     }
 
     if (exploreCatalogBtn) {
-        exploreCatalogBtn.addEventListener("click", () => {
+        exploreCatalogBtn.addEventListener("click", (e) => {
+            e.preventDefault();
             navigateTo("albums-page");
             loadAlbumsPageContent("__TRENDING__");
         });
@@ -952,13 +967,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const favGrid = document.getElementById("profile-favorites-grid");
         if (favGrid) {
             if (favs && favs.length > 0) {
-                favGrid.innerHTML = favs.map(f => `
-                    <div class="poster-card" style="width: 150px; position: relative;">
-                        ${isMyProfile ? `<button onclick="removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2;">&times;</button>` : ''}
+                favGrid.innerHTML = favs.map(f => {
+                    const safeName = (f.album_name || '').replace(/'/g, "\\'");
+                    const safeArtist = (f.artist_name || '').replace(/'/g, "\\'");
+                    const safeCover = (f.cover_url || '').replace(/'/g, "\\'");
+                    return `
+                    <div class="poster-card" style="width: 150px; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
+                        ${isMyProfile ? `<button onclick="event.stopPropagation(); removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2;">&times;</button>` : ''}
                         <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
                         <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             } else {
                 favGrid.innerHTML = "<p style='color: var(--text-muted); grid-column: 1/-1;'>Nenhum álbum favoritado ainda.</p>";
             }
@@ -971,8 +991,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 profileReviewsList.innerHTML = profileReviews.map(r => {
                     const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
                     const date = new Date(r.created_at).toLocaleDateString('pt-BR');
+                    const safeName = (r.album_name || '').replace(/'/g, "\\'");
+                    const safeArtist = (r.artist_name || '').replace(/'/g, "\\'");
+                    const safeCover = (r.cover_url || '').replace(/'/g, "\\'");
                     return `
-                    <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative;">
+                    <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
                         <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
                         <div style="flex: 1;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -982,7 +1005,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
                             <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
                         </div>
-                        ${isMyProfile ? `<button onclick="removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem;">&times;</button>` : ''}
+                        ${isMyProfile ? `<button onclick="event.stopPropagation(); removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem;">&times;</button>` : ''}
                     </div>`;
                 }).join('');
             } else {
@@ -1571,18 +1594,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (backlogItems && backlogItems.length > 0) {
-            backlogContainer.innerHTML = backlogItems.map(item => `
-                <div class="backlog-item" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+            backlogContainer.innerHTML = backlogItems.map(item => {
+                const safeName = (item.album_name || '').replace(/'/g, "\\'");
+                const safeArtist = (item.artist_name || '').replace(/'/g, "\\'");
+                const safeCover = (item.cover_url || '').replace(/'/g, "\\'");
+                return `
+                <div class="backlog-item" style="background: var(--bg-card); padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
                     <img src="${item.cover_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=100&h=100&fit=crop'}" style="width: 70px; height: 70px; border-radius: 6px; object-fit: cover;">
                     <div style="flex: 1;">
                         <h4 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; color: var(--text-main);">${item.album_name}</h4>
                         <span style="color: var(--text-muted); font-size: 0.9rem;">${item.artist_name}</span>
                     </div>
                     <div style="display: flex; gap: 0.75rem;">
-                        <button onclick="removeFromBacklog('${item.id}')" class="btn-secondary-dark" style="padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); border-radius: 4px;">Remover</button>
+                        <button onclick="event.stopPropagation(); removeFromBacklog('${item.id}')" class="btn-secondary-dark" style="padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); border-radius: 4px;">Remover</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } else {
             backlogContainer.innerHTML = `
                 <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 8px;">
