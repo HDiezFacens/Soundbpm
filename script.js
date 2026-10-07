@@ -144,6 +144,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                // Buscar os dados do perfil após o login normal para atualizar o localStorage
+                if (data.session && data.session.user) {
+                    const { data: profile } = await supabase
+                        .from("profiles")
+                        .select("username, avatar_url")
+                        .eq("id", data.session.user.id)
+                        .single();
+
+                    localStorage.setItem("soundbpm_user", JSON.stringify({
+                        email: data.session.user.email,
+                        username: profile?.username || data.session.user.email.split("@")[0],
+                        avatar: profile?.avatar_url || ""
+                    }));
+                }
+
                 alert("Login efetuado com sucesso!");
             }
 
@@ -602,7 +617,6 @@ document.addEventListener("DOMContentLoaded", () => {
         navigateTo(pageId, false);
     });
 
-    // NOVA FUNÇÃO: ABRIR PÁGINA DE DETALHES DO ÁLBUM (ESTILO LETTERBOXD)
     window.openAlbumPage = async function(collectionId, albumName, artistName, coverUrl) {
         navigateTo("album-detail-page");
 
@@ -614,8 +628,23 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("detail-fav-btn").onclick = () => toggleFavorite(albumName, artistName, coverUrl);
         document.getElementById("detail-backlog-btn").onclick = () => addToBacklog(albumName, artistName, coverUrl);
 
-        // 1. Carregar Tracklist
         const tracklistContainer = document.getElementById("detail-tracklist");
+        tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando faixas...</p>";
+
+        // Se o ID não foi passado (veio do perfil/lista), busca o ID no iTunes pelo nome e artista
+        if (!collectionId || collectionId === 'undefined' || collectionId === 'null' || collectionId === '') {
+            try {
+                const searchResp = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(albumName + " " + artistName)}&entity=album&limit=1`);
+                const searchData = await searchResp.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    collectionId = searchData.results[0].collectionId;
+                }
+            } catch (e) {
+                console.error("Erro ao buscar ID do álbum:", e);
+            }
+        }
+
+        // 1. Carregar Tracklist
         if (collectionId && collectionId !== 'undefined' && collectionId !== 'null' && collectionId !== '') {
             try {
                 const resp = await fetch(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song`);
