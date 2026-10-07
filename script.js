@@ -480,16 +480,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return `
             <div class="poster-card" data-collection-id="${collectionId}">
-                <div class="poster-image-wrap">
+                <div class="poster-image-wrap" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
                     <img src="${imageUrl}" alt="${albumName}">
-                    <div class="poster-overlay-actions">
+                    <div class="poster-overlay-actions" onclick="event.stopPropagation()">
                         <button class="action-icon-btn" title="Avaliar Álbum" onclick="openReviewModal('${safeName}', '${safeArtist}', '${safeImage}', '${collectionId}')">★</button>
                         <button class="action-icon-btn btn-fav-action" title="Favoritar" onclick="toggleFavorite('${safeName}', '${safeArtist}', '${safeImage}', this)">♥</button>
                         <button class="action-icon-btn" title="Adicionar à Fila de Desejos" onclick="addToBacklog('${safeName}', '${safeArtist}', '${safeImage}')">＋</button>
                         <button class="action-icon-btn" title="Tocar" onclick="playMockTrack('${safeName}', '${safeArtist}', '${safeImage}')">▶</button>
                     </div>
                 </div>
-                <div class="poster-info">
+                <div class="poster-info" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
                     <h3>${albumName}</h3>
                     <span class="poster-artist">${artistName}</span>
                     <div class="poster-rating-stars">★★★★★ <span class="numeric-score">${(Math.random() * 0.4 + 4.6).toFixed(1)}</span></div>
@@ -563,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPopularContent();
 
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-    const allPages = ["dashboard", "albums-page", "profile-page", "people-page"];
+    const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page"];
 
     window.navigateTo = function(pageId) {
         if (pageId === "home") {
@@ -591,6 +591,80 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         window.scrollTo(0, 0);
+    };
+
+    // NOVA FUNÇÃO: ABRIR PÁGINA DE DETALHES DO ÁLBUM (ESTILO LETTERBOXD)
+    window.openAlbumPage = async function(collectionId, albumName, artistName, coverUrl) {
+        navigateTo("album-detail-page");
+
+        document.getElementById("detail-album-title").textContent = albumName;
+        document.getElementById("detail-album-artist").textContent = artistName;
+        document.getElementById("detail-album-cover").src = coverUrl;
+
+        document.getElementById("detail-review-btn").onclick = () => openReviewModal(albumName, artistName, coverUrl, collectionId);
+        document.getElementById("detail-fav-btn").onclick = () => toggleFavorite(albumName, artistName, coverUrl);
+        document.getElementById("detail-backlog-btn").onclick = () => addToBacklog(albumName, artistName, coverUrl);
+
+        // 1. Carregar Tracklist
+        const tracklistContainer = document.getElementById("detail-tracklist");
+        if (collectionId && collectionId !== 'undefined' && collectionId !== 'null' && collectionId !== '') {
+            try {
+                const resp = await fetch(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song`);
+                const data = await resp.json();
+                const songs = data.results.filter(item => item.wrapperType === 'track');
+                if (songs.length > 0) {
+                    tracklistContainer.innerHTML = songs.map((s, idx) => `
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border-subtle);">
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${idx+1}. ${s.trackName}</span>
+                            <span style="color: var(--text-muted);">${Math.floor(s.trackTimeMillis / 60000)}:${String(Math.floor((s.trackTimeMillis % 60000) / 1000)).padStart(2, '0')}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Nenhuma faixa encontrada.</p>";
+                }
+            } catch (e) {
+                tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Erro ao carregar faixas.</p>";
+            }
+        } else {
+            tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Faixas indisponíveis.</p>";
+        }
+
+        // 2. Carregar Resenhas da Comunidade do Supabase
+        const reviewsContainer = document.getElementById("detail-community-reviews");
+        if (supabase) {
+            const { data: albumReviews } = await supabase
+                .from('reviews')
+                .select('*, profiles:user_id(username, avatar_url)')
+                .eq('album_name', albumName)
+                .order('created_at', { ascending: false });
+
+            if (albumReviews && albumReviews.length > 0) {
+                const totalRating = albumReviews.reduce((acc, r) => acc + r.rating, 0);
+                const avgRating = (totalRating / albumReviews.length).toFixed(1);
+                const starsCount = "★".repeat(Math.round(avgRating)) + "☆".repeat(5 - Math.round(avgRating));
+                document.getElementById("detail-album-rating-avg").innerHTML = `${starsCount} <span style="color: var(--text-main); font-weight: 600;">${avgRating}</span> <span style="color: var(--text-muted); font-size: 0.9rem;">(${albumReviews.length} resenha${albumReviews.length > 1 ? 's' : ''})</span>`;
+
+                reviewsContainer.innerHTML = albumReviews.map(r => {
+                    const avatar = r.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces";
+                    const username = r.profiles?.username || "Membro";
+                    const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
+                    const date = new Date(r.created_at).toLocaleDateString('pt-BR');
+                    return `
+                    <div style="background: var(--bg-base); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; cursor: pointer;" onclick="openUserProfile('${r.user_id}')">
+                            <img src="${avatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;">
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--accent-gold);">${username}</span>
+                            <span style="margin-left: auto; color: var(--accent-orange); font-size: 0.85rem;">${stars}</span>
+                        </div>
+                        <p style="margin: 0; font-size: 0.85rem; font-style: italic; color: var(--text-main); white-space: pre-line;">"${r.review_text || 'Sem texto.'}"</p>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.3rem;">${date}</span>
+                    </div>`;
+                }).join('');
+            } else {
+                document.getElementById("detail-album-rating-avg").innerHTML = `★★★★★ <span style="color: var(--text-muted); font-size: 0.9rem;">(Sem avaliações ainda)</span>`;
+                reviewsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Ainda ninguém escreveu uma resenha para este álbum. Sê o primeiro!</p>";
+            }
+        }
     };
 
     window.addToBacklog = async function(albumName, artistName, coverUrl) {
