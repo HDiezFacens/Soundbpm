@@ -166,7 +166,7 @@ ul {
     height: 100%;
     background-size: cover;
     background-position: center;
-    filter: blur(15px) brightness(0.4); /* Reduzido o blur para 15px e clareado um pouco */
+    filter: blur(15px) brightness(0.4);
     transform: scale(1.1);
     z-index: 1;
     transition: background-image 1s ease-in-out;
@@ -802,6 +802,7 @@ ul {
         grid-template-columns: 1fr;
     }
 }
+
 /* Integração Dashboard & Player */
 .dashboard-grid {
     display: grid;
@@ -966,10 +967,160 @@ ul {
     }
 }
 
-/* Seletor de estrelas interativo no modal (Movido para o escopo global) */
+/* Seletor de estrelas interativo no modal */
 #star-rating-selector span {
     transition: transform 0.1s ease;
 }
 #star-rating-selector span:hover {
     transform: scale(1.15);
+}
+
+/* ==========================================================================
+   📱 RESPONSIVIDADE PARA TELEMÓVEIS (Telas até 768px)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    /* 1. Ajustes Globais de Layout */
+    body {
+        font-size: 14px; /* Texto ligeiramente menor para caber melhor */
+    }
+
+    /* Se tiveres uma sidebar lateral (Navegação), transforma-a num Bottom Nav ou empilha-a */
+    .sidebar, .nav-container {
+        flex-direction: row;
+        justify-content: space-around;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--bg-card);
+        padding: 10px;
+        z-index: 1000;
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Dá um espaço no fundo da página para o conteúdo não ficar escondido pela navbar */
+    main, .main-content {
+        padding-bottom: 80px !important;
+        margin-left: 0 !important; /* Remove margem da sidebar lateral se existir */
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    /* 2. Grelhas de Álbuns (Cria 2 colunas no telemóvel em vez de 4 ou 5) */
+    #trending-albums-grid, 
+    #albums-page-grid, 
+    #profile-favorites-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+
+    /* 3. Cartões de Álbuns (Posters) */
+    .poster-card img {
+        height: auto;
+        aspect-ratio: 1 / 1; /* Mantém as capas quadradas perfeitas */
+    }
+    
+    .poster-info h3 {
+        font-size: 0.9rem;
+    }
+    
+    .poster-info span {
+        font-size: 0.8rem;
+    }
+
+    /* 4. Página de Detalhes do Álbum (Empilhar imagem e texto) */
+    #album-detail-page > div:first-child {
+        flex-direction: column !important;
+        align-items: center;
+        text-align: center;
+    }
+
+    #detail-album-cover {
+        width: 220px !important;
+        height: 220px !important;
+        margin-bottom: 15px;
+    }
+
+    /* 5. Cartões de Lançamentos (Upcoming) e Backlog */
+    .upcoming-card, .backlog-item {
+        flex-direction: column !important;
+        text-align: center;
+        align-items: center !important;
+    }
+
+    .upcoming-card img, .backlog-item img {
+        width: 120px !important;
+        height: 120px !important;
+        margin-bottom: 10px;
+    }
+
+    /* 6. Modais (Login, Review, Edit Profile) - Ocupar a tela quase toda */
+    .modal-content, 
+    #login-modal > div, 
+    #review-modal > div, 
+    #edit-profile-modal > div {
+        width: 95% !important;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 20px !important;
+        margin: 5% auto !important;
+        border-radius: 15px !important;
+    }
+
+    /* 7. Diário e Resenhas no Perfil */
+    .diary-item {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center;
+        gap: 10px !important;
+    }
+
+    .diary-item img {
+        width: 100px !important;
+        height: 100px !important;
+    }
+
+    /* O botão de "Partilhar no Instagram" fica centralizado e maior no toque */
+    .diary-item button {
+        width: 100%;
+        justify-content: center;
+        padding: 10px !important;
+        font-size: 1rem !important;
+    }
+
+    /* 8. Web Player (O Player de música no fundo da tela) */
+    #web-player {
+        bottom: 60px; /* Fica acima da barra de navegação de baixo */
+        flex-direction: column;
+        padding: 10px !important;
+        text-align: center;
+        gap: 8px;
+    }
+
+    /* 9. Hero Banner (Banner de Destaque) */
+    #hero-backdrop {
+        height: 300px; /* Reduz a altura do banner no celular */
+    }
+    
+    #hero-title {
+        font-size: 1.5rem !important;
+    }
+    
+    #hero-desc {
+        font-size: 0.9rem !important;
+    }
+
+    /* 10. Header do Perfil (Avatar + Info) */
+    #profile-page > div:first-child {
+        flex-direction: column !important;
+        text-align: center;
+    }
+
+    #profile-avatar-img {
+        width: 120px !important;
+        height: 120px !important;
+        margin-bottom: 10px;
+    }
 }

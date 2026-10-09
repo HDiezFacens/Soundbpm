@@ -144,7 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // Buscar os dados do perfil após o login normal para atualizar o localStorage
                 if (data.session && data.session.user) {
                     const { data: profile } = await supabase
                         .from("profiles")
@@ -384,80 +383,107 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById("search-input");
     let carouselInterval;
 
-    async function fetchCatalogData(query) {
+    const searchCache = new Map();
+
+    // Sistema de Fallback para o iTunes caso o Spotify falhe
+    async function fetchCatalogDataFromITunes(query) {
         try {
-            const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=12`);
-            if (!response.ok) throw new Error("Erro na API do iTunes");
+            const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=20`);
             const data = await response.json();
             
-            return data.results.map(item => ({
+            return (data.results || []).map(item => ({
                 name: item.collectionName,
+                collectionName: item.collectionName,
+                artistName: item.artistName,
                 artists: [{ name: item.artistName }],
-                images: [{ url: item.artworkUrl100.replace('100x100bb', '600x600bb') }],
-                release_date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 'Desconhecido',
-                collectionId: item.collectionId
+                images: [{ url: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : '' }],
+                artworkUrl100: item.artworkUrl100 || '',
+                release_date: item.releaseDate ? item.releaseDate.split('T')[0] : '2026',
+                collectionId: item.collectionId,
+                id: item.collectionId
             }));
         } catch (error) {
-            console.error("Erro ao buscar dados do catálogo:", error);
+            console.error("Erro no fallback do iTunes:", error);
             return [];
+        }
+    }
+
+    async function fetchCatalogData(query) {
+        if (!query) return [];
+        if (searchCache.has(query)) {
+            return searchCache.get(query);
+        }
+
+        try {
+            if (!supabase) {
+                throw new Error("Supabase não inicializado.");
+            }
+
+            const { data, error } = await supabase.functions.invoke('spotify-search', {
+                body: { query }
+            });
+
+            if (error || !data || !data.albums || !data.albums.items || data.albums.items.length === 0) {
+                console.warn("Spotify indisponível ou sem resultados. Alternando para o iTunes...");
+                const iTunesResults = await fetchCatalogDataFromITunes(query);
+                searchCache.set(query, iTunesResults);
+                return iTunesResults;
+            }
+
+            const results = (data.albums.items || []).map(item => ({
+                name: item.name,
+                collectionName: item.name,
+                artistName: item.artists.map(a => a.name).join(', '),
+                artists: item.artists,
+                images: item.images,
+                artworkUrl100: item.images[0]?.url || '',
+                release_date: item.release_date || '2026',
+                collectionId: item.id,
+                id: item.id
+            }));
+
+            searchCache.set(query, results);
+            return results;
+        } catch (error) {
+            console.error("Falha crítica na comunicação com Spotify. Acionando fallback do iTunes:", error);
+            const iTunesResults = await fetchCatalogDataFromITunes(query);
+            return iTunesResults;
         }
     }
 
     async function fetchRealTrendingAlbums() {
         const acclaimedMasterpieces = [
-            { query: "the dark side of the moon pink floyd", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
-            { query: "abbey road the beatles", synopsis: "O grande canto do cisne da banda, trazendo medleys lendários e produção impecável." },
-            { query: "thriller michael jackson", synopsis: "O álbum mais vendido de todos os tempos, redefinindo o pop com genialidade e refrões eternos." },
-            { query: "rumours fleetwood mac", synopsis: "Um clássico atemporal forjado no meio de corações partidos e harmonias vocais perfeitas." },
-            { query: "nevermind nirvana", synopsis: "O trovão grunge que destruiu o hair metal e deu voz à angústia da Geração X." },
-            { query: "ok computer radiohead", synopsis: "O marco do rock alternativo que previu com precisão a alienação e a ansiedade da era digital." },
-            { query: "in rainbows radiohead", synopsis: "Quente, melancólico e ritmicamente complexo, um dos registros mais intimistas e brilhantes da banda." },
-            { query: "back to black amy winehouse", synopsis: "Soul e R&B visceral com uma honestidade brutal e letras de cortar o coração." },
-            { query: "discovery daft punk", synopsis: "Uma viagem nostálgica de french house e disco que moldou para sempre a música eletrônica moderna." },
-            { query: "good kid maad city kendrick", synopsis: "Um curta-metragem sonoro magistral sobre a juventude, os perigos e as tentações nas ruas de Compton." },
-            { query: "to pimp a butterfly kendrick", synopsis: "Um épico denso de jazz-rap que explora a cultura afro-americana, o racismo e o peso da fama." },
-            { query: "blonde frank ocean", synopsis: "Uma obra-prima atmosférica, minimalista e introspectiva que redefiniu os limites do R&B contemporâneo." },
-            { query: "igor tyler the creator", synopsis: "Uma jornada caótica, colorida e genial sobre desilusão amorosa, misturando neo-soul e sintetizadores." },
-            { query: "renaissance beyonce", synopsis: "Uma celebração eufórica, vibrante e contínua da cultura dance, house e disco underground." },
-            { query: "norman fucking rockwell lana del rey", synopsis: "O grande romance americano moderno contado através de baladas poéticas e melancólicas deslumbrantes." },
-            { query: "melodrama lorde", synopsis: "Um retrato teatral, eufórico e dolorosamente honesto sobre a solidão das festas e o fim da juventude." },
-            { query: "my beautiful dark twisted fantasy kanye", synopsis: "Um espetáculo maximalista e grandioso sobre o ego, a fama e a genialidade em colapso." },
-            { query: "after hours the weeknd", synopsis: "Uma odisseia noturna e cinematográfica pelas luzes de neon, excessos e desilusões de Las Vegas." },
-            { query: "astroworld travis scott", synopsis: "Um parque de diversões psicodélico do trap moderno com produções colossais e envolventes." },
-            { query: "future nostalgia dua lipa", synopsis: "Uma aula magistral de pop contemporâneo com influências marcantes da disco music dos anos 80." },
-            { query: "billie eilish when we all fall asleep", synopsis: "Pop sussurrado, sombrio e inovador gerado no quarto que conquistou o mundo." },
-            { query: "hit me hard and soft billie eilish", synopsis: "Vocais delicados e arranjos expansivos que flutuam entre o lamento melancólico e o brilho pop." },
-            { query: "brat charli xcx", synopsis: "Um mergulho frenético, clubber e hiperativo recheado de vulnerabilidade e batidas ácidas marcantes." },
-            { query: "folklore taylor swift", synopsis: "Um refúgio indie-folk repleto de narrativas ficcionais, atmosferas acústicas e pura poesia." },
-            { query: "punisher phoebe bridgers", synopsis: "Folk indie assombrado, melancólico e espirituoso, perfeito para madrugadas existenciais." },
-            { query: "souvlaki slowdive", synopsis: "Paredes de guitarras enevoadas e vocais etéreos criando a essência definitiva do shoegaze." },
-            { query: "homogenic bjork", synopsis: "A batida vulcânica da música eletrônica misturada com cordas sinfónicas numa carta de amor islandesa." },
-            { query: "channel orange frank ocean", synopsis: "R&B alternativo inovador com narrativas urbanas profundas e texturas sonoras luxuosas." },
-            { query: "blonde on blonde bob dylan", synopsis: "O cume poético do folk-rock com arranjos eletrizantes que mudaram a história da composição." },
-            { query: "what s going on marvin gaye", synopsis: "Uma obra-prima atemporal de soul protesto que questiona a humanidade, a guerra e a paz." }
+            { query: "Pink Floyd Dark Side of the Moon", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
+            { query: "The Beatles Abbey Road", synopsis: "O grande canto do cisne da banda, trazendo medleys lendários e produção impecável." },
+            { query: "Michael Jackson Thriller", synopsis: "O álbum mais vendido de todos os tempos, redefinindo o pop com genialidade e refrões eternos." },
+            { query: "Fleetwood Mac Rumours", synopsis: "Um clássico atemporal forjado no meio de corações partidos e harmonias vocais perfeitas." },
+            { query: "Nirvana Nevermind", synopsis: "O trovão grunge que destruiu o hair metal e deu voz à angústia da Geração X." },
+            { query: "Radiohead OK Computer", synopsis: "O marco do rock alternativo que previu com precisão a alienação e a ansiedade da era digital." },
+            { query: "Amy Winehouse Back to Black", synopsis: "Soul e R&B visceral com uma honestidade brutal e letras de cortar o coração." },
+            { query: "Daft Punk Discovery", synopsis: "Uma viagem nostálgica de french house e disco que moldou para sempre a música eletrônica moderna." },
+            { query: "Kendrick Lamar good kid m.A.A.d city", synopsis: "Um curta-metragem sonoro magistral sobre a juventude, os perigos e as tentações nas ruas de Compton." },
+            { query: "Frank Ocean Blonde", synopsis: "Uma obra-prima atmosférica, minimalista e introspectiva que redefiniu os limites do R&B contemporâneo." },
+            { query: "Tyler The Creator Igor", synopsis: "Uma jornada caótica, colorida e genial sobre desilusão amorosa, misturando neo-soul e sintetizadores." },
+            { query: "Beyonce Renaissance", synopsis: "Uma celebração eufórica, vibrante e contínua da cultura dance, house e disco underground." }
         ];
         
-        const shuffled = acclaimedMasterpieces.sort(() => 0.5 - Math.random()).slice(0, 12);
-        
+        const shuffled = acclaimedMasterpieces.sort(() => 0.5 - Math.random()).slice(0, 8);
+        let finalAlbums = [];
+
         try {
-            const results = await Promise.all(shuffled.map(obj => 
-                fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(obj.query)}&entity=album&limit=1`).then(r => r.json())
-            ));
-            
-            let finalAlbums = [];
-            results.forEach((res, index) => {
-                if (res.results && res.results.length > 0) {
-                    const item = res.results[0];
+            for (const obj of shuffled) {
+                const results = await fetchCatalogData(obj.query);
+                if (results && results.length > 0) {
+                    const item = results[0];
                     finalAlbums.push({
-                        name: item.collectionName,
-                        artists: [{ name: item.artistName }],
-                        images: [{ url: item.artworkUrl100.replace('100x100bb', '600x600bb') }],
-                        release_date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 'Desconhecido',
-                        synopsis: shuffled[index].synopsis,
-                        collectionId: item.collectionId
+                        ...item,
+                        synopsis: obj.synopsis
                     });
                 }
-            });
+            }
+            if (finalAlbums.length === 0) {
+                return await fetchCatalogData("hits");
+            }
             return finalAlbums;
         } catch (e) {
             console.error("Falha ao carregar álbuns em destaque", e);
@@ -484,10 +510,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.createAlbumCardHTML = function(album) {
-        const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 ? album.artworkUrl100.replace('100x100bb', '600x600bb') : '');
+        const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 ? album.artworkUrl100 : '');
         const artistName = album.artists ? album.artists.map(a => a.name).join(', ') : (album.artistName || 'Artista Desconhecido');
         const albumName = album.name || album.collectionName || 'Álbum';
-        const collectionId = album.collectionId || '';
+        const collectionId = album.collectionId || album.id || '';
         
         const safeName = albumName.replace(/'/g, "\\'");
         const safeArtist = artistName.replace(/'/g, "\\'");
@@ -538,19 +564,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateHeroContent(album) {
-        const imageUrl = album.images && album.images[0] ? album.images[0].url : '';
-        const artists = album.artists.map(a => a.name).join(', ');
+        const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 || '');
+        const artists = album.artists ? album.artists.map(a => a.name).join(', ') : (album.artistName || '');
+        const releaseYear = album.release_date ? album.release_date.split('-')[0] : '2026';
+
         if (heroBackdrop) {
             heroBackdrop.style.backgroundImage = `url('${imageUrl}')`;
         }
         if (heroTitle) {
-            heroTitle.innerHTML = `Destaque Atual: <span style="color: var(--accent-gold);">${album.name}</span>`;
+            heroTitle.innerHTML = `Destaque Atual: <span style="color: var(--accent-gold);">${album.name || album.collectionName}</span>`;
         }
         if (heroDesc) {
             if (album.synopsis) {
-                heroDesc.textContent = `"${album.synopsis}" — Lançado em ${album.release_date}.`;
+                heroDesc.textContent = `"${album.synopsis}" — Lançado em ${releaseYear}.`;
             } else {
-                heroDesc.textContent = `Ouça o álbum de ${artists}. Lançado em ${album.release_date}. Avalie e catalogue no SoundBPM.`;
+                heroDesc.textContent = `Ouça o álbum de ${artists}. Lançado em ${releaseYear}. Avalie e catalogue no SoundBPM.`;
             }
         }
     }
@@ -568,7 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     const albums = await fetchCatalogData(query);
                     renderAlbums(albums);
-                }, 400);
+                }, 500);
             } else if (query.length <= 2) {
                 loadPopularContent();
             }
@@ -631,43 +659,40 @@ document.addEventListener("DOMContentLoaded", () => {
         const tracklistContainer = document.getElementById("detail-tracklist");
         tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando faixas...</p>";
 
-        // Se o ID não foi passado (veio do perfil/lista), busca o ID no iTunes pelo nome e artista
-        if (!collectionId || collectionId === 'undefined' || collectionId === 'null' || collectionId === '') {
-            try {
-                const searchResp = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(albumName + " " + artistName)}&entity=album&limit=1`);
-                const searchData = await searchResp.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    collectionId = searchData.results[0].collectionId;
-                }
-            } catch (e) {
-                console.error("Erro ao buscar ID do álbum:", e);
-            }
-        }
-
-        // 1. Carregar Tracklist
         if (collectionId && collectionId !== 'undefined' && collectionId !== 'null' && collectionId !== '') {
             try {
-                const resp = await fetch(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song`);
-                const data = await resp.json();
-                const songs = data.results.filter(item => item.wrapperType === 'track');
+                const { data, error } = await supabase.functions.invoke('spotify-search', {
+                    body: { albumId: collectionId }
+                });
+
+                if (error || !data) {
+                    throw new Error("Erro ao carregar faixas");
+                }
+
+                const songs = data.items || [];
                 if (songs.length > 0) {
-                    tracklistContainer.innerHTML = songs.map((s, idx) => `
+                    tracklistContainer.innerHTML = songs.map((s, idx) => {
+                        const totalSecs = Math.floor((s.duration_ms || 0) / 1000);
+                        const mins = Math.floor(totalSecs / 60);
+                        const secs = String(totalSecs % 60).padStart(2, '0');
+                        return `
                         <div style="display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border-subtle);">
-                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${idx+1}. ${s.trackName}</span>
-                            <span style="color: var(--text-muted);">${Math.floor(s.trackTimeMillis / 60000)}:${String(Math.floor((s.trackTimeMillis % 60000) / 1000)).padStart(2, '0')}</span>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${idx+1}. ${s.name}</span>
+                            <span style="color: var(--text-muted);">${mins}:${secs}</span>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 } else {
                     tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Nenhuma faixa encontrada.</p>";
                 }
             } catch (e) {
+                console.error(e);
                 tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Erro ao carregar faixas.</p>";
             }
         } else {
-            tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Faixas indisponíveis.</p>";
+            tracklistContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>ID do álbum inválido.</p>";
         }
 
-        // 2. Carregar Resenhas da Comunidade do Supabase
         const reviewsContainer = document.getElementById("detail-community-reviews");
         if (supabase) {
             const { data: albumReviews } = await supabase
@@ -700,7 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }).join('');
             } else {
                 document.getElementById("detail-album-rating-avg").innerHTML = `★★★★★ <span style="color: var(--text-muted); font-size: 0.9rem;">(Sem avaliações ainda)</span>`;
-                reviewsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Ainda ninguém escreveu uma resenha para este álbum. Sê o primeiro!</p>";
+                reviewsContainer.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Ainda ninguém escreveu uma resenha para este álbum. Seja o primeiro!</p>";
             }
         }
     };
@@ -1033,6 +1058,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             </div>
                             <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
                             <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
+                            
+                            <!-- BOTÃO DE COMPARTILHAR NO INSTAGRAM AQUI -->
+                            <button onclick="event.stopPropagation(); shareToInstagramStory('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(r.review_text || '').replace(/`/g, '\\`')}\`)" 
+                                style="margin-top: 10px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                                📸 Compartilhar no Instagram Story
+                            </button>
+                            
                         </div>
                         ${isMyProfile ? `<button onclick="event.stopPropagation(); removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem;">&times;</button>` : ''}
                     </div>`;
@@ -1082,7 +1114,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.removeProfileReview = async function(id) {
         if (!supabase) return;
-        if (!confirm("Tens a certeza de que pretendes excluir esta resenha?")) return;
+        if (!confirm("Tem certeza de que deseja excluir esta resenha?")) return;
         const { error } = await supabase.from('reviews').delete().eq('id', id);
         if (!error) {
             loadUserProfile();
@@ -1157,52 +1189,63 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (upcomingContainer) {
             try {
-                const randomQueryPool = [
-                    "pop album 2026", "indie album 2026", "hip hop album 2026", 
-                    "r&b album 2026", "rock album 2026", "electronic album 2026", 
-                    "latin album 2026", "alternative album 2026", "soul album 2026",
-                    "Taylor Swift 2026", "Sabrina Carpenter 2026", "Kendrick Lamar 2026",
-                    "Billie Eilish 2026", "Charli XCX 2026", "new music hits 2026"
+                // Buscas direcionadas estritamente a lançamentos recentes do ano corrente (2026) e final de 2025
+                const current2026Queries = [
+                    "The Weeknd 2026", 
+                    "Lady Gaga 2026", 
+                    "Bad Bunny 2026", 
+                    "Kendrick Lamar 2026", 
+                    "Sabrina Carpenter 2026", 
+                    "Billie Eilish 2026", 
+                    "Tyler The Creator 2026", 
+                    "Bruno Mars 2026", 
+                    "Rosalia 2026", 
+                    "Coldplay 2026", 
+                    "Charli xcx 2026", 
+                    "Post Malone 2026"
                 ];
 
-                const shuffledQueries = randomQueryPool.sort(() => 0.5 - Math.random()).slice(0, 6);
-
-                const fetchPromises = shuffledQueries.map(q => 
-                    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=album&limit=25&country=br`)
-                        .then(r => r.json())
-                        .catch(() => ({ results: [] }))
-                );
-
-                const responses = await Promise.all(fetchPromises);
-                
+                const shuffledQueries = current2026Queries.sort(() => 0.5 - Math.random()).slice(0, 5);
                 let allAlbums = [];
-                responses.forEach(res => {
-                    if (res && res.results) {
-                        allAlbums.push(...res.results);
+
+                for (const q of shuffledQueries) {
+                    const results = await fetchCatalogData(q);
+                    if (results && results.length > 0) {
+                        allAlbums.push(...results);
                     }
+                }
+
+                // Se a busca por 2026 retornar vazia em algum ambiente, faz fallback para álbuns de 2026 em geral
+                if (allAlbums.length === 0) {
+                    allAlbums = await fetchCatalogData("2026");
+                }
+
+                // Ordenação rigorosa por data de lançamento (mais recente primeiro)
+                allAlbums.sort((a, b) => {
+                    const dateA = new Date(a.release_date || '2026-01-01');
+                    const dateB = new Date(b.release_date || '2026-01-01');
+                    return dateB - dateA;
                 });
 
                 const uniqueMap = new Map();
                 allAlbums.forEach(album => {
-                    if (album.collectionName && !uniqueMap.has(album.collectionName)) {
-                        uniqueMap.set(album.collectionName, album);
+                    const albumName = album.name || album.collectionName;
+                    if (albumName && !uniqueMap.has(albumName)) {
+                        const rawDate = album.release_date || '2026';
+                        const year = rawDate.split('-')[0] || '2026';
+
+                        uniqueMap.set(albumName, {
+                            collectionName: albumName,
+                            artistName: album.artistName || (album.artists ? album.artists.map(a => a.name).join(', ') : ''),
+                            artworkUrl100: album.artworkUrl100 || (album.images && album.images[0] ? album.images[0].url : ''),
+                            releaseDate: rawDate,
+                            releaseYear: year,
+                            collectionViewUrl: '#'
+                        });
                     }
                 });
 
-                let rawItems = Array.from(uniqueMap.values());
-
-                allUpcomingItems = rawItems.filter(album => {
-                    if (!album.releaseDate) return false;
-                    const year = new Date(album.releaseDate).getFullYear();
-                    return year === 2026;
-                });
-
-                allUpcomingItems.sort((a, b) => {
-                    const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
-                    const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
-                    return dateB - dateA;
-                });
-
+                allUpcomingItems = Array.from(uniqueMap.values());
                 renderUpcomingList(4);
 
                 if (viewMoreUpcomingLink) {
@@ -1224,7 +1267,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         document.getElementById("upcoming").scrollIntoView({ behavior: "smooth" });
                     });
                 }
-
             } catch(e) {
                 console.error("Erro ao carregar lançamentos:", e);
                 upcomingContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; grid-column: 1/-1;'>Erro ao carregar o radar de lançamentos.</p>";
@@ -1237,7 +1279,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const currentViewMoreBtn = document.getElementById("view-more-upcoming-link");
             
             if (allUpcomingItems.length === 0) {
-                upcomingContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; grid-column: 1/-1;'>Nenhum lançamento recente encontrado para 2026.</p>";
+                upcomingContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; grid-column: 1/-1;'>Nenhum lançamento recente encontrado.</p>";
                 upcomingContainer.style.display = "block";
                 if (currentViewMoreBtn) currentViewMoreBtn.style.display = "none";
                 return;
@@ -1248,8 +1290,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             upcomingContainer.innerHTML = itemsToDisplay.map((a) => {
-                const cover = a.artworkUrl100 ? a.artworkUrl100.replace("100x100bb", "300x300bb") : './Logo.png';
-                const year = a.releaseDate ? new Date(a.releaseDate).getFullYear() : '2026';
+                const cover = a.artworkUrl100 ? a.artworkUrl100 : './Logo.png';
+                const year = a.releaseYear || '2026';
                 
                 return `
                 <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
@@ -1426,10 +1468,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!container) return;
         container.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando faixas...</p>";
         try {
-            const resp = await fetch(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song`);
-            const data = await resp.json();
-            const songs = data.results.filter(item => item.wrapperType === 'track');
-            currentTracksData = songs.map(s => ({ name: s.trackName, rating: 5 }));
+            const { data, error } = await supabase.functions.invoke('spotify-search', {
+                body: { albumId: collectionId }
+            });
+
+            if (error || !data) {
+                throw new Error("Erro ao carregar faixas");
+            }
+
+            const songs = data.items || [];
+            currentTracksData = songs.map(s => ({ name: s.name, rating: 5 }));
 
             if (currentTracksData.length === 0) {
                 container.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Nenhuma faixa encontrada.</p>";
@@ -1797,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (reqList) {
             if (requests && requests.length > 0) {
                 reqList.innerHTML = requests.map(r => {
-                    const avatar = r.requester?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                    const avatar = r.requester?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=52&h=52&fit=crop&crop=faces";
                     return `
                     <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid #e74c3c33;">
                         <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">
@@ -1843,7 +1891,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 resultsDiv.innerHTML = profiles.map(p => {
                     if (p.id === myId) return "";
-                    const avatar = p.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                    const avatar = p.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=52&h=52&fit=crop&crop=faces";
                     return `
                     <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${p.id}')">
                         <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
@@ -1941,4 +1989,111 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })();
 
+    // 📸 NOVA FUNÇÃO: GERAR IMAGEM PARA COMPARTILHAR NO INSTAGRAM STORIES
+    window.shareToInstagramStory = async function(albumName, artistName, coverUrl, rating, reviewText) {
+        if (typeof html2canvas === 'undefined') {
+            alert("A biblioteca html2canvas não carregou corretamente. Verifique o seu HTML.");
+            return;
+        }
+
+        const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+        const username = localUser.username || "Usuário";
+        const avatar = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+        const starsStr = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
+
+        const card = document.createElement("div");
+        card.style.position = "absolute";
+        card.style.left = "-9999px";
+        card.style.width = "1080px";
+        card.style.height = "1920px";
+        card.style.background = "linear-gradient(145deg, #121212, #1e1e1e)";
+        card.style.color = "#fff";
+        card.style.fontFamily = "sans-serif";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.alignItems = "center";
+        card.style.justifyContent = "center";
+        card.style.padding = "80px";
+        card.style.boxSizing = "border-box";
+        card.style.borderRadius = "40px";
+
+        card.innerHTML = `
+            <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: url('${coverUrl}') center/cover; filter: blur(80px); opacity: 0.3; z-index: 1;"></div>
+            
+            <div style="z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; max-width: 900px; background: rgba(0,0,0,0.6); padding: 60px; border-radius: 40px; border: 2px solid rgba(255,255,255,0.1);">
+                
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 50px;">
+                    <img src="${avatar}" crossorigin="anonymous" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid #D4AF37;">
+                    <span style="font-size: 40px; font-weight: bold; color: #D4AF37;">${username}</span>
+                    <span style="font-size: 35px; color: #aaa;">ouviu e avaliou:</span>
+                </div>
+
+                <img src="${coverUrl}" crossorigin="anonymous" style="width: 500px; height: 500px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); margin-bottom: 40px;">
+                
+                <h1 style="font-size: 60px; margin: 0 0 10px 0; line-height: 1.1;">${albumName}</h1>
+                <h2 style="font-size: 40px; color: #ccc; margin: 0 0 40px 0; font-weight: normal;">${artistName}</h2>
+                
+                <div style="font-size: 70px; color: #ff9800; margin-bottom: 40px; letter-spacing: 10px;">${starsStr}</div>
+                
+                <p style="font-size: 35px; line-height: 1.4; font-style: italic; color: #ddd; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden;">"${reviewText || 'Sem texto na resenha.'}"</p>
+                
+            </div>
+
+            <div style="position: absolute; bottom: 80px; z-index: 2; text-align: center;">
+                <div style="font-size: 30px; font-weight: bold; letter-spacing: 5px; color: #D4AF37;">SOUNDBPM</div>
+            </div>
+        `;
+
+        document.body.appendChild(card);
+
+        try {
+            const loadingMsg = document.createElement('div');
+            loadingMsg.id = 'share-loading';
+            loadingMsg.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--accent-gold); color:#000; padding:10px 20px; border-radius:20px; z-index:9999; font-weight:bold;";
+            loadingMsg.innerText = "Gerando imagem para o Instagram...";
+            document.body.appendChild(loadingMsg);
+
+            const canvas = await html2canvas(card, {
+                useCORS: true,
+                allowTaint: false,
+                scale: 2,
+                backgroundColor: "#121212"
+            });
+
+            document.body.removeChild(loadingMsg);
+
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], `soundbpm_${albumName.replace(/\s+/g, '_')}.png`, { type: "image/png" });
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Resenha no SoundBPM',
+                            text: `A minha avaliação de ${albumName} no SoundBPM!`
+                        });
+                    } catch (err) {
+                        console.log("Compartilhamento cancelado ou falhou", err);
+                    }
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = file.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert("Imagem baixada! Agora você pode postar nos seus Stories.");
+                }
+            }, "image/png", 1.0);
+
+        } catch (error) {
+            console.error("Erro ao gerar a imagem: ", error);
+            alert("Não foi possível gerar a imagem. Confira se a capa do álbum permite compartilhamento (CORS).");
+            if (document.getElementById('share-loading')) document.getElementById('share-loading').remove();
+        } finally {
+            document.body.removeChild(card);
+        }
+    };
 });
