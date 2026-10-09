@@ -53,22 +53,22 @@ ul {
 .header-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0.75rem 1.5rem;
+    padding: 0.6rem 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.5rem;
 }
 
 .logo-link {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
 }
 
 .brand-logo {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
     object-position: center;
@@ -83,7 +83,7 @@ ul {
 }
 
 .logo {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 800;
     letter-spacing: -0.5px;
     color: var(--text-main);
@@ -115,7 +115,7 @@ ul {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .header-search input {
@@ -139,8 +139,8 @@ ul {
     background: transparent;
     color: var(--text-main);
     border: 1px solid var(--border-subtle);
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
     border-radius: 4px;
     cursor: pointer;
@@ -935,7 +935,6 @@ ul {
     text-align: right;
 }
 
-/* Seletor de estrelas interativo no modal */
 #star-rating-selector span {
     transition: transform 0.1s ease;
 }
@@ -944,112 +943,143 @@ ul {
 }
 
 /* ==========================================================================
-   📱 CORREÇÃO CRÍTICA DE RESPONSIVIDADE E ROTAÇÃO (Telas até 768px)
+   📱 CORREÇÃO MOBILE DEFINITIVA (Header, Perfil e Botão Gigante)
    ========================================================================== */
 
 @media (max-width: 768px) {
-    /* 1. Correção Definitiva do Header (Impede o vazamento e reorganiza) */
-    .header-container {
-        padding: 0.5rem 0.75rem;
-        flex-wrap: wrap;
-        justify-content: space-between;
-    }
-
-    .logo {
-        font-size: 1.15rem;
-    }
-
-    .main-nav {
-        order: 3;
+    /* 1. Header Compacto e Centralizado para não vazar */
+    .site-header {
+        position: fixed;
         width: 100%;
-        display: flex;
-        justify-content: center;
+    }
+
+    .header-container {
+        padding: 0.5rem;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .logo-link .logo {
+        font-size: 1rem;
+    }
+
+    .brand-logo {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Barra de navegação em scroll horizontal fluido sem quebrar o layout */
+    .main-nav {
+        grid-column: 1 / -1;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
         background-color: var(--bg-tint);
         border-top: 1px solid var(--border-subtle);
-        margin-top: 0.4rem;
-        padding: 0.4rem 0;
-        overflow-x: auto; /* Permite rolar os menus de navegação se forem compridos */
+        padding: 0.35rem 0.5rem;
         -webkit-overflow-scrolling: touch;
     }
 
+    .main-nav::-webkit-scrollbar {
+        display: none; /* Oculta a barra de rolagem visualmente no mobile */
+    }
+
     .main-nav ul {
+        display: inline-flex;
         gap: 1rem;
-        padding: 0 0.5rem;
-        white-space: nowrap;
     }
 
     .nav-link {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
 
     .header-search {
-        display: none; /* Oculta busca pesada do header no mobile se necessário, ou ajuste abaixo */
+        display: none; /* Remove barra de pesquisa grande do header móvel para economizar espaço */
     }
 
     .header-right {
-        gap: 0.5rem;
+        gap: 0.3rem;
     }
 
     .btn-login-nav {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
     }
 
-    /* 2. Correção Completa da Área de Perfil */
+    /* 2. Correção Absoluta da Área de Perfil e Botão "Editar Perfil" */
     #profile-page, 
     .profile-container,
-    .user-profile-section {
-        display: flex;
+    .user-profile-section,
+    section[id*="profile"] {
+        display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         text-align: center !important;
         width: 100% !important;
-        gap: 1rem;
+        padding: 0 10px;
     }
 
+    /* Seletor genérico para o bloco do topo do perfil */
     #profile-page > div:first-child,
     .profile-header {
+        display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
+        justify-content: center !important;
         text-align: center !important;
         width: 100% !important;
+        margin: 0 auto;
     }
 
+    /* Avatar do perfil centralizado e menor */
     #profile-avatar-img,
-    .profile-avatar {
-        width: 100px !important;
-        height: 100px !important;
-        margin: 0 auto 0.5rem auto !important;
-        border-radius: 50%;
-        object-fit: cover;
+    .profile-avatar,
+    #profile-page img:first-of-type {
+        width: 90px !important;
+        height: 90px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        margin: 0 auto 8px auto !important;
+        float: none !important;
     }
 
-    /* Grelhas de favoritos e histórico no perfil */
-    #profile-favorites-grid,
-    .profile-grid {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important;
-        width: 100% !important;
+    /* Força o botão de editar perfil a ter largura automática e tamanho normal */
+    #edit-profile-btn,
+    .btn-edit-profile,
+    button[id*="edit"],
+    .profile-header button {
+        width: auto !important;
+        min-width: 120px !important;
+        max-width: 180px !important;
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.75rem !important;
+        margin: 8px auto 0 auto !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
-    /* 3. Espaçamentos Globais e Rodapé */
+    /* 3. Espaçamentos e Grades no Mobile */
     body {
-        padding-top: 90px; /* Compensa o header de duas linhas no mobile */
+        padding-top: 85px; /* Compensa a altura do menu superior fixo */
     }
 
     main, .main-content, .container {
-        padding-bottom: 100px !important;
-        padding-left: 12px;
-        padding-right: 12px;
+        padding-bottom: 95px !important;
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     .poster-grid,
     #trending-albums-grid, 
-    #albums-page-grid {
-        display: grid;
+    #albums-page-grid,
+    #profile-favorites-grid {
+        display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
+        width: 100% !important;
     }
 
     .news-grid,
@@ -1057,36 +1087,21 @@ ul {
     .dashboard-grid {
         grid-template-columns: 1fr !important;
         gap: 12px;
+        width: 100% !important;
     }
 
-    /* 4. Comportamento ao Rotacionar o Aparelho (Landscape vs Portrait no Mobile) */
-    @media (orientation: landscape) {
-        body {
-            padding-top: 70px;
-        }
-        .main-nav {
-            padding: 0.2rem 0;
-        }
-        .hero-carousel-section {
-            padding: 5rem 1rem 3rem 1rem;
-        }
-        .hero-content-wrapper h1 {
-            font-size: 1.8rem !important;
-        }
-    }
-
-    /* 5. Modais e Player */
+    /* 4. Modais e Player no Celular */
     .modal-card,
     .modal-content {
-        width: 94% !important;
+        width: 92% !important;
         max-height: 85vh;
         overflow-y: auto;
-        padding: 1.25rem !important;
+        padding: 1.2rem !important;
         margin: auto !important;
     }
 
     .web-player {
-        padding: 0.5rem 0.75rem;
+        padding: 0.5rem;
         flex-direction: row;
         justify-content: space-between;
     }
