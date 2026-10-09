@@ -44,7 +44,7 @@ ul {
     top: 0;
     left: 0;
     width: 100%;
-    background-color: rgba(20, 24, 28, 0.92);
+    background-color: rgba(20, 24, 28, 0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-subtle);
     z-index: 1000;
@@ -53,10 +53,11 @@ ul {
 .header-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0.75rem 2rem;
+    padding: 0.75rem 1.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
 }
 
 .logo-link {
@@ -82,10 +83,11 @@ ul {
 }
 
 .logo {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-weight: 800;
     letter-spacing: -0.5px;
     color: var(--text-main);
+    white-space: nowrap;
 }
 
 .logo span {
@@ -94,11 +96,11 @@ ul {
 
 .main-nav ul {
     display: flex;
-    gap: 1.75rem;
+    gap: 1.5rem;
 }
 
 .nav-link {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-muted);
     transition: var(--transition-base);
@@ -113,7 +115,7 @@ ul {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .header-search input {
@@ -123,27 +125,28 @@ ul {
     padding: 0.4rem 0.75rem;
     color: var(--text-main);
     font-size: 0.85rem;
-    width: 180px;
+    width: 160px;
     outline: none;
     transition: var(--transition-base);
 }
 
 .header-search input:focus {
     border-color: var(--accent-gold);
-    width: 220px;
+    width: 200px;
 }
 
 .btn-login-nav {
     background: transparent;
     color: var(--text-main);
     border: 1px solid var(--border-subtle);
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
     font-weight: 700;
     border-radius: 4px;
     cursor: pointer;
     transition: var(--transition-base);
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .btn-login-nav:hover {
@@ -153,7 +156,7 @@ ul {
 
 .hero-carousel-section {
     position: relative;
-    padding: 10rem 2rem 6rem 2rem;
+    padding: 9rem 2rem 5rem 2rem;
     text-align: center;
     overflow: hidden;
 }
@@ -197,7 +200,7 @@ ul {
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 700;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.2rem;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -780,29 +783,6 @@ ul {
     }
 }
 
-@media (max-width: 600px) {
-    .main-nav {
-        display: none;
-    }
-
-    .header-search {
-        display: none;
-    }
-
-    .hero-content-wrapper h1 {
-        font-size: 2rem;
-    }
-
-    .hero-stats-row {
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .footer-container {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* Integração Dashboard & Player */
 .dashboard-grid {
     display: grid;
@@ -955,18 +935,6 @@ ul {
     text-align: right;
 }
 
-@media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-    .web-player {
-        padding: 0.75rem 1rem;
-    }
-    .player-logo {
-        display: none;
-    }
-}
-
 /* Seletor de estrelas interativo no modal */
 #star-rating-selector span {
     transition: transform 0.1s ease;
@@ -976,219 +944,159 @@ ul {
 }
 
 /* ==========================================================================
-   📱 RESPONSIVIDADE OTIMIZADA PARA TELEMÓVEIS (Telas até 768px)
+   📱 CORREÇÃO CRÍTICA DE RESPONSIVIDADE E ROTAÇÃO (Telas até 768px)
    ========================================================================== */
 
 @media (max-width: 768px) {
-    /* 1. Ajustes Globais de Layout e Margens */
-    body {
-        font-size: 14px;
-    }
-
+    /* 1. Correção Definitiva do Header (Impede o vazamento e reorganiza) */
     .header-container {
-        padding: 0.6rem 1rem;
+        padding: 0.5rem 0.75rem;
+        flex-wrap: wrap;
+        justify-content: space-between;
     }
 
-    .section-container {
-        padding: 2.5rem 1rem;
+    .logo {
+        font-size: 1.15rem;
     }
 
-    .section-container.bg-tinted {
-        padding: 2.5rem 1rem;
+    .main-nav {
+        order: 3;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        background-color: var(--bg-tint);
+        border-top: 1px solid var(--border-subtle);
+        margin-top: 0.4rem;
+        padding: 0.4rem 0;
+        overflow-x: auto; /* Permite rolar os menus de navegação se forem compridos */
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Espaçamento no rodapé para o conteúdo não ficar coberto pelo player/menu fixo */
+    .main-nav ul {
+        gap: 1rem;
+        padding: 0 0.5rem;
+        white-space: nowrap;
+    }
+
+    .nav-link {
+        font-size: 0.75rem;
+    }
+
+    .header-search {
+        display: none; /* Oculta busca pesada do header no mobile se necessário, ou ajuste abaixo */
+    }
+
+    .header-right {
+        gap: 0.5rem;
+    }
+
+    .btn-login-nav {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+    }
+
+    /* 2. Correção Completa da Área de Perfil */
+    #profile-page, 
+    .profile-container,
+    .user-profile-section {
+        display: flex;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        gap: 1rem;
+    }
+
+    #profile-page > div:first-child,
+    .profile-header {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    #profile-avatar-img,
+    .profile-avatar {
+        width: 100px !important;
+        height: 100px !important;
+        margin: 0 auto 0.5rem auto !important;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    /* Grelhas de favoritos e histórico no perfil */
+    #profile-favorites-grid,
+    .profile-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    /* 3. Espaçamentos Globais e Rodapé */
+    body {
+        padding-top: 90px; /* Compensa o header de duas linhas no mobile */
+    }
+
     main, .main-content, .container {
-        padding-bottom: 90px !important;
+        padding-bottom: 100px !important;
+        padding-left: 12px;
+        padding-right: 12px;
     }
 
-    /* 2. Grelhas (Grids) transformadas para 2 colunas perfeitamente ajustadas */
     .poster-grid,
     #trending-albums-grid, 
-    #albums-page-grid, 
-    #profile-favorites-grid {
+    #albums-page-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
     }
 
     .news-grid,
-    .upcoming-grid {
+    .upcoming-grid,
+    .dashboard-grid {
         grid-template-columns: 1fr !important;
         gap: 12px;
     }
 
-    /* 3. Cartões de Álbuns e Imagens */
-    .poster-card img {
-        height: auto;
-        aspect-ratio: 1 / 1;
-    }
-    
-    .poster-info {
-        padding: 0.75rem;
-    }
-
-    .poster-info h3 {
-        font-size: 0.85rem;
-    }
-    
-    .poster-artist, .poster-info span {
-        font-size: 0.75rem;
+    /* 4. Comportamento ao Rotacionar o Aparelho (Landscape vs Portrait no Mobile) */
+    @media (orientation: landscape) {
+        body {
+            padding-top: 70px;
+        }
+        .main-nav {
+            padding: 0.2rem 0;
+        }
+        .hero-carousel-section {
+            padding: 5rem 1rem 3rem 1rem;
+        }
+        .hero-content-wrapper h1 {
+            font-size: 1.8rem !important;
+        }
     }
 
-    /* 4. Página de Detalhes do Álbum */
-    #album-detail-page > div:first-child,
-    .album-detail-header {
-        flex-direction: column !important;
-        align-items: center;
-        text-align: center;
-    }
-
-    #detail-album-cover {
-        width: 180px !important;
-        height: 180px !important;
-        margin-bottom: 12px;
-    }
-
-    /* 5. Cartões de Lançamentos e Backlog */
-    .upcoming-card, .backlog-item {
-        flex-direction: column !important;
-        text-align: center;
-        align-items: center !important;
-        padding: 1rem;
-    }
-
-    .upcoming-date-badge {
-        width: 100%;
-        max-width: 120px;
-        margin-bottom: 6px;
-    }
-
-    /* 6. Modais (Ocupar a tela de forma amigável no celular) */
+    /* 5. Modais e Player */
     .modal-card,
-    .modal-content, 
-    #login-modal > div, 
-    #review-modal > div, 
-    #edit-profile-modal > div {
-        width: 92% !important;
+    .modal-content {
+        width: 94% !important;
         max-height: 85vh;
         overflow-y: auto;
-        padding: 1.5rem !important;
+        padding: 1.25rem !important;
         margin: auto !important;
-        border-radius: 10px !important;
     }
 
-    /* 7. Diário e Stream de Resenhas */
-    .diary-item {
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: center;
-        gap: 10px !important;
-        padding: 1rem;
-    }
-
-    .diary-avatar {
-        margin-bottom: 4px;
-    }
-
-    /* 8. Web Player Otimizado para Mobile */
     .web-player {
         padding: 0.5rem 0.75rem;
-        gap: 0.5rem;
-        bottom: 0;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .player-logo {
+        display: none;
     }
 
     .player-info {
         width: auto;
         flex: 1;
-        gap: 0.75rem;
-        overflow: hidden;
-    }
-
-    .player-info img {
-        width: 44px;
-        height: 44px;
-    }
-
-    .player-text h4 {
-        font-size: 0.85rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .player-text p {
-        font-size: 0.75rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .player-controls {
-        gap: 1rem;
-    }
-
-    .player-controls button {
-        font-size: 1rem;
-    }
-
-    .player-controls .play-btn {
-        font-size: 1.5rem;
-    }
-
-    /* 9. Hero Section Ajustada */
-    .hero-carousel-section {
-        padding: 7rem 1rem 3rem 1rem;
-    }
-
-    .hero-content-wrapper h1 {
-        font-size: 2rem !important;
-        line-height: 1.2;
-    }
-
-    .hero-content-wrapper p {
-        font-size: 0.95rem !important;
-    }
-
-    .hero-actions {
-        flex-direction: column;
-        gap: 0.75rem;
-        width: 100%;
-        padding: 0 1rem;
-    }
-
-    .hero-actions button {
-        width: 100%;
-    }
-
-    .hero-stats-row {
-        flex-direction: row;
-        gap: 1.5rem;
-        justify-content: space-around;
-        padding-top: 1.5rem;
-    }
-
-    .stat-box strong {
-        font-size: 1.15rem;
-    }
-
-    /* 10. Rodapé Responsivo */
-    .footer-container {
-        grid-template-columns: 1fr !important;
-        gap: 2rem;
-        text-align: center;
-    }
-
-    .footer-col ul {
-        align-items: center;
-    }
-}
-
-@media (max-width: 380px) {
-    .poster-grid,
-    #trending-albums-grid, 
-    #albums-page-grid, 
-    #profile-favorites-grid {
-        grid-template-columns: repeat(1, 1fr) !important;
     }
 }
