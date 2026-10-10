@@ -512,7 +512,7 @@ ul {
 
 .upcoming-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
 }
 
@@ -525,10 +525,19 @@ ul {
     align-items: center;
     gap: 1.25rem;
     transition: var(--transition-base);
+    width: 100%;
 }
 
 .upcoming-card:hover {
     background-color: var(--bg-card-hover);
+}
+
+.upcoming-card img {
+    width: 75px;
+    height: 75px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .upcoming-date-badge {

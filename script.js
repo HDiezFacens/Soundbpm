@@ -385,7 +385,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const searchCache = new Map();
 
-    // Sistema de Fallback para o iTunes caso o Spotify falhe
     async function fetchCatalogDataFromITunes(query) {
         try {
             const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=20`);
@@ -609,7 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page"];
 
     window.navigateTo = function(pageId, pushHistory = true) {
-        if (pageId === "home") {
+        if (pageId === "home" || pageId === "explore") {
             homeSections.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = "block";
@@ -644,6 +643,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const pageId = event.state?.page || "home";
         navigateTo(pageId, false);
     });
+
+    // 📱 SUPORTE AO SELETOR DROPDOWN NO MOBILE
+    const mobileDropdown = document.getElementById("mobile-nav-dropdown");
+    if (mobileDropdown) {
+        mobileDropdown.addEventListener("change", (e) => {
+            const val = e.target.value;
+            if (val === "explore" || val === "#explore" || val === "home") {
+                navigateTo("home");
+            } else {
+                const pageId = val.replace("#", "");
+                navigateTo(pageId);
+                
+                if (pageId === "dashboard") populateDashboard();
+                if (pageId === "albums-page") loadAlbumsPageContent("__TRENDING__");
+                if (pageId === "people-page") loadPeoplePage();
+                if (pageId === "profile-page") loadUserProfile();
+            }
+        });
+    }
 
     window.openAlbumPage = async function(collectionId, albumName, artistName, coverUrl) {
         navigateTo("album-detail-page");
@@ -1027,7 +1045,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const safeCover = (f.cover_url || '').replace(/'/g, "\\'");
                     return `
                     <div class="poster-card" style="width: 150px; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
-                        ${isMyProfile ? `<button onclick="event.stopPropagation(); removeProfileFavorite('${f.id}')" title="Remover favorito" style="position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 2;">&times;</button>` : ''}
+                        ${isMyProfile ? `<button class="remove-favorite-btn" onclick="event.stopPropagation(); removeProfileFavorite('${f.id}')" title="Remover favorito">&times;</button>` : ''}
                         <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
                         <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
                     </div>
@@ -1059,7 +1077,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
                             <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
                             
-                            <!-- BOTÃO DE COMPARTILHAR NO INSTAGRAM AQUI -->
                             <button onclick="event.stopPropagation(); shareToInstagramStory('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(r.review_text || '').replace(/`/g, '\\`')}\`)" 
                                 style="margin-top: 10px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
                                 📸 Compartilhar no Instagram Story
@@ -1189,7 +1206,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (upcomingContainer) {
             try {
-                // Buscas direcionadas estritamente a lançamentos recentes do ano corrente (2026) e final de 2025
                 const current2026Queries = [
                     "The Weeknd 2026", 
                     "Lady Gaga 2026", 
@@ -1215,12 +1231,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // Se a busca por 2026 retornar vazia em algum ambiente, faz fallback para álbuns de 2026 em geral
                 if (allAlbums.length === 0) {
                     allAlbums = await fetchCatalogData("2026");
                 }
 
-                // Ordenação rigorosa por data de lançamento (mais recente primeiro)
                 allAlbums.sort((a, b) => {
                     const dateA = new Date(a.release_date || '2026-01-01');
                     const dateB = new Date(b.release_date || '2026-01-01');
@@ -1294,14 +1308,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 const year = a.releaseYear || '2026';
                 
                 return `
-                <div class="upcoming-card" style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                    <img src="${cover}" style="width: 75px; height: 75px; border-radius: 6px; object-fit: cover;">
-                    <div class="upcoming-details" style="flex: 1; min-width: 0;">
-                        <h4 style="margin: 0 0 0.2rem 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${a.collectionName}">${a.collectionName}</h4>
-                        <span class="upcoming-artist" style="color: var(--text-muted); font-size: 0.85rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${a.artistName}</span>
-                        <p style="margin: 0.3rem 0 0 0; font-size: 0.75rem; color: var(--accent-gold); font-weight: 600;">🔥 Lançamento Recente • ${year}</p>
+                <div class="upcoming-card">
+                    <img src="${cover}" alt="${a.collectionName}">
+                    <div class="upcoming-details">
+                        <h4 title="${a.collectionName}">${a.collectionName}</h4>
+                        <span class="upcoming-artist">${a.artistName}</span>
+                        <p>🔥 Lançamento Recente • ${year}</p>
                     </div>
-                    <a href="${a.collectionViewUrl || '#'}" target="_blank" class="btn-notify" style="text-decoration: none; padding: 0.4rem 0.8rem; background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-main); border-radius: 4px; font-size: 0.8rem; white-space: nowrap;">Ouvir</a>
+                    <a href="${a.collectionViewUrl || '#'}" target="_blank" class="btn-notify">Ouvir</a>
                 </div>`;
             }).join('');
 
@@ -1989,7 +2003,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })();
 
-    // 📸 NOVA FUNÇÃO: GERAR IMAGEM PARA COMPARTILHAR NO INSTAGRAM STORIES
     window.shareToInstagramStory = async function(albumName, artistName, coverUrl, rating, reviewText) {
         if (typeof html2canvas === 'undefined') {
             alert("A biblioteca html2canvas não carregou corretamente. Verifique o seu HTML.");
