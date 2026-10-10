@@ -783,7 +783,6 @@ ul {
     }
 }
 
-/* Integração Dashboard & Player */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -854,7 +853,6 @@ ul {
     justify-content: center;
 }
 
-/* Web Player Flutuante */
 .web-player {
     position: fixed;
     bottom: 0;
@@ -942,17 +940,13 @@ ul {
     transform: scale(1.15);
 }
 
-/* ==========================================================================
-   📱 CORREÇÃO MOBILE PRECISA E DEFINITIVA
-   ========================================================================== */
-
 @media (max-width: 768px) {
-    /* 1. Header Compacto e Fixo Sem Estouro */
     .site-header {
         position: fixed;
         width: 100%;
         top: 0;
         left: 0;
+        z-index: 1000;
     }
 
     .header-container {
@@ -960,7 +954,7 @@ ul {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.5rem;
         width: 100%;
         box-sizing: border-box;
     }
@@ -971,20 +965,21 @@ ul {
     }
 
     .logo {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
 
     .brand-logo {
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
     }
 
-    /* Menu de navegação com scroll horizontal fluido sem quebrar o header */
     .main-nav {
+        display: block !important;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         flex-grow: 1;
-        max-width: 42vw;
+        max-width: 50vw;
+        margin: 0 0.25rem;
     }
 
     .main-nav::-webkit-scrollbar {
@@ -993,12 +988,13 @@ ul {
 
     .main-nav ul {
         display: flex;
-        gap: 0.8rem;
+        gap: 0.75rem;
         white-space: nowrap;
+        padding: 2px 0;
     }
 
     .nav-link {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
     }
 
     .header-search {
@@ -1015,11 +1011,28 @@ ul {
         font-size: 0.65rem;
     }
 
-    /* 2. Grades protegidas contra overflow lateral */
     .section-container {
         padding: 2rem 1rem;
         max-width: 100%;
         box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    .upcoming-grid,
+    .news-grid,
+    .dashboard-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .upcoming-card {
+        width: 100% !important;
+        box-sizing: border-box;
+        padding: 1rem;
+        gap: 0.75rem;
     }
 
     .poster-grid,
@@ -1032,22 +1045,41 @@ ul {
         width: 100% !important;
     }
 
-    .news-grid,
-    .upcoming-grid,
-    .dashboard-grid {
-        grid-template-columns: 1fr !important;
-        gap: 12px;
-        width: 100% !important;
+    .poster-image-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1/1;
+        overflow: hidden;
     }
 
-    /* 3. PERFIL: Corrigido para não aparecer em outras telas e centralizar corretamente apenas quando ativo */
+    .poster-image-wrap button, 
+    .poster-image-wrap .remove-favorite,
+    .poster-overlay-actions {
+        position: absolute !important;
+        top: 6px !important;
+        right: 6px !important;
+        left: auto !important;
+        bottom: auto !important;
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 50% !important;
+        background: rgba(0, 0, 0, 0.75) !important;
+        color: #fff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.8rem !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        opacity: 1 !important;
+        z-index: 10 !important;
+    }
+
     #profile-page {
         box-sizing: border-box;
         width: 100% !important;
         padding: 10px;
     }
 
-    /* Regra interna se o perfil estiver ativo/exibido */
     #profile-page[style*="display: block"],
     #profile-page[style*="display: flex"] {
         display: flex !important;
@@ -1058,8 +1090,8 @@ ul {
 
     #profile-page img,
     #profile-avatar-img {
-        width: 90px !important;
-        height: 90px !important;
+        width: 85px !important;
+        height: 85px !important;
         border-radius: 50% !important;
         object-fit: cover !important;
         margin: 0 auto 8px auto !important;
@@ -1069,15 +1101,14 @@ ul {
     #edit-profile-btn,
     .btn-edit-profile {
         width: auto !important;
-        min-width: 120px !important;
-        max-width: 170px !important;
+        min-width: 110px !important;
+        max-width: 160px !important;
         padding: 0.4rem 0.8rem !important;
         font-size: 0.75rem !important;
         margin: 6px auto 0 auto !important;
         display: inline-block !important;
     }
 
-    /* 4. Rodapé e Player */
     .footer-container {
         grid-template-columns: 1fr !important;
         gap: 2rem;
