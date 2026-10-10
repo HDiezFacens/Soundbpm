@@ -52,24 +52,24 @@ ul {
 }
 
 .header-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0.6rem 1rem;
+    padding: 0.8rem 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 2rem;
 }
 
 .logo-link {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .brand-logo {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     object-fit: cover;
     object-position: center;
@@ -84,7 +84,7 @@ ul {
 }
 
 .logo {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: -0.5px;
     color: var(--text-main);
@@ -97,7 +97,12 @@ ul {
 
 .desktop-nav-list {
     display: flex;
-    gap: 1.5rem;
+    list-style: none;
+    gap: 1.2rem;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .mobile-tab-selector {
@@ -120,24 +125,25 @@ ul {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1rem;
+    flex-shrink: 0;
 }
 
 .header-search input {
     background-color: var(--bg-card);
     border: 1px solid var(--border-subtle);
-    border-radius: 4px;
-    padding: 0.4rem 0.75rem;
+    border-radius: 20px;
+    padding: 0.5rem 0.8rem;
     color: var(--text-main);
     font-size: 0.85rem;
-    width: 160px;
+    width: 180px;
     outline: none;
     transition: var(--transition-base);
 }
 
 .header-search input:focus {
     border-color: var(--accent-gold);
-    width: 200px;
+    width: 220px;
 }
 
 .btn-login-nav {
@@ -161,7 +167,7 @@ ul {
 
 .hero-carousel-section {
     position: relative;
-    padding: 4rem 2rem 4rem 2rem;
+    padding: 5rem 2rem 5rem 2rem;
     text-align: center;
     overflow: hidden;
 }
@@ -982,7 +988,6 @@ ul {
         height: 24px;
     }
 
-    /* Oculta lista horizontal e ativa o seletor compacto em formato dropdown com setinha na vertical */
     .desktop-nav-list {
         display: none !important;
     }
@@ -990,7 +995,7 @@ ul {
     .mobile-tab-selector {
         display: block !important;
         flex-grow: 1;
-        max-width: 130px;
+        max-width: 140px;
         margin: 0 auto;
     }
 
@@ -1076,31 +1081,31 @@ ul {
         display: none !important;
     }
 
-    /* Correção precisa e restrita para o botão de exclusão de favorito no perfil */
+    /* Trava de tamanho estrito 20x20px para o botão de excluir favorito */
     #profile-favorites-grid .poster-image-wrap button,
     #profile-favorites-grid .poster-image-wrap .remove-favorite,
     #profile-favorites-grid .poster-image-wrap [class*="remove"],
     .poster-image-wrap button[class*="remove"] {
         position: absolute !important;
-        top: 6px !important;
-        right: 6px !important;
+        top: 4px !important;
+        right: 4px !important;
         left: auto !important;
         bottom: auto !important;
-        width: 22px !important;
-        height: 22px !important;
-        min-width: 22px !important;
-        max-width: 22px !important;
-        min-height: 22px !important;
-        max-height: 22px !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+        min-height: 20px !important;
+        max-height: 20px !important;
         border-radius: 50% !important;
-        background: rgba(0, 0, 0, 0.85) !important;
+        background: rgba(0, 0, 0, 0.9) !important;
         color: #ffffff !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 0.6rem !important;
+        font-size: 0.55rem !important;
         line-height: 1 !important;
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
         opacity: 1 !important;
         z-index: 99 !important;
         box-shadow: none !important;

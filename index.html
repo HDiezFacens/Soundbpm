@@ -41,15 +41,15 @@
 
                 <!-- Seletor exclusivo para celulares / telas verticais -->
                 <div class="mobile-tab-selector">
-                    <select id="mobile-nav-dropdown" onchange="if(this.value) window.location.href=this.value;">
-                        <option value="#explore" selected>Início ▾</option>
-                        <option value="#dashboard">Minha Lista ▾</option>
-                        <option value="#albums-page">Álbuns ▾</option>
-                        <option value="#news">Notícias ▾</option>
-                        <option value="#upcoming">Lançamentos ▾</option>
-                        <option value="#people-page">Pessoas ▾</option>
-                        <option value="#community">Comunidade ▾</option>
-                    </select>
+                    <select id="mobile-nav-dropdown" onchange="if(window.switchTab) { switchTab(this.value); } else { location.hash = this.value; }">
+    <option value="explore" selected>Início ▾</option>
+    <option value="dashboard">Minha Lista ▾</option>
+    <option value="albums-page">Álbuns ▾</option>
+    <option value="news">Notícias ▾</option>
+    <option value="upcoming">Lançamentos ▾</option>
+    <option value="people-page">Pessoas ▾</option>
+    <option value="community">Comunidade ▾</option>
+</select>
                 </div>
             </nav>
 
