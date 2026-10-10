@@ -644,13 +644,21 @@ document.addEventListener("DOMContentLoaded", () => {
         navigateTo(pageId, false);
     });
 
-    // 📱 SUPORTE AO SELETOR DROPDOWN NO MOBILE
+    // 📱 SUPORTE AO SELETOR DROPDOWN NO MOBILE (ATUALIZADO)
     const mobileDropdown = document.getElementById("mobile-nav-dropdown");
     if (mobileDropdown) {
         mobileDropdown.addEventListener("change", (e) => {
             const val = e.target.value;
-            if (val === "explore" || val === "#explore" || val === "home") {
+            const homeSectionsList = ["explore", "trending", "news", "upcoming", "community"];
+            
+            if (val === "explore" || val === "home" || homeSectionsList.includes(val)) {
                 navigateTo("home");
+                setTimeout(() => {
+                    const targetEl = document.getElementById(val === "home" ? "explore" : val);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: "smooth" });
+                    }
+                }, 50);
             } else {
                 const pageId = val.replace("#", "");
                 navigateTo(pageId);
@@ -1646,9 +1654,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const href = link.getAttribute("href");
             if (href.startsWith("#") && href.length > 1) {
                 const targetId = href.substring(1);
-                const homeSections = ["explore", "trending", "news", "upcoming", "community"];
+                const homeSectionsList = ["explore", "trending", "news", "upcoming", "community"];
                 
-                if (homeSections.includes(targetId)) {
+                if (homeSectionsList.includes(targetId)) {
                     e.preventDefault();
                     navigateTo("home");
                     setTimeout(() => {

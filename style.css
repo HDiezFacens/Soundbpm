@@ -12,7 +12,7 @@
     --transition-base: all 0.2s ease;
 }
 
-* {
+*, *::before, *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -167,21 +167,25 @@ ul {
 
 .hero-carousel-section {
     position: relative;
-    padding: 5rem 2rem 5rem 2rem;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: 6rem 2rem 5rem 2rem;
     text-align: center;
     overflow: hidden;
 }
 
 .hero-bg-backdrop {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    width: calc(100% + 40px);
+    height: calc(100% + 40px);
     background-size: cover;
     background-position: center;
-    filter: blur(15px) brightness(0.4);
-    transform: scale(1.1);
+    filter: blur(20px) brightness(0.35);
+    transform: scale(1.15);
     z-index: 1;
     transition: background-image 1s ease-in-out;
 }
@@ -1050,6 +1054,8 @@ ul {
 
     .hero-carousel-section {
         padding: 3.5rem 1rem 2rem 1rem;
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
     }
 
     .upcoming-grid,
@@ -1090,36 +1096,43 @@ ul {
         display: none !important;
     }
 
-    /* Trava de tamanho estrito 20x20px para o botão de excluir favorito */
+    /* Botão de excluir favorito refinado, menor e limpo */
+    .remove-favorite-btn,
     #profile-favorites-grid .poster-image-wrap button,
     #profile-favorites-grid .poster-image-wrap .remove-favorite,
     #profile-favorites-grid .poster-image-wrap [class*="remove"],
     .poster-image-wrap button[class*="remove"] {
         position: absolute !important;
-        top: 4px !important;
-        right: 4px !important;
+        top: 5px !important;
+        right: 5px !important;
         left: auto !important;
         bottom: auto !important;
-        width: 20px !important;
-        height: 20px !important;
-        min-width: 20px !important;
-        max-width: 20px !important;
-        min-height: 20px !important;
-        max-height: 20px !important;
-        border-radius: 50% !important;
-        background: rgba(0, 0, 0, 0.9) !important;
+        background: rgba(0, 0, 0, 0.75) !important;
         color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50% !important;
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+        max-width: 18px !important;
+        min-height: 18px !important;
+        max-height: 18px !important;
+        cursor: pointer !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 0.55rem !important;
+        font-size: 10px !important;
         line-height: 1 !important;
-        border: 1px solid rgba(255, 255, 255, 0.5) !important;
-        opacity: 1 !important;
-        z-index: 99 !important;
-        box-shadow: none !important;
+        z-index: 5 !important;
         padding: 0 !important;
         margin: 0 !important;
+        box-shadow: none !important;
+        opacity: 1 !important;
+    }
+
+    .remove-favorite-btn:hover {
+        background: rgba(223, 177, 91, 0.9) !important;
+        color: #000 !important;
     }
 
     #profile-page {
