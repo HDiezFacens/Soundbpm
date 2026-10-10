@@ -15,21 +15,22 @@
 </head>
 <body>
 
-    <header class="site-header" style="position: sticky; top: 0; z-index: 1000; background: var(--bg-base); border-bottom: 1px solid var(--border-subtle); width: 100%;">
-        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; padding: 1rem 2rem; gap: 2rem;">
+    <header class="site-header">
+        <div class="header-container">
             
             <!-- Logotipo -->
-            <div class="logo-area" style="display: flex; align-items: center; flex-shrink: 0;">
-                <a href="#" class="logo-link" style="display: flex; align-items: center; gap: 0.6rem; text-decoration: none;">
-                    <img src="./Logo.png" alt="SoundBPM Logo" class="brand-logo" style="width: 34px; height: 34px; object-fit: contain;">
-                    <span class="logo" style="font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.5px;">Sound<span style="color: var(--accent-gold);">BPM</span></span>
+            <div class="logo-area">
+                <a href="#" class="logo-link">
+                    <img src="./Logo.png" alt="SoundBPM Logo" class="brand-logo">
+                    <span class="logo">Sound<span>BPM</span></span>
                 </a>
             </div>
 
-            <!-- Menu de Navegação -->
-            <nav class="main-nav" style="display: flex; align-items: center;">
-                <ul style="display: flex; list-style: none; gap: 1.2rem; margin: 0; padding: 0; align-items: center; white-space: nowrap;">
-                     <li><a href="#explore" id="nav-home-link" class="nav-link active">Início</a></li>
+            <!-- Menu de Navegação (Desktop & Mobile Dropdown) -->
+            <nav class="main-nav">
+                <!-- Lista para telas grandes -->
+                <ul class="desktop-nav-list">
+                    <li><a href="#explore" id="nav-home-link" class="nav-link active">Início</a></li>
                     <li id="nav-dashboard-item"><a href="#dashboard" id="nav-dashboard-link" class="nav-link" style="color: var(--accent-gold);">Minha Lista</a></li>
                     <li><a href="#albums-page" id="nav-albums-link" class="nav-link">Álbuns</a></li>
                     <li><a href="#news" class="nav-link">Notícias</a></li>
@@ -37,12 +38,25 @@
                     <li><a href="#people-page" id="nav-people-link" class="nav-link">Pessoas</a></li>
                     <li><a href="#community" class="nav-link">Comunidade</a></li>
                 </ul>
+
+                <!-- Seletor exclusivo para celulares / telas verticais -->
+                <div class="mobile-tab-selector">
+                    <select id="mobile-nav-dropdown" onchange="if(this.value) window.location.href=this.value;">
+                        <option value="#explore" selected>Início ▾</option>
+                        <option value="#dashboard">Minha Lista ▾</option>
+                        <option value="#albums-page">Álbuns ▾</option>
+                        <option value="#news">Notícias ▾</option>
+                        <option value="#upcoming">Lançamentos ▾</option>
+                        <option value="#people-page">Pessoas ▾</option>
+                        <option value="#community">Comunidade ▾</option>
+                    </select>
+                </div>
             </nav>
 
             <!-- Pesquisa e Perfil / Entrar -->
-            <div class="header-right" style="display: flex; align-items: center; gap: 1rem; flex-shrink: 0;">
+            <div class="header-right">
                 <div class="header-search">
-                    <input type="text" id="search-input" placeholder="Buscar álbuns, artistas..." style="padding: 0.5rem 0.8rem; border-radius: 20px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; width: 180px;">
+                    <input type="text" id="search-input" placeholder="Buscar álbuns, artistas...">
                 </div>
                 <!-- Sino de Notificações -->
                 <div id="notification-bell-wrap" style="position: relative; display: none;">
@@ -86,7 +100,7 @@
         </section>
 
         <!-- Minha Lista / Fila de Desejos (Foco Principal) -->
-        <section id="dashboard" class="section-container" style="display: none; padding-top: 4rem;">
+        <section id="dashboard" class="section-container" style="display: none;">
             <div class="section-header" style="margin-bottom: 2rem;">
                 <h2>Minha Lista • Fila de Desejos</h2>
                 <p style="color: var(--text-muted);">Organize aqui os álbuns que você salvou para escutar e resenhar em breve.</p>
@@ -137,7 +151,7 @@
         </section>
 
         <!-- Página de Perfil -->
-        <section id="profile-page" class="section-container" style="display: none; padding-top: 4rem;">
+        <section id="profile-page" class="section-container" style="display: none;">
             <div style="display: flex; gap: 2rem; align-items: flex-end; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 2rem; position: relative;">
                 <img id="profile-avatar-img" src="./Logo.png" alt="Avatar" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid var(--bg-card);">
                 <div>
@@ -182,7 +196,7 @@
         </div>
 
         <!-- ══ PÁGINA PESSOAS ══ -->
-        <section id="people-page" class="section-container" style="display: none; padding-top: 3rem;">
+        <section id="people-page" class="section-container" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <div>
                     <h2 style="margin-bottom: 0.3rem;">Pessoas</h2>
@@ -210,7 +224,7 @@
         </section>
 
         <!-- PÁGINA: DETALHES DO ÁLBUM (ESTILO LETTERBOXD) -->
-        <section id="album-detail-page" class="section-container" style="display: none; padding-top: 4rem;">
+        <section id="album-detail-page" class="section-container" style="display: none;">
             <div style="display: flex; gap: 2.5rem; align-items: flex-start; margin-bottom: 3rem; background: var(--bg-card); padding: 2rem; border-radius: 8px; border: 1px solid var(--border-subtle); flex-wrap: wrap;">
                 <img id="detail-album-cover" src="" alt="Capa do Álbum" style="width: 220px; height: 220px; border-radius: 6px; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                 <div style="flex: 1; min-width: 250px;">
@@ -254,7 +268,7 @@
         </div>
 
         <!-- Página Dedicada de Álbuns -->
-        <section id="albums-page" class="section-container" style="display: none; padding-top: 4rem;">
+        <section id="albums-page" class="section-container" style="display: none;">
             <div class="section-header-flex" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
                 <div>
                     <h2>Catálogo Completo</h2>
@@ -266,7 +280,6 @@
             </div>
 
             <div class="poster-grid" id="albums-page-grid" style="margin-top: 2rem;">
-                <!-- JS populates -->
                 <p style="color: var(--text-muted); grid-column: 1/-1; text-align: center;">Carregando catálogo...</p>
             </div>
         </section>
