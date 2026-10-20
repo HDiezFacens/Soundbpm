@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPopularContent();
 
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-    const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page"];
+    const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page"];
 
     window.navigateTo = function(pageId, pushHistory = true) {
         if (pageId === "home" || pageId === "explore") {
@@ -666,6 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (pageId === "dashboard") populateDashboard();
                 if (pageId === "albums-page") loadAlbumsPageContent("__TRENDING__");
                 if (pageId === "people-page") loadPeoplePage();
+                if (pageId === "ranking-page") loadRankingPage();
                 if (pageId === "profile-page") loadUserProfile();
             }
         });
@@ -1043,6 +1044,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (avatarImg) avatarImg.src = avatarUrl;
         if (bioDisplay) bioDisplay.textContent = bioText;
 
+        gameCache = null;
+        renderProfileGamification(userIdToLoad);
+
         const { data: favs } = await supabase.from('favorites').select('*').eq('user_id', userIdToLoad);
         const favGrid = document.getElementById("profile-favorites-grid");
         if (favGrid) {
@@ -1098,6 +1102,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 profileReviewsList.innerHTML = "<p style='color: var(--text-muted);'>Nenhuma resenha escrita ainda.</p>";
             }
         }
+
+        renderProfileExtras({ userId: userIdToLoad, myId, mine: isMyProfile, name: displayName, profile, reviews: profileReviews || [], favs: favs || [] });
 
         let logoutBtn = document.getElementById("btn-logout-profile");
         if (isMyProfile) {
@@ -1905,6 +1911,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     .ilike("username", `%${query}%`)
                     .limit(8);
 
+                const { data: rels } = myId ? await supabase.from("friendships").select("requester_id, addressee_id, status").or(`requester_id.eq.${myId},addressee_id.eq.${myId}`) : { data: [] };
+                const relMap = new Map((rels || []).map(r => [r.requester_id === myId ? r.addressee_id : r.requester_id, r.status]));
                 if (!resultsDiv) return;
                 if (!profiles || profiles.length === 0) {
                     resultsDiv.innerHTML = `<p style="color: var(--text-muted);">Nenhum usuário encontrado.</p>`;
@@ -1921,7 +1929,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <strong style="color: var(--accent-gold);">${p.username || "Usuário"}</strong>
                             <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${p.bio || ""}</p>
                         </div>
-                        <button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); sendFriendRequest('${p.id}', this)">+ Adicionar</button>
+                        ${relMap.get(p.id) === "accepted" ? '<span style="color: var(--accent-gold); font-size:0.8rem; font-weight:700;">✓ Amigos</span>' : relMap.get(p.id) === "pending" ? '<span style="color: var(--text-muted); font-size:0.8rem;">Pendente</span>' : `<button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); sendFriendRequest('${p.id}', this)">+ Adicionar</button>`}
                     </div>`;
                 }).join("");
             }, 400);
@@ -2117,4 +2125,407 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.removeChild(card);
         }
     };
+
+    // ═══════════════ GAMIFICAÇÃO: XP, classificação, conquistas e ranking ═══════════════
+    // Tudo é calculado a partir de 'reviews' e 'favorites' (sem tabelas novas).
+    // XP = 10 por resenha + 5 de bônus se o texto tiver 50+ caracteres + 3 por favorito.
+    const GAME_TIERS = [
+        { min: 0,    name: "Ouvinte",   icon: "🎧" },
+        { min: 100,  name: "Curioso",   icon: "🎵" },
+        { min: 300,  name: "Crítico",   icon: "✍️" },
+        { min: 700,  name: "Audiófilo", icon: "📀" },
+        { min: 1500, name: "Lenda",     icon: "👑" }
+    ];
+
+    const GAME_BADGES = [
+        { icon: "📝", name: "Primeira Resenha",  desc: "Publique sua 1ª resenha",         ok: s => s.reviews >= 1 },
+        { icon: "🎙️", name: "Crítico Dedicado",  desc: "Publique 10 resenhas",            ok: s => s.reviews >= 10 },
+        { icon: "🏆", name: "Crítico Veterano",  desc: "Publique 50 resenhas",            ok: s => s.reviews >= 50 },
+        { icon: "📖", name: "Escritor",          desc: "5 resenhas com 100+ caracteres",  ok: s => s.longText >= 5 },
+        { icon: "🎼", name: "Faixa a Faixa",     desc: "Avalie um álbum faixa a faixa",   ok: s => s.trackReviews >= 1 },
+        { icon: "💛", name: "Colecionador",      desc: "Favorite 5 álbuns",               ok: s => s.favorites >= 5 },
+        { icon: "💿", name: "Curador",           desc: "Favorite 20 álbuns",              ok: s => s.favorites >= 20 },
+        { icon: "🔥", name: "Em Sequência",      desc: "Avalie em 3 dias seguidos",       ok: s => s.streak >= 3 },
+        { icon: "⚡", name: "Maratonista",       desc: "Avalie em 7 dias seguidos",       ok: s => s.streak >= 7 },
+        { icon: "🌟", name: "Presença Fiel",     desc: "7 dias de login seguidos",        ok: s => s.loginBest >= 7 },
+        { icon: "🏠", name: "Residente",         desc: "30 dias de login seguidos",       ok: s => s.loginBest >= 30 }
+    ];
+
+    // Títulos: um por classificação (muda sozinho ao bater a meta de XP) e um por conquista.
+    const TIER_TITLES  = ["Novato do Vinil", "Ouvido Curioso", "Pena Afiada", "Audiófilo de Respeito", "Lenda do Vinil"];
+    const BADGE_TITLES = ["Estreante", "Voz da Crítica", "Mestre da Crítica", "Poeta das Resenhas", "Ouvido Clínico",
+                          "Guardião de Discos", "Curador de Acervo", "Em Chamas", "Imparável", "Presença Fiel", "Morador do Estúdio"];
+    const GAME_TITLES = [
+        ...GAME_TIERS.map((t, i) => ({ name: TIER_TITLES[i], src: `Classificação ${t.name} (${t.min} XP)`, tier: true, ok: s => s.xp >= t.min })),
+        ...GAME_BADGES.map((b, i) => ({ name: BADGE_TITLES[i], src: `Conquista: ${b.name}`, ok: b.ok }))
+    ];
+    function resolveTitle(s, chosen) {
+        const ok = GAME_TITLES.filter(t => t.ok(s));
+        return (ok.find(t => t.name === chosen) || ok.filter(t => t.tier).pop()).name;
+    }
+    function liveStreak(p) {
+        if (!p.last_checkin) return 0;
+        return (Date.now() - new Date(p.last_checkin).getTime()) / 3600000 >= 44 ? 0 : (p.streak_count || 0);
+    }
+    function gameToast(msg) {
+        const t = document.createElement("div");
+        t.className = "game-toast"; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.classList.add("hide"), 3500);
+        setTimeout(() => t.remove(), 4000);
+    }
+    async function fetchProfilesGame() {
+        let r = await supabase.from("profiles").select("id, username, avatar_url, title, streak_count, streak_best, last_checkin");
+        if (r.error) r = await supabase.from("profiles").select("id, username, avatar_url");
+        return r;
+    }
+    let localStreak = null;
+
+    const gameEsc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+    function gameStats(revs, favCount, login = {}) {
+        const text = r => (r.review_text || "");
+        const days = [...new Set(revs.map(r => new Date(r.created_at).toDateString()))]
+            .map(d => new Date(d).getTime()).sort((a, b) => a - b);
+        let streak = days.length ? 1 : 0, run = 1;
+        for (let i = 1; i < days.length; i++) {
+            run = Math.round((days[i] - days[i - 1]) / 86400000) === 1 ? run + 1 : 1;
+            streak = Math.max(streak, run);
+        }
+        const s = {
+            reviews: revs.length,
+            withText: revs.filter(r => text(r).replace(/\[Avaliação Faixa a Faixa\][\s\S]*?\n\n/, "").trim().length >= 50).length,
+            longText: revs.filter(r => text(r).length >= 100).length,
+            trackReviews: revs.filter(r => text(r).startsWith("[Avaliação Faixa a Faixa]")).length,
+            favorites: favCount,
+            streak,
+            loginBest: login.best || 0,
+            loginNow: login.now || 0
+        };
+        s.xp = s.reviews * 10 + s.withText * 5 + s.favorites * 3;
+        s.badges = GAME_BADGES.filter(b => b.ok(s)).length;
+        const idx = GAME_TIERS.reduce((acc, t, i) => (s.xp >= t.min ? i : acc), 0);
+        s.tier = GAME_TIERS[idx];
+        s.nextTier = GAME_TIERS[idx + 1] || null;
+        return s;
+    }
+
+    let gameCache = null, gameCacheAt = 0;
+    async function fetchGameData() {
+        if (gameCache && Date.now() - gameCacheAt < 60000) return gameCache;
+        if (!supabase) return [];
+        const [rv, fv, pf] = await Promise.all([
+            supabase.from("reviews").select("user_id, review_text, created_at"),
+            supabase.from("favorites").select("user_id"),
+            fetchProfilesGame()
+        ]);
+        const map = new Map();
+        const entry = id => { if (!map.has(id)) map.set(id, { revs: [], favs: 0 }); return map.get(id); };
+        (rv.data || []).forEach(r => entry(r.user_id).revs.push(r));
+        (fv.data || []).forEach(f => entry(f.user_id).favs++);
+        const profiles = new Map((pf.data || []).map(p => [p.id, p]));
+        (pf.data || []).forEach(p => entry(p.id));
+        gameCache = [...map.entries()].map(([id, v]) => {
+            const p = profiles.get(id) || {};
+            if (localStreak && localStreak.id === id && !("streak_count" in p)) Object.assign(p, localStreak);
+            if (!("title" in p)) { try { p.title = localStorage.getItem("sb_title_" + id) || null; } catch (e) {} }
+            const now = liveStreak(p);
+            const st = gameStats(v.revs, v.favs, { best: Math.max(p.streak_best || 0, now), now });
+            st.title = resolveTitle(st, p.title);
+            return { id, profile: p, stats: st };
+        });
+        gameCacheAt = Date.now();
+        return gameCache;
+    }
+
+    async function equipTitle(name) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const { error } = await supabase.from("profiles").update({ title: name }).eq("id", session.user.id);
+        // Sem a coluna "title" no Supabase, o título fica salvo só neste navegador.
+        if (error) localStorage.setItem("sb_title_" + session.user.id, name);
+        gameCache = null;
+        renderProfileGamification(session.user.id);
+        gameToast(error ? "Título equipado (salvo só neste navegador)" : "Título equipado: " + name);
+    }
+
+    function notifyNewTitles(userId, unlocked) {
+        const key = "sb_titles_" + userId;
+        const names = unlocked.map(t => t.name);
+        let seen = null;
+        try { seen = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+        if (seen) {
+            const fresh = names.filter(n => !seen.includes(n));
+            if (fresh.length) gameToast("🏅 Novo título desbloqueado: " + fresh[fresh.length - 1]);
+        }
+        localStorage.setItem(key, JSON.stringify(names));
+    }
+
+    async function renderProfileGamification(userId) {
+        const box = document.getElementById("profile-gamification");
+        if (!box || !userId) return;
+        const users = await fetchGameData();
+        const found = users.find(u => u.id === userId);
+        const s = found ? found.stats : gameStats([], 0);
+        const p = found ? found.profile : {};
+        if (!found) s.title = resolveTitle(s, null);
+        const { data: { session } } = await supabase.auth.getSession();
+        const mine = session?.user?.id === userId;
+
+        const base = s.tier.min;
+        const pct = s.nextTier ? Math.min(100, Math.round(((s.xp - base) / (s.nextTier.min - base)) * 100)) : 100;
+        let hint = s.nextTier ? `Faltam ${s.nextTier.min - s.xp} XP para ${s.nextTier.icon} ${s.nextTier.name}` : "Classificação máxima alcançada!";
+        if (mine && p.last_checkin) {
+            const rem = 20 - (Date.now() - new Date(p.last_checkin).getTime()) / 3600000;
+            if (rem > 0) hint += ` • Próximo dia da sequência em ${Math.floor(rem)}h ${Math.floor((rem % 1) * 60)}min`;
+        }
+
+        const line = document.getElementById("profile-title-line");
+        if (line) line.innerHTML = `<span class="title-chip">🏅 ${gameEsc(s.title)}</span>` +
+            (s.loginNow ? `<span class="streak-chip">🔥 ${s.loginNow} dia${s.loginNow === 1 ? "" : "s"}</span>` : "");
+
+        const unlocked = GAME_TITLES.filter(t => t.ok(s));
+        box.innerHTML = `
+            <div class="game-tier-card">
+                <div class="game-tier-top">
+                    <span class="game-tier-icon">${s.tier.icon}</span>
+                    <div>
+                        <div class="game-tier-name">${s.tier.name}</div>
+                        <div class="game-tier-xp">${s.xp} XP • ${s.reviews} resenha${s.reviews === 1 ? "" : "s"} • ${s.favorites} favorito${s.favorites === 1 ? "" : "s"} • 🔥 ${s.loginNow} dia${s.loginNow === 1 ? "" : "s"} de login (recorde ${s.loginBest})</div>
+                    </div>
+                </div>
+                <div class="game-xp-bar"><div class="game-xp-fill" style="width: ${pct}%;"></div></div>
+                <div class="game-xp-hint">${hint}</div>
+            </div>
+            <div class="badge-grid">
+                ${GAME_BADGES.map(b => `
+                    <div class="badge-item ${b.ok(s) ? "" : "locked"}">
+                        <span class="badge-icon">${b.icon}</span>
+                        <span class="badge-name">${b.name}</span>
+                        <span class="badge-desc">${b.desc}</span>
+                    </div>`).join("")}
+            </div>
+            <h4 class="game-subtitle">Títulos (${unlocked.length}/${GAME_TITLES.length})</h4>
+            <div class="badge-grid">
+                ${GAME_TITLES.map(t => {
+                    const ok = t.ok(s), eq = t.name === s.title;
+                    return `<div class="badge-item title-item ${ok ? "unlocked" : "locked"} ${eq ? "equipped" : ""} ${ok && mine ? "clickable" : ""}" data-title="${gameEsc(t.name)}">
+                        <span class="badge-name">🏅 ${gameEsc(t.name)}</span>
+                        <span class="badge-desc">${ok ? (eq ? "Equipado" : (mine ? "Clique para equipar" : "Desbloqueado")) : gameEsc(t.src)}</span>
+                    </div>`;
+                }).join("")}
+            </div>`;
+
+        if (mine) {
+            box.querySelectorAll(".title-item.clickable").forEach(el => el.addEventListener("click", () => equipTitle(el.dataset.title)));
+            notifyNewTitles(userId, unlocked);
+        }
+    }
+
+    let rankingSort = "xp";
+    async function loadRankingPage() {
+        const list = document.getElementById("ranking-list");
+        if (!list) return;
+        list.innerHTML = "<p style='color: var(--text-muted);'>Carregando ranking...</p>";
+
+        const { data: { session } } = supabase ? await supabase.auth.getSession() : { data: {} };
+        const myId = session?.user?.id;
+        const users = (await fetchGameData()).slice()
+            .sort((a, b) => b.stats[rankingSort] - a.stats[rankingSort] || b.stats.xp - a.stats.xp)
+            .slice(0, 50);
+
+        if (users.length === 0) {
+            list.innerHTML = `<div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 8px;">
+                <p style="color: var(--text-muted);">Ninguém pontuou ainda. Avalie um álbum para abrir o ranking!</p></div>`;
+            return;
+        }
+
+        const medals = ["🥇", "🥈", "🥉"];
+        const unit = { xp: "XP", reviews: "resenhas", badges: "conquistas", loginNow: "dias" }[rankingSort];
+        list.innerHTML = users.map((u, i) => {
+            const avatar = u.profile.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+            return `
+            <div class="rank-row ${u.id === myId ? "me" : ""}" onclick="openUserProfile('${gameEsc(u.id)}')">
+                <span class="rank-pos">${medals[i] || i + 1}</span>
+                <img src="${gameEsc(avatar)}" alt="Avatar">
+                <div class="rank-info">
+                    <strong>${gameEsc(u.profile.username || "Usuário")}${u.id === myId ? " (você)" : ""}</strong>
+                    <span>🏅 ${gameEsc(u.stats.title)} • ${u.stats.tier.icon} ${u.stats.tier.name}${u.stats.loginNow ? " • 🔥 " + u.stats.loginNow : ""}</span>
+                </div>
+                <span class="rank-score">${u.stats[rankingSort]} ${unit}</span>
+            </div>`;
+        }).join("");
+    }
+
+    document.querySelectorAll(".game-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".game-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            rankingSort = btn.dataset.sort;
+            loadRankingPage();
+        });
+    });
+
+    const navRankingLink = document.getElementById("nav-ranking-link");
+    if (navRankingLink) {
+        navRankingLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigateTo("ranking-page");
+            loadRankingPage();
+        });
+    }
+
+    // ═══════════════ SEQUÊNCIA DE LOGIN (🔥) ═══════════════
+    // Regra: a cada 20h libera um novo dia; se voltar entre 20h e 44h a sequência continua, depois de 44h zera.
+    async function loginCheckIn(uid) {
+        let st = null, dbOk = true;
+        const r = await supabase.from("profiles").select("streak_count, streak_best, last_checkin").eq("id", uid).maybeSingle();
+        if (r.error) { dbOk = false; try { st = JSON.parse(localStorage.getItem("sb_streak_" + uid)); } catch (e) {} } else st = r.data;
+        st = st || {};
+        const now = Date.now();
+        const last = st.last_checkin ? new Date(st.last_checkin).getTime() : 0;
+        const hrs = (now - last) / 3600000;
+        if (last && hrs < 20) { if (!dbOk) localStreak = { id: uid, ...st }; return; }
+        const count = (last && hrs < 44) ? (st.streak_count || 0) + 1 : 1;
+        const next = { streak_count: count, streak_best: Math.max(st.streak_best || 0, count), last_checkin: new Date(now).toISOString() };
+        if (dbOk) { const u = await supabase.from("profiles").update(next).eq("id", uid); if (u.error) dbOk = false; }
+        if (!dbOk) { localStorage.setItem("sb_streak_" + uid, JSON.stringify(next)); localStreak = { id: uid, ...next }; }
+        gameToast(count > 1 ? `🔥 Sequência de ${count} dias!` : "🔥 Sequência iniciada! Volte em 20 horas.");
+        gameCache = null;
+        renderProfileGamification(uid);
+    }
+
+    let checkedInUser = null;
+    if (supabase) {
+        supabase.auth.onAuthStateChange((_event, session) => {
+            const uid = session?.user?.id;
+            if (!uid) { checkedInUser = null; return; }
+            if (checkedInUser !== uid) { checkedInUser = uid; setTimeout(() => loginCheckIn(uid), 0); }
+        });
+    }
+
+    // ═══════════════ PERFIL: estatísticas, álbum favorito, atividade, amizade, exportação e compartilhamento ═══════════════
+    async function shareText(text) {
+        const url = location.href.split("#")[0];
+        try {
+            if (navigator.share) { await navigator.share({ text, url }); return; }
+            await navigator.clipboard.writeText(text + " " + url);
+            gameToast("Texto copiado para compartilhar!");
+        } catch (e) { /* compartilhamento cancelado */ }
+    }
+
+    function downloadFile(name, content, type) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([content], { type }));
+        a.download = name; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    function calcProfileStats(reviews, favs) {
+        const n = reviews.length, num = r => Number(r.rating || 0);
+        const avg = n ? reviews.reduce((a, r) => a + num(r), 0) / n : 0;
+        const dist = {}, artists = {};
+        reviews.forEach(r => {
+            const k = num(r).toFixed(1); dist[k] = (dist[k] || 0) + 1;
+            if (r.artist_name) artists[r.artist_name] = (artists[r.artist_name] || 0) + 1;
+        });
+        const favNames = new Set(favs.map(f => f.album_name));
+        // Álbum favorito = maior nota; empate: quem está nos favoritos, depois o mais recente.
+        const best = [...reviews].sort((a, b) => num(b) - num(a) || (favNames.has(b.album_name) - favNames.has(a.album_name)) || new Date(b.created_at) - new Date(a.created_at))[0];
+        return { n, avg, dist, best, topArtist: Object.entries(artists).sort((a, b) => b[1] - a[1])[0] };
+    }
+
+    async function exportMyData(kind, ctx, st) {
+        const { data: bl } = await supabase.from("backlog").select("*").eq("user_id", ctx.userId);
+        const stamp = new Date().toISOString().slice(0, 10);
+        if (kind === "json") {
+            const data = {
+                exportado_em: new Date().toISOString(), perfil: ctx.profile,
+                estatisticas: { resenhas: st.n, media: +st.avg.toFixed(2), artista_mais_avaliado: st.topArtist?.[0] || null, album_favorito: st.best?.album_name || null },
+                resenhas: ctx.reviews, favoritos: ctx.favs, fila_de_desejos: bl || []
+            };
+            downloadFile(`soundbpm-dados-${stamp}.json`, JSON.stringify(data, null, 2), "application/json");
+        } else {
+            const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+            const rows = [["Álbum", "Artista", "Nota", "Data", "Resenha"], ...ctx.reviews.map(r => [r.album_name, r.artist_name, r.rating, fmtDateBR(r.created_at), r.review_text])];
+            downloadFile(`soundbpm-resenhas-${stamp}.csv`, "\ufeff" + rows.map(r => r.map(q).join(";")).join("\n"), "text/csv;charset=utf-8");
+        }
+        gameToast("Dados exportados!");
+    }
+    const fmtDateBR = d => d ? new Date(d).toLocaleDateString("pt-BR") : "";
+
+    async function renderProfileExtras(ctx) {
+        const { userId, myId, mine, name, reviews, favs } = ctx;
+        const st = calcProfileStats(reviews, favs);
+
+        // Amigos (equivale a seguidores): contagem e relação com quem está logado
+        const { data: fr } = await supabase.from("friendships").select("id, requester_id, addressee_id, status")
+            .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+        const accepted = (fr || []).filter(f => f.status === "accepted");
+        const friendIds = new Set(accepted.map(f => f.requester_id === userId ? f.addressee_id : f.requester_id));
+        const rel = (fr || []).find(f => f.requester_id === myId || f.addressee_id === myId);
+
+        // Estatísticas pessoais + álbum favorito
+        const box = document.getElementById("profile-stats");
+        if (box) {
+            const keys = ["0.5", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0"];
+            const max = Math.max(1, ...Object.values(st.dist));
+            const card = (v, l) => `<div class="stat-card"><span class="stat-value">${v}</span><span class="stat-label">${l}</span></div>`;
+            box.innerHTML = st.n === 0
+                ? `<p style="color: var(--text-muted);">Nenhuma estatística ainda. Avalie um álbum para começar!</p>`
+                : `<div class="badge-grid">
+                    ${st.best ? `<div class="stat-card stat-fav"><img src="${gameEsc(st.best.cover_url)}" alt="Capa">
+                        <div><span class="stat-label">Álbum favorito</span><div class="stat-value" style="font-size:1.1rem;">${gameEsc(st.best.album_name)}</div>
+                        <span class="stat-label">${gameEsc(st.best.artist_name)} • nota ${st.best.rating}</span></div></div>` : ""}
+                    ${card(st.n, "resenhas")}${card(st.avg.toFixed(2), "média das notas")}${card(favs.length, "favoritos")}${card(friendIds.size, "amigos")}
+                    ${st.topArtist ? card(gameEsc(st.topArtist[0]), `artista mais avaliado (${st.topArtist[1]}x)`) : ""}
+                   </div>
+                   <div class="dist-row">${keys.map(k => `<div class="dist-col" title="${k}★: ${st.dist[k] || 0}"><div class="dist-bar" style="height:${((st.dist[k] || 0) / max) * 80}%"></div><span>${k}</span></div>`).join("")}</div>`;
+        }
+
+        // Histórico de atividades (resenhas + favoritos com data)
+        const feed = [
+            ...reviews.map(r => ({ icon: "⭐", date: r.created_at, album: r.album_name, artist: r.artist_name, txt: `avaliou com ${r.rating}★` })),
+            ...favs.filter(f => f.created_at).map(f => ({ icon: "💛", date: f.created_at, album: f.album_name, artist: f.artist_name, txt: "favoritou" }))
+        ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+        const act = document.getElementById("profile-activity");
+        if (act) {
+            act.innerHTML = feed.length ? feed.map((a, i) => `<div class="activity-item"><span style="font-size:1.3rem;">${a.icon}</span>
+                <div class="activity-body"><strong>${gameEsc(name)}</strong> ${gameEsc(a.txt)} <em>${gameEsc(a.album)}</em><span class="activity-date">${gameEsc(a.artist)} • ${fmtDateBR(a.date)}</span></div>
+                <button class="activity-share" data-i="${i}" title="Compartilhar">🔗</button></div>`).join("")
+                : `<p style="color: var(--text-muted);">Nenhuma atividade ainda.</p>`;
+            act.querySelectorAll(".activity-share").forEach(b => b.addEventListener("click", () => {
+                const a = feed[b.dataset.i];
+                shareText(`${name} ${a.txt} "${a.album}" de ${a.artist} no SoundBPM 🎵`);
+            }));
+        }
+
+        // Botões de ação do perfil
+        const actions = document.getElementById("profile-actions");
+        if (!actions) return;
+        actions.innerHTML = `<span class="title-chip">👥 ${friendIds.size} amigo${friendIds.size === 1 ? "" : "s"}</span>`;
+        const add = (label, cls, fn, disabled) => {
+            const b = document.createElement("button");
+            b.className = cls; b.textContent = label; b.style.cssText = "font-size:0.8rem; padding:0.4rem 0.9rem;";
+            if (disabled) b.disabled = true; else b.addEventListener("click", fn);
+            actions.appendChild(b);
+        };
+        if (!mine && myId) {
+            if (!rel) add("+ Adicionar amigo", "btn-notify", async () => { await sendFriendRequest(userId, null); loadUserProfile(userId); });
+            else if (rel.status === "accepted") add("✓ Amigos • Desfazer", "btn-secondary-dark", async () => {
+                if (!confirm(`Desfazer amizade com ${name}?`)) return;
+                await supabase.from("friendships").delete().eq("id", rel.id);
+                gameToast("Amizade desfeita.");
+                loadUserProfile(userId);
+            });
+            else if (rel.requester_id === myId) add("Pedido enviado", "btn-secondary-dark", null, true);
+            else add("Aceitar pedido", "btn-primary-gold", async () => { await acceptFriendRequest(rel.requester_id, null, rel.id); loadUserProfile(userId); });
+        }
+        add("🔗 Compartilhar perfil", "btn-secondary-dark", () =>
+            shareText(`Perfil de ${name} no SoundBPM: ${st.n} resenhas • média ${st.avg.toFixed(1)}★ • ${friendIds.size} amigos 🎵`));
+        if (mine) {
+            add("⬇ Exportar JSON", "btn-secondary-dark", () => exportMyData("json", ctx, st));
+            add("⬇ Exportar CSV", "btn-secondary-dark", () => exportMyData("csv", ctx, st));
+        }
+    }
 });
