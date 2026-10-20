@@ -169,23 +169,28 @@ ul {
     position: relative;
     width: 100vw;
     margin-left: calc(50% - 50vw);
-    padding: 6rem 2rem 5rem 2rem;
+    
+    /* NOVO: Puxa a seção inteira 80px para cima, para ficar por baixo do cabeçalho */
+    margin-top: -80px; 
+    /* NOVO: Compensa os 80px adicionando eles no padding, pro seu texto não colar no topo */
+    padding: calc(6rem + 80px) 2rem 5rem 2rem; 
+    
     text-align: center;
     overflow: hidden;
+    background-color: var(--bg-base);
 }
 
 .hero-bg-backdrop {
     position: absolute;
-    top: -20px;
-    left: -20px;
-    right: -20px;
-    bottom: -20px;
-    width: calc(100% + 40px);
-    height: calc(100% + 40px);
-    background-size: cover;
+    top: 0; left: 0; width: 100%; height: 100%;
+    
+    /* Usa 100% 100% para a imagem não respeitar proporção e cobrir tudo antes do zoom */
+    background-size: 100% 100%; 
     background-position: center;
-    filter: blur(20px) brightness(0.35);
-    transform: scale(1.15);
+    background-repeat: no-repeat;
+    
+    filter: blur(40px) brightness(0.4);
+    transform: scale(1.3); /* Dá o zoom para esconder as bordas vazadas do blur */
     z-index: 1;
     transition: background-image 1s ease-in-out;
 }
@@ -196,7 +201,8 @@ ul {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, rgba(20, 24, 28, 0.4) 0%, var(--bg-base) 100%);
+    /* Degrau suave para garantir que o texto fique legível sobre a imagem */
+    background: linear-gradient(180deg, rgba(20, 24, 28, 0.3) 0%, var(--bg-base) 100%);
     z-index: 2;
 }
 

@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // RESOLUÇÃO DE HOISTING: Variáveis do modal movidas para o topo para evitar quebra no fluxo de autenticação
+    const modal = document.getElementById("login-modal");
+    const openLoginBtn = document.getElementById("open-login-modal");
+    const closeLoginBtn = document.querySelector(".close-modal");
+
     // Limpa simulações antigas para que o site nunca abra simulado por padrão
     if (localStorage.getItem("spotify_access_token") === "simulated_token") {
         localStorage.removeItem("spotify_access_token");
@@ -24,6 +29,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const authSubmitBtn = document.getElementById("auth-submit-btn");
     const authForm = document.getElementById("auth-form");
     let isRegisterMode = false;
+
+    // Função de sanitização contra XSS
+    const gameEsc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+    // ===========================================================================
+    // CORREÇÃO: INTERCEPTADOR DE ALTA RESOLUÇÃO (Evita imagem embaçada no Hero)
+    // ===========================================================================
+    function getHighResImage(data) {
+        let url = '';
+        if (typeof data === 'string') {
+            url = data;
+        } else if (data) {
+            if (data.images && data.images.length > 0) url = data.images[0].url;
+            else if (data.album && data.album.images && data.album.images.length > 0) url = data.album.images[0].url;
+            else if (data.artworkUrl100) url = data.artworkUrl100;
+        }
+        
+        // Se a imagem for do iTunes/Apple, força qualidade de estúdio (1000x1000 px)
+        if (url && (url.includes('mzstatic.com') || url.includes('apple.com'))) {
+            return url.replace(/100x100bb\.jpg/g, '1000x1000bb.jpg').replace(/600x600bb\.jpg/g, '1000x1000bb.jpg');
+        }
+        return url || '';
+    }
 
     if (tabLoginBtn && tabRegisterBtn) {
         tabLoginBtn.addEventListener("click", (e) => {
@@ -167,10 +195,6 @@ document.addEventListener("DOMContentLoaded", () => {
             openUserProfile(); 
         });
     }
-
-    const modal = document.getElementById("login-modal");
-    const openLoginBtn = document.getElementById("open-login-modal");
-    const closeLoginBtn = document.querySelector(".close-modal");
 
     if (openLoginBtn && modal) {
         openLoginBtn.addEventListener("click", async () => {
@@ -390,17 +414,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=album&limit=20`);
             const data = await response.json();
             
-            return (data.results || []).map(item => ({
-                name: item.collectionName,
-                collectionName: item.collectionName,
-                artistName: item.artistName,
-                artists: [{ name: item.artistName }],
-                images: [{ url: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb.jpg', '600x600bb.jpg') : '' }],
-                artworkUrl100: item.artworkUrl100 || '',
-                release_date: item.releaseDate ? item.releaseDate.split('T')[0] : '2026',
-                collectionId: item.collectionId,
-                id: item.collectionId
-            }));
+            return (data.results || []).map(item => {
+                const highResUrl = getHighResImage(item.artworkUrl100);
+                return {
+                    name: item.collectionName,
+                    collectionName: item.collectionName,
+                    artistName: item.artistName,
+                    artists: [{ name: item.artistName }],
+                    images: [{ url: highResUrl }],
+                    artworkUrl100: highResUrl,
+                    release_date: item.releaseDate ? item.releaseDate.split('T')[0] : '2026',
+                    collectionId: item.collectionId,
+                    id: item.collectionId
+                };
+            });
         } catch (error) {
             console.error("Erro no fallback do iTunes:", error);
             return [];
@@ -509,7 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.createAlbumCardHTML = function(album) {
-        const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 ? album.artworkUrl100 : '');
+        const imageUrl = getHighResImage(album);
         const artistName = album.artists ? album.artists.map(a => a.name).join(', ') : (album.artistName || 'Artista Desconhecido');
         const albumName = album.name || album.collectionName || 'Álbum';
         const collectionId = album.collectionId || album.id || '';
@@ -563,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateHeroContent(album) {
-        const imageUrl = album.images && album.images[0] ? album.images[0].url : (album.artworkUrl100 || '');
+        const imageUrl = getHighResImage(album);
         const artists = album.artists ? album.artists.map(a => a.name).join(', ') : (album.artistName || '');
         const releaseYear = album.release_date ? album.release_date.split('-')[0] : '2026';
 
@@ -644,7 +671,6 @@ document.addEventListener("DOMContentLoaded", () => {
         navigateTo(pageId, false);
     });
 
-    // 📱 SUPORTE AO SELETOR DROPDOWN NO MOBILE (ATUALIZADO)
     const mobileDropdown = document.getElementById("mobile-nav-dropdown");
     if (mobileDropdown) {
         mobileDropdown.addEventListener("change", (e) => {
@@ -739,6 +765,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const username = r.profiles?.username || "Membro";
                     const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
                     const date = new Date(r.created_at).toLocaleDateString('pt-BR');
+                    // RESOLUÇÃO DE XSS
                     return `
                     <div style="background: var(--bg-base); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle);">
                         <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; cursor: pointer;" onclick="openUserProfile('${r.user_id}')">
@@ -746,7 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span style="font-weight: 600; font-size: 0.85rem; color: var(--accent-gold);">${username}</span>
                             <span style="margin-left: auto; color: var(--accent-orange); font-size: 0.85rem;">${stars}</span>
                         </div>
-                        <p style="margin: 0; font-size: 0.85rem; font-style: italic; color: var(--text-main); white-space: pre-line;">"${r.review_text || 'Sem texto.'}"</p>
+                        <p style="margin: 0; font-size: 0.85rem; font-style: italic; color: var(--text-main); white-space: pre-line;">"${gameEsc(r.review_text || 'Sem texto.')}"</p>
                         <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.3rem;">${date}</span>
                     </div>`;
                 }).join('');
@@ -784,6 +811,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            // RESOLUÇÃO DE EXPIRAÇÃO DE TOKEN
+            if (response.status === 401) {
+                localStorage.removeItem("spotify_access_token");
+                console.warn("Sessão do Spotify expirou.");
+                return null;
+            }
+
             if (!response.ok) throw new Error("Erro Spotify: " + response.status);
             return await response.json();
         } catch (error) {
@@ -837,7 +872,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (recentData && recentData.items && scrobblesContainer) {
                 scrobblesContainer.innerHTML = recentData.items.map(item => {
                     const track = item.track;
-                    const imageUrl = track.album.images[0] ? track.album.images[0].url : './Logo.png';
+                    const imageUrl = getHighResImage(track) || './Logo.png';
                     const trackName = track.name.replace(/'/g, "\\'");
                     const artistName = track.artists[0].name.replace(/'/g, "\\'");
                     return `
@@ -857,7 +892,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (topData && topData.items && recsContainer) {
                 recsContainer.innerHTML = topData.items.map(track => {
-                    const imageUrl = track.album.images[0] ? track.album.images[0].url : './Logo.png';
+                    const imageUrl = getHighResImage(track) || './Logo.png';
                     const trackName = track.name.replace(/'/g, "\\'");
                     const artistName = track.artists[0].name.replace(/'/g, "\\'");
                     return `
@@ -1078,6 +1113,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     const safeName = (r.album_name || '').replace(/'/g, "\\'");
                     const safeArtist = (r.artist_name || '').replace(/'/g, "\\'");
                     const safeCover = (r.cover_url || '').replace(/'/g, "\\'");
+                    
+                    const shareButtonHtml = isMyProfile ? `
+                        <button onclick="event.stopPropagation(); shareToInstagramStory('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(gameEsc(r.review_text || '')).replace(/`/g, '\\`')}\`)" 
+                            style="margin-top: 10px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                            📸 Compartilhar no Instagram Story
+                        </button>` : '';
+
                     return `
                     <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
                         <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
@@ -1087,12 +1129,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
                             </div>
                             <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
-                            <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${r.review_text || 'Sem texto de resenha.'}"</p>
+                            <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${gameEsc(r.review_text || 'Sem texto de resenha.')}"</p>
                             
-                            <button onclick="event.stopPropagation(); shareToInstagramStory('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(r.review_text || '').replace(/`/g, '\\`')}\`)" 
-                                style="margin-top: 10px; background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
-                                📸 Compartilhar no Instagram Story
-                            </button>
+                            ${shareButtonHtml}
                             
                         </div>
                         ${isMyProfile ? `<button onclick="event.stopPropagation(); removeProfileReview('${r.id}')" title="Excluir resenha" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.3rem;">&times;</button>` : ''}
@@ -1192,10 +1231,17 @@ document.addEventListener("DOMContentLoaded", () => {
                             document.getElementById("news").scrollIntoView({ behavior: "smooth" });
                         });
                     }
+                } else {
+                    throw new Error("RSS vazio");
                 }
             } catch(e) {
-                console.error("Erro ao carregar notícias:", e);
-                newsContainer.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Não foi possível carregar as notícias mais recentes.</p>";
+                console.warn("Falha no RSS primário, carregando fallback estático de notícias...", e);
+                allNewsItems = [
+                    { title: "Os grandes lançamentos da semana no cenário musical", link: "#", pubDate: new Date().toISOString(), description: "Confira os álbuns e singles que estão dominando as paradas globais neste momento." },
+                    { title: "A evolução da produção sonora na era digital", link: "#", pubDate: new Date().toISOString(), description: "Como os artistas estão resgatando sonoridades retro com tecnologia moderna de mixagem." },
+                    { title: "Festivais de música confirmam calendários para os próximos meses", link: "#", pubDate: new Date().toISOString(), description: "Line-ups preliminares movimentam os fãs e geram grandes expectativas nas redes sociais." }
+                ];
+                renderNewsList(3);
             }
         }
 
@@ -1203,7 +1249,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!newsContainer) return;
             newsContainer.innerHTML = allNewsItems.slice(0, limit).map(item => {
                 const date = new Date(item.pubDate);
-                const dataFormatada = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+                const dataFormatada = `${isNaN(date.getDate()) ? 'Hoje' : date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear()}`;
                 return `
                 <article class="news-card">
                     <div class="news-tag">News</div>
@@ -1318,7 +1364,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             upcomingContainer.innerHTML = itemsToDisplay.map((a) => {
-                const cover = a.artworkUrl100 ? a.artworkUrl100 : './Logo.png';
+                const cover = getHighResImage(a.artworkUrl100) || './Logo.png';
                 const year = a.releaseYear || '2026';
                 
                 return `
@@ -2126,35 +2172,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // ═══════════════ GAMIFICAÇÃO: XP, classificação, conquistas e ranking ═══════════════
-    // Tudo é calculado a partir de 'reviews' e 'favorites' (sem tabelas novas).
-    // XP = 10 por resenha + 5 de bônus se o texto tiver 50+ caracteres + 3 por favorito.
     const GAME_TIERS = [
         { min: 0,    name: "Ouvinte",   icon: "🎧" },
         { min: 100,  name: "Curioso",   icon: "🎵" },
         { min: 300,  name: "Crítico",   icon: "✍️" },
         { min: 700,  name: "Audiófilo", icon: "📀" },
-        { min: 1500, name: "Lenda",     icon: "👑" }
+        { min: 1500, name: "Lenda",    icon: "👑" }
     ];
 
     const GAME_BADGES = [
-        { icon: "📝", name: "Primeira Resenha",  desc: "Publique sua 1ª resenha",         ok: s => s.reviews >= 1 },
+        { icon: "📝", name: "Primeira Resenha",  desc: "Publique sua 1ª resenha",        ok: s => s.reviews >= 1 },
         { icon: "🎙️", name: "Crítico Dedicado",  desc: "Publique 10 resenhas",            ok: s => s.reviews >= 10 },
         { icon: "🏆", name: "Crítico Veterano",  desc: "Publique 50 resenhas",            ok: s => s.reviews >= 50 },
         { icon: "📖", name: "Escritor",          desc: "5 resenhas com 100+ caracteres",  ok: s => s.longText >= 5 },
         { icon: "🎼", name: "Faixa a Faixa",     desc: "Avalie um álbum faixa a faixa",   ok: s => s.trackReviews >= 1 },
-        { icon: "💛", name: "Colecionador",      desc: "Favorite 5 álbuns",               ok: s => s.favorites >= 5 },
+        { icon: "💛", name: "Colecionador",      desc: "Favorite 5 álbuns",                ok: s => s.favorites >= 5 },
         { icon: "💿", name: "Curador",           desc: "Favorite 20 álbuns",              ok: s => s.favorites >= 20 },
-        { icon: "🔥", name: "Em Sequência",      desc: "Avalie em 3 dias seguidos",       ok: s => s.streak >= 3 },
-        { icon: "⚡", name: "Maratonista",       desc: "Avalie em 7 dias seguidos",       ok: s => s.streak >= 7 },
+        { icon: "🔥", name: "Em Sequência",      desc: "Avalie em 3 dias seguidos",      ok: s => s.streak >= 3 },
+        { icon: "⚡", name: "Maratonista",       desc: "Avalie em 7 dias seguidos",      ok: s => s.streak >= 7 },
         { icon: "🌟", name: "Presença Fiel",     desc: "7 dias de login seguidos",        ok: s => s.loginBest >= 7 },
-        { icon: "🏠", name: "Residente",         desc: "30 dias de login seguidos",       ok: s => s.loginBest >= 30 }
+        { icon: "🏠", name: "Residente",         desc: "30 dias de login seguidos",      ok: s => s.loginBest >= 30 }
     ];
 
-    // Títulos: um por classificação (muda sozinho ao bater a meta de XP) e um por conquista.
     const TIER_TITLES  = ["Novato do Vinil", "Ouvido Curioso", "Pena Afiada", "Audiófilo de Respeito", "Lenda do Vinil"];
     const BADGE_TITLES = ["Estreante", "Voz da Crítica", "Mestre da Crítica", "Poeta das Resenhas", "Ouvido Clínico",
-                          "Guardião de Discos", "Curador de Acervo", "Em Chamas", "Imparável", "Presença Fiel", "Morador do Estúdio"];
+                         "Guardião de Discos", "Curador de Acervo", "Em Chamas", "Imparável", "Presença Fiel", "Morador do Estúdio"];
     const GAME_TITLES = [
         ...GAME_TIERS.map((t, i) => ({ name: TIER_TITLES[i], src: `Classificação ${t.name} (${t.min} XP)`, tier: true, ok: s => s.xp >= t.min })),
         ...GAME_BADGES.map((b, i) => ({ name: BADGE_TITLES[i], src: `Conquista: ${b.name}`, ok: b.ok }))
@@ -2180,8 +2222,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return r;
     }
     let localStreak = null;
-
-    const gameEsc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
     function gameStats(revs, favCount, login = {}) {
         const text = r => (r.review_text || "");
@@ -2242,7 +2282,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         const { error } = await supabase.from("profiles").update({ title: name }).eq("id", session.user.id);
-        // Sem a coluna "title" no Supabase, o título fica salvo só neste navegador.
         if (error) localStorage.setItem("sb_title_" + session.user.id, name);
         gameCache = null;
         renderProfileGamification(session.user.id);
@@ -2375,8 +2414,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ═══════════════ SEQUÊNCIA DE LOGIN (🔥) ═══════════════
-    // Regra: a cada 20h libera um novo dia; se voltar entre 20h e 44h a sequência continua, depois de 44h zera.
     async function loginCheckIn(uid) {
         let st = null, dbOk = true;
         const r = await supabase.from("profiles").select("streak_count, streak_best, last_checkin").eq("id", uid).maybeSingle();
@@ -2404,7 +2441,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ═══════════════ PERFIL: estatísticas, álbum favorito, atividade, amizade, exportação e compartilhamento ═══════════════
     async function shareText(text) {
         const url = location.href.split("#")[0];
         try {
@@ -2412,13 +2448,6 @@ document.addEventListener("DOMContentLoaded", () => {
             await navigator.clipboard.writeText(text + " " + url);
             gameToast("Texto copiado para compartilhar!");
         } catch (e) { /* compartilhamento cancelado */ }
-    }
-
-    function downloadFile(name, content, type) {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([content], { type }));
-        a.download = name; a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
 
     function calcProfileStats(reviews, favs) {
@@ -2430,42 +2459,22 @@ document.addEventListener("DOMContentLoaded", () => {
             if (r.artist_name) artists[r.artist_name] = (artists[r.artist_name] || 0) + 1;
         });
         const favNames = new Set(favs.map(f => f.album_name));
-        // Álbum favorito = maior nota; empate: quem está nos favoritos, depois o mais recente.
         const best = [...reviews].sort((a, b) => num(b) - num(a) || (favNames.has(b.album_name) - favNames.has(a.album_name)) || new Date(b.created_at) - new Date(a.created_at))[0];
         return { n, avg, dist, best, topArtist: Object.entries(artists).sort((a, b) => b[1] - a[1])[0] };
     }
 
-    async function exportMyData(kind, ctx, st) {
-        const { data: bl } = await supabase.from("backlog").select("*").eq("user_id", ctx.userId);
-        const stamp = new Date().toISOString().slice(0, 10);
-        if (kind === "json") {
-            const data = {
-                exportado_em: new Date().toISOString(), perfil: ctx.profile,
-                estatisticas: { resenhas: st.n, media: +st.avg.toFixed(2), artista_mais_avaliado: st.topArtist?.[0] || null, album_favorito: st.best?.album_name || null },
-                resenhas: ctx.reviews, favoritos: ctx.favs, fila_de_desejos: bl || []
-            };
-            downloadFile(`soundbpm-dados-${stamp}.json`, JSON.stringify(data, null, 2), "application/json");
-        } else {
-            const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-            const rows = [["Álbum", "Artista", "Nota", "Data", "Resenha"], ...ctx.reviews.map(r => [r.album_name, r.artist_name, r.rating, fmtDateBR(r.created_at), r.review_text])];
-            downloadFile(`soundbpm-resenhas-${stamp}.csv`, "\ufeff" + rows.map(r => r.map(q).join(";")).join("\n"), "text/csv;charset=utf-8");
-        }
-        gameToast("Dados exportados!");
-    }
     const fmtDateBR = d => d ? new Date(d).toLocaleDateString("pt-BR") : "";
 
     async function renderProfileExtras(ctx) {
         const { userId, myId, mine, name, reviews, favs } = ctx;
         const st = calcProfileStats(reviews, favs);
 
-        // Amigos (equivale a seguidores): contagem e relação com quem está logado
         const { data: fr } = await supabase.from("friendships").select("id, requester_id, addressee_id, status")
             .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
         const accepted = (fr || []).filter(f => f.status === "accepted");
         const friendIds = new Set(accepted.map(f => f.requester_id === userId ? f.addressee_id : f.requester_id));
         const rel = (fr || []).find(f => f.requester_id === myId || f.addressee_id === myId);
 
-        // Estatísticas pessoais + álbum favorito
         const box = document.getElementById("profile-stats");
         if (box) {
             const keys = ["0.5", "1.0", "1.5", "2.0", "2.5", "3.0", "3.5", "4.0", "4.5", "5.0"];
@@ -2483,7 +2492,6 @@ document.addEventListener("DOMContentLoaded", () => {
                    <div class="dist-row">${keys.map(k => `<div class="dist-col" title="${k}★: ${st.dist[k] || 0}"><div class="dist-bar" style="height:${((st.dist[k] || 0) / max) * 80}%"></div><span>${k}</span></div>`).join("")}</div>`;
         }
 
-        // Histórico de atividades (resenhas + favoritos com data)
         const feed = [
             ...reviews.map(r => ({ icon: "⭐", date: r.created_at, album: r.album_name, artist: r.artist_name, txt: `avaliou com ${r.rating}★` })),
             ...favs.filter(f => f.created_at).map(f => ({ icon: "💛", date: f.created_at, album: f.album_name, artist: f.artist_name, txt: "favoritou" }))
@@ -2500,7 +2508,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }));
         }
 
-        // Botões de ação do perfil
         const actions = document.getElementById("profile-actions");
         if (!actions) return;
         actions.innerHTML = `<span class="title-chip">👥 ${friendIds.size} amigo${friendIds.size === 1 ? "" : "s"}</span>`;
@@ -2523,9 +2530,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         add("🔗 Compartilhar perfil", "btn-secondary-dark", () =>
             shareText(`Perfil de ${name} no SoundBPM: ${st.n} resenhas • média ${st.avg.toFixed(1)}★ • ${friendIds.size} amigos 🎵`));
-        if (mine) {
-            add("⬇ Exportar JSON", "btn-secondary-dark", () => exportMyData("json", ctx, st));
-            add("⬇ Exportar CSV", "btn-secondary-dark", () => exportMyData("csv", ctx, st));
-        }
     }
 });
