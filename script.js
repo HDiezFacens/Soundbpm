@@ -2531,4 +2531,117 @@ document.addEventListener("DOMContentLoaded", () => {
         add("🔗 Compartilhar perfil", "btn-secondary-dark", () =>
             shareText(`Perfil de ${name} no SoundBPM: ${st.n} resenhas • média ${st.avg.toFixed(1)}★ • ${friendIds.size} amigos 🎵`));
     }
+
+    // ═══════════════ v0.10 SMOOTH: tema, magnético, scroll reveal e painéis ═══════════════
+    const fxReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ---- Alternância de tema claro/escuro (lembra a escolha; padrão = escuro) ----
+    (function initTheme() {
+        const root = document.documentElement, btn = document.getElementById("theme-toggle");
+        if (!btn) return;
+        const sync = () => btn.setAttribute("aria-pressed", root.getAttribute("data-theme") === "light");
+        sync();
+        let t = null;
+        btn.addEventListener("click", () => {
+            const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+            root.classList.add("theme-anim");
+            if (next === "light") root.setAttribute("data-theme", "light"); else root.removeAttribute("data-theme");
+            try { localStorage.setItem("soundbpm_theme", next); } catch (e) {}
+            sync();
+            clearTimeout(t);
+            t = setTimeout(() => root.classList.remove("theme-anim"), 700);
+        });
+    })();
+
+    // ---- Botões magnéticos: o botão é atraído suavemente pelo cursor ----
+    (function initMagnetic() {
+        if (fxReduceMotion || window.matchMedia("(hover: none)").matches) return;
+        const SEL = ".btn-primary-gold, .btn-secondary-dark, .btn-login-nav, .btn-notify, .theme-toggle, [data-magnetic]";
+        const RADIUS = 80, PULL = 0.32, MAX = 12;
+        const state = new WeakMap();
+        let mx = -9999, my = -9999, raf = null;
+
+        function frame() {
+            let busy = false;
+            document.querySelectorAll(SEL).forEach(el => {
+                const r = el.getBoundingClientRect();
+                if (!r.width) return;
+                const s = state.get(el) || { x: 0, y: 0 };
+                state.set(el, s);
+                const dx = Math.max(r.left - mx, 0, mx - r.right), dy = Math.max(r.top - my, 0, my - r.bottom);
+                let tx = 0, ty = 0;
+                if (!el.disabled && Math.hypot(dx, dy) < RADIUS) {
+                    tx = Math.max(-MAX, Math.min(MAX, (mx - (r.left + r.width / 2)) * PULL));
+                    ty = Math.max(-MAX, Math.min(MAX, (my - (r.top + r.height / 2)) * PULL));
+                }
+                s.x += (tx - s.x) * 0.18;
+                s.y += (ty - s.y) * 0.18;
+                const settled = Math.abs(tx - s.x) < 0.05 && Math.abs(ty - s.y) < 0.05;
+                if (settled && tx === 0 && ty === 0) { if (s.x || s.y) { s.x = s.y = 0; el.style.translate = ""; } return; }
+                el.style.translate = `${s.x.toFixed(2)}px ${s.y.toFixed(2)}px`;
+                if (!settled) busy = true;
+            });
+            raf = busy ? requestAnimationFrame(frame) : null;
+        }
+        const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+        document.addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; kick(); }, { passive: true });
+        document.addEventListener("mouseleave", () => { mx = my = -9999; kick(); });
+    })();
+
+    // ---- Elementos surgindo na rolagem (fade + subida / deslize lateral / zoom) ----
+    // Dica: qualquer elemento aceita data-reveal="up|left|right|zoom" para escolher o efeito.
+    (function initScrollReveal() {
+        if (fxReduceMotion || !("IntersectionObserver" in window)) return;
+        const RULES = [
+            ["main h2, main h3, .section-header-flex, .footer-col", "up"],
+            [".poster-card, .news-card, .upcoming-card, .dash-block, .stat-card, .badge-item, .game-tier-card, .acc", "up"],
+            [".diary-item, .activity-item, .rank-row", "alt"],
+            ["section.section-container img", "zoom"],
+            ["[data-reveal]", "attr"]
+        ];
+        const SKIP = ".hero-carousel-section, .site-header, .web-player, .modal-overlay, .find-bar";
+        const io = new IntersectionObserver((entries) => {
+            entries.filter(e => e.isIntersecting).forEach((e, i) => {
+                const el = e.target, delay = Math.min(i, 8) * 70;
+                io.unobserve(el);
+                el.style.transitionDelay = delay + "ms";
+                el.classList.add("sr-in");
+                // Terminada a entrada, devolve o elemento ao CSS original (mantém hovers)
+                setTimeout(() => { el.classList.remove("sr", "sr-up", "sr-left", "sr-right", "sr-zoom", "sr-in"); el.style.transitionDelay = ""; }, 1000 + delay);
+            });
+        }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+
+        const scan = () => {
+            RULES.forEach(([sel, kind]) => document.querySelectorAll(sel).forEach(el => {
+                if (el.dataset.sr || el.closest(SKIP)) return;
+                if (kind !== "attr" && el.parentElement && el.parentElement.closest("[data-sr]")) return;
+                el.dataset.sr = "1";
+                let dir = kind;
+                if (kind === "attr") dir = el.dataset.reveal || "up";
+                if (kind === "alt") dir = ([...el.parentElement.children].indexOf(el) % 2 === 0) ? "left" : "right";
+                el.classList.add("sr", "sr-" + dir);
+                io.observe(el);
+            }));
+        };
+        new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+        scan();
+    })();
+
+    // ---- Painéis expansíveis (FAQ, regras do XP) e menu do rodapé no celular ----
+    document.addEventListener("click", (e) => {
+        const head = e.target.closest(".acc-head");
+        if (head) {
+            const item = head.closest(".acc"), willOpen = !item.classList.contains("open");
+            const group = item.closest("[data-acc-group]");
+            if (group && willOpen) group.querySelectorAll(".acc.open").forEach(o => {
+                o.classList.remove("open");
+                o.querySelector(".acc-head").setAttribute("aria-expanded", "false");
+            });
+            item.classList.toggle("open", willOpen);
+            head.setAttribute("aria-expanded", String(willOpen));
+            return;
+        }
+        const foot = e.target.closest(".footer-col h4");
+        if (foot) foot.parentElement.classList.toggle("open");
+    });
 });

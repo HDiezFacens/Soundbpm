@@ -12,6 +12,7 @@
     
     <!-- Biblioteca necessária para a função de partilhar nos Stories do Instagram -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>try { if (localStorage.getItem("soundbpm_theme") === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}</script>
 </head>
 <body>
 
@@ -60,6 +61,11 @@
                 <div class="header-search">
                     <input type="text" id="search-input" placeholder="Buscar álbuns, artistas...">
                 </div>
+                <!-- Alternar tema claro/escuro -->
+                <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Alternar entre tema claro e escuro" title="Alternar tema">
+                    <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+                </button>
                 <!-- Sino de Notificações -->
                 <div id="notification-bell-wrap" style="position: relative; display: none;">
                     <button id="notification-bell" title="Notificações" style="background: none; border: none; cursor: pointer; font-size: 1.4rem; color: var(--text-muted); position: relative; padding: 0.2rem;">🔔</button>
@@ -260,6 +266,10 @@
             <div id="ranking-list" class="diary-stream">
                 <p style="color: var(--text-muted);">Carregando ranking...</p>
             </div>
+        
+            <div class="acc-list" style="margin-top: 1.5rem;">
+                <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como o XP é calculado?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>10 XP por resenha, +5 XP quando o texto tem 50 caracteres ou mais e +3 XP por álbum favoritado. As classificações são Ouvinte (0 XP), Curioso (100), Crítico (300), Audiófilo (700) e Lenda (1.500). Conquistas e títulos são desbloqueados conforme sua atividade.</div></div></div></div>
+            </div>
         </section>
 
         <!-- PÁGINA: DETALHES DO ÁLBUM (ESTILO LETTERBOXD) -->
@@ -409,6 +419,23 @@
                         <p class="diary-review-text">"O conceito visual e sonoro criado pelo Tyler neste projeto é monumental. Destaque absoluto para 'EARFQUAKE'."</p>
                         <span class="diary-date">Registrado há 3 dias</span>
                     </div>
+                </div>
+            </div>
+        
+            <div class="faq-block">
+                <div class="section-header-flex">
+                    <div>
+                        <h2>Perguntas Frequentes</h2>
+                        <p>Tire suas dúvidas sobre como o SoundBPM funciona.</p>
+                    </div>
+                </div>
+                <div class="acc-list" data-acc-group>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como avalio um álbum?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Pesquise um álbum, abra a página dele e clique para avaliar. Você pode dar uma nota de 0,5 a 5 estrelas para o disco inteiro ou avaliar faixa a faixa, e a média é calculada automaticamente. A resenha em texto é opcional.</div></div></div></div>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como funcionam XP, classificações e conquistas?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Cada resenha vale 10 XP, mais 5 XP se o texto tiver 50 caracteres ou mais, e cada álbum favoritado vale 3 XP. Conforme o XP cresce você sobe de classificação, de Ouvinte até Lenda, e desbloqueia conquistas e títulos que aparecem no seu perfil.</div></div></div></div>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>O que é a sequência de login 🔥?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>A cada 20 horas libera-se um novo dia de sequência. Se você voltar entre 20 e 44 horas depois, a sequência continua; passando disso, ela recomeça do dia 1. Ela aparece no seu perfil e na aba “Maior sequência” do Ranking.</div></div></div></div>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como adiciono amigos?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Na página Pessoas, busque pelo nome e envie um pedido de amizade, ou use o botão direto no perfil da pessoa. Quando ela aceitar, vocês passam a aparecer como amigos e o contador do perfil é atualizado.</div></div></div></div>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como conecto minha conta do Spotify?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Use o “Spotify Connect” no rodapé ou no seu Painel. Depois de autorizar, o site importa seus álbuns ouvidos recentemente e sugere faixas recomendadas.</div></div></div></div>
+                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Posso compartilhar meu perfil e minhas atividades?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Sim. No perfil há o botão “Compartilhar perfil”, e cada item da Atividade Recente tem seu próprio botão de compartilhar.</div></div></div></div>
                 </div>
             </div>
         </section>

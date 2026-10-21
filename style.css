@@ -1256,3 +1256,98 @@ ul {
 .activity-share { background: transparent; border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 4px; cursor: pointer; padding: 0.3rem 0.6rem; transition: var(--transition-base); }
 .activity-share:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
 @media (max-width: 768px) { .stat-fav { flex-direction: row; text-align: left; } }
+
+/* =====================================================================
+   v0.10 — SMOOTH: magnético, cards flutuantes, scroll reveal, tema claro e painéis
+   (apenas acréscimos: tudo usa as variáveis e o padrão visual existentes)
+   ===================================================================== */
+:root {
+    --fx-shadow: rgba(0, 0, 0, 0.45);
+    --fx-glow-soft: rgba(223, 177, 91, 0.25);
+}
+
+/* ---------- TEMA CLARO ----------
+   Teoria das cores: o escuro usa fundo azul-ardósia + dourado (cores quase complementares).
+   No claro o par se inverte: papel quente (creme) + tinta ardósia, e o dourado escurece para
+   âmbar profundo para manter o contraste. Cards ficam brancos sobre o creme, como no escuro
+   os cards ficam mais claros que o fundo. */
+:root[data-theme="light"] {
+    --bg-base: #f5f0e6;
+    --bg-card: #ffffff;
+    --bg-card-hover: #fbf6ea;
+    --bg-tint: #ebe4d3;
+    --accent-gold: #9c6305;
+    --accent-gold-hover: #b9770a;
+    --accent-orange: #d96a00;
+    --text-main: #1a2230;
+    --text-muted: #5a6878;
+    --border-subtle: #d6cdb8;
+    --fx-shadow: rgba(60, 40, 10, 0.22);
+    --fx-glow-soft: rgba(156, 99, 5, 0.18);
+    color-scheme: light;
+}
+:root[data-theme="light"] .site-header { background-color: rgba(245, 240, 230, 0.92); }
+:root[data-theme="light"] .site-footer { background-color: #e6dec9; }
+:root[data-theme="light"] .web-player { background-color: rgba(255, 255, 255, 0.95); box-shadow: 0 -5px 20px rgba(60, 40, 10, 0.15); }
+:root[data-theme="light"] .modal-overlay { background-color: rgba(26, 34, 48, 0.55); }
+:root[data-theme="light"] .btn-login-nav:hover { background-color: rgba(156, 99, 5, 0.08); }
+:root[data-theme="light"] .hero-bg-backdrop { filter: blur(20px) brightness(1.05) saturate(0.85); }
+:root[data-theme="light"] .hero-overlay { background: linear-gradient(180deg, rgba(245, 240, 230, 0.72) 0%, var(--bg-base) 100%); }
+:root[data-theme="light"] .poster-overlay-actions { background: rgba(26, 34, 48, 0.62); }
+
+/* Transição animada entre os temas (cores, bordas, sombras e ícones mudam suavemente) */
+html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+    transition: background-color 0.55s ease, color 0.55s ease, border-color 0.55s ease, box-shadow 0.55s ease, fill 0.55s ease, stroke 0.55s ease !important;
+}
+
+/* Botão de tema: sol e lua trocam girando */
+.theme-toggle { position: relative; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border-subtle); background: transparent; color: var(--accent-gold); cursor: pointer; transition: var(--transition-base); }
+.theme-toggle:hover { border-color: var(--accent-gold); box-shadow: 0 0 14px var(--fx-glow-soft); }
+.theme-toggle svg { position: absolute; inset: 7px; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease; }
+.theme-toggle .icon-sun  { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle .icon-moon { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+:root[data-theme="light"] .theme-toggle .icon-sun  { opacity: 0; transform: rotate(90deg) scale(0.4); }
+:root[data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0) scale(1); }
+
+/* ---------- CARDS FLUTUANTES (músicas vindas da API) ---------- */
+.poster-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.25s ease, background-color 0.25s ease; }
+.poster-card:hover { transform: translateY(-10px) scale(1.04); box-shadow: 0 18px 38px var(--fx-shadow), 0 0 0 1px var(--accent-gold); position: relative; z-index: 5; }
+.upcoming-card, .news-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.25s ease, background-color 0.25s ease; }
+.upcoming-card:hover, .news-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 14px 30px var(--fx-shadow); }
+
+/* ---------- ELEMENTOS SURGINDO NA ROLAGEM ---------- */
+.sr { opacity: 0; transition: opacity 0.7s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.sr-up    { transform: translateY(34px); }
+.sr-left  { transform: translateX(-48px); }
+.sr-right { transform: translateX(48px); }
+.sr-zoom  { transform: scale(0.94); }
+.sr.sr-in { opacity: 1; transform: none; }
+
+/* ---------- PAINÉIS EXPANSÍVEIS (FAQ, regras, menu do rodapé no celular) ---------- */
+.faq-block { margin-top: 4rem; }
+.acc-list { display: flex; flex-direction: column; gap: 0.7rem; max-width: 860px; }
+.acc { background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; transition: border-color 0.25s ease, box-shadow 0.35s ease, background-color 0.25s ease; }
+.acc:hover { border-color: var(--accent-gold); }
+.acc.open { border-color: var(--accent-gold); box-shadow: 0 8px 24px var(--fx-shadow); }
+.acc-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; background: transparent; border: none; color: var(--text-main); font: inherit; font-size: 1rem; font-weight: 700; text-align: left; cursor: pointer; }
+.acc-icon { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: var(--accent-gold); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.acc.open .acc-icon { transform: rotate(180deg); }
+.acc-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.acc.open .acc-body { grid-template-rows: 1fr; }
+.acc-inner { overflow: hidden; min-height: 0; }
+.acc-inner > div { padding: 0 1.25rem 1.1rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s; }
+.acc.open .acc-inner > div { opacity: 1; transform: none; }
+
+@media (max-width: 768px) {
+    .footer-col h4 { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .footer-col h4::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--accent-gold); border-bottom: 2px solid var(--accent-gold); transform: rotate(45deg); transition: transform 0.3s ease; }
+    .footer-col.open h4::after { transform: rotate(-135deg); }
+    .footer-col h4 + ul { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s ease, opacity 0.3s ease; }
+    .footer-col.open h4 + ul { max-height: 260px; opacity: 1; }
+    .sr-left, .sr-right { transform: translateY(26px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sr { opacity: 1; transform: none; transition: none; }
+    .acc-body, .acc-icon, .acc-inner > div { transition: none; }
+}
