@@ -100,7 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                     email: email,
-                    password: password
+                    password: password,
+                    options: { data: { username: username, bio: "Explorando o mundo da música." } }
                 });
 
                 if (signUpError) {
@@ -110,13 +111,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                await savePendingSignup(email, username, avatarField);
+
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
 
                 if (signInError) {
-                    alert("Conta criada, mas faça login para continuar.");
+                    alert("Conta criada! Confirme seu e-mail e depois faça login: seu apelido e sua foto serão aplicados automaticamente.");
                     submitBtn.textContent = oldText;
                     submitBtn.disabled = false;
                     if (modal) modal.classList.remove("active");
@@ -366,6 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session) {
+            await ensureProfileFromSignup(session);
             const { data: profile } = await supabase
                 .from("profiles").select("username, avatar_url").eq("id", session.user.id).single();
 
@@ -2644,4 +2648,144 @@ document.addEventListener("DOMContentLoaded", () => {
         const foot = e.target.closest(".footer-col h4");
         if (foot) foot.parentElement.classList.toggle("open");
     });
+
+    // ═══════════════ CORREÇÃO: dados do cadastro com confirmação de e-mail ═══════════════
+    // Sem sessão (e-mail ainda não confirmado) não dá para gravar no banco nem subir a foto.
+    // Por isso o apelido/bio vão na própria conta (signUp) e a foto fica guardada neste navegador;
+    // no primeiro login com sessão válida o perfil é criado e a foto é enviada.
+    function fileToDataURL(file) {
+        return new Promise((resolve) => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result);
+            r.onerror = () => resolve(null);
+            r.readAsDataURL(file);
+        });
+    }
+
+    async function savePendingSignup(email, username, avatarField) {
+        let avatar = null;
+        if (avatarField && avatarField.files && avatarField.files[0]) avatar = await fileToDataURL(avatarField.files[0]);
+        try {
+            localStorage.setItem("soundbpm_pending_" + email.toLowerCase(), JSON.stringify({ username, avatar }));
+        } catch (e) { console.warn("Não foi possível guardar a foto pendente:", e); }
+    }
+
+    async function ensureProfileFromSignup(session) {
+        try {
+            const user = session.user, meta = user.user_metadata || {};
+            const key = "soundbpm_pending_" + (user.email || "").toLowerCase();
+            let pending = null;
+            try { pending = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+            if (!meta.username && !pending) return;
+
+            const { data: profile } = await supabase.from("profiles").select("username, bio, avatar_url").eq("id", user.id).maybeSingle();
+            const emailPrefix = (user.email || "").split("@")[0];
+            const fields = { id: user.id };
+
+            if (!profile?.username || profile.username === emailPrefix) fields.username = meta.username || pending?.username;
+            if (!profile?.bio) fields.bio = meta.bio || "Explorando o mundo da música.";
+            if (!profile?.avatar_url && pending?.avatar) {
+                const blob = await (await fetch(pending.avatar)).blob();
+                const path = `${user.id}-${Date.now()}.jpg`;
+                const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
+                if (!upErr) fields.avatar_url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+                else console.error("Erro ao enviar a foto do cadastro:", upErr);
+            }
+            if (Object.keys(fields).length > 1) {
+                const { error } = await supabase.from("profiles").upsert([fields]);
+                if (error) { console.error("Erro ao criar o perfil:", error); return; }
+            }
+            localStorage.removeItem(key);
+        } catch (e) { console.error("ensureProfileFromSignup:", e); }
+    }
+
+    // ═══════════════ AJUSTE DE FOTO: dimensionar, posicionar e recortar o avatar ═══════════════
+    function openAvatarCropper(file) {
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(file), img = new Image();
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+            img.onload = () => {
+                const S = 260, OUT = 400;
+                const cover = Math.max(S / img.width, S / img.height), contain = Math.min(S / img.width, S / img.height);
+                const minScale = contain * 0.6, maxScale = cover * 3;
+                let scale = cover, ox = 0, oy = 0, drag = null;
+
+                const ov = document.createElement("div");
+                ov.className = "crop-overlay";
+                ov.innerHTML = `
+                    <div class="crop-card" role="dialog" aria-label="Ajustar foto de perfil">
+                        <strong>Ajustar foto de perfil</strong>
+                        <p class="crop-hint">Arraste a imagem para posicionar e use o controle (ou a rodinha do mouse) para dimensionar.</p>
+                        <div class="crop-stage"><canvas width="${OUT}" height="${OUT}"></canvas></div>
+                        <div class="crop-zoom"><span>−</span><input type="range" class="crop-range" min="${minScale}" max="${maxScale}" step="0.001" value="${scale}" aria-label="Tamanho da imagem"><span>+</span></div>
+                        <div class="crop-modes">
+                            <button type="button" class="btn-secondary-dark" data-m="cover">Preencher</button>
+                            <button type="button" class="btn-secondary-dark" data-m="contain">Imagem inteira</button>
+                            <button type="button" class="btn-secondary-dark" data-m="reset">Centralizar</button>
+                        </div>
+                        <div class="crop-actions">
+                            <button type="button" class="btn-secondary-dark crop-cancel">Cancelar</button>
+                            <button type="button" class="btn-primary-gold crop-ok">Aplicar</button>
+                        </div>
+                    </div>`;
+                const cv = ov.querySelector("canvas"), ctx = cv.getContext("2d"), range = ov.querySelector(".crop-range"), stage = ov.querySelector(".crop-stage");
+                const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg-card").trim() || "#2c3440";
+
+                const draw = () => {
+                    const k = OUT / S, w = img.width * scale * k, h = img.height * scale * k;
+                    ctx.fillStyle = bg; ctx.fillRect(0, 0, OUT, OUT);
+                    ctx.drawImage(img, OUT / 2 + ox * k - w / 2, OUT / 2 + oy * k - h / 2, w, h);
+                };
+                const setScale = (v) => { scale = Math.min(maxScale, Math.max(minScale, v)); range.value = scale; draw(); };
+                const clamp = (v) => Math.max(-S, Math.min(S, v));
+                const close = (result) => { document.removeEventListener("keydown", onKey); ov.classList.remove("show"); setTimeout(() => ov.remove(), 250); URL.revokeObjectURL(url); resolve(result); };
+                const onKey = (e) => { if (e.key === "Escape") close(null); };
+
+                stage.addEventListener("pointerdown", (e) => { drag = { x: e.clientX - ox, y: e.clientY - oy }; stage.setPointerCapture(e.pointerId); stage.classList.add("dragging"); });
+                stage.addEventListener("pointermove", (e) => { if (!drag) return; ox = clamp(e.clientX - drag.x); oy = clamp(e.clientY - drag.y); draw(); });
+                ["pointerup", "pointercancel"].forEach(ev => stage.addEventListener(ev, () => { drag = null; stage.classList.remove("dragging"); }));
+                stage.addEventListener("wheel", (e) => { e.preventDefault(); setScale(scale * (e.deltaY < 0 ? 1.06 : 0.94)); }, { passive: false });
+                range.addEventListener("input", () => setScale(parseFloat(range.value)));
+                ov.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+                    ox = oy = 0;
+                    setScale(b.dataset.m === "contain" ? contain : cover);
+                }));
+                ov.querySelector(".crop-cancel").addEventListener("click", () => close(null));
+                ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+                ov.querySelector(".crop-ok").addEventListener("click", () => {
+                    cv.toBlob((blob) => close(blob ? new File([blob], "avatar.jpg", { type: "image/jpeg" }) : null), "image/jpeg", 0.9);
+                });
+                document.addEventListener("keydown", onKey);
+                document.body.appendChild(ov);
+                draw();
+                requestAnimationFrame(() => ov.classList.add("show"));
+            };
+            img.src = url;
+        });
+    }
+
+    // Liga o ajuste aos dois campos de foto (cadastro e editar perfil), sem mexer no código de envio:
+    // o arquivo recortado substitui o escolhido dentro do próprio <input>.
+    function wireAvatarInput(input) {
+        if (!input) return;
+        const box = document.createElement("div");
+        box.className = "avatar-pick";
+        box.innerHTML = `<img class="avatar-preview" alt="Prévia da foto" hidden><button type="button" class="btn-secondary-dark avatar-adjust" hidden>Ajustar foto</button>`;
+        input.insertAdjacentElement("afterend", box);
+        const prev = box.querySelector("img"), adj = box.querySelector("button");
+        let original = null;
+        const run = async (file) => {
+            const out = await openAvatarCropper(file);
+            if (!out) { input.value = ""; prev.hidden = adj.hidden = true; original = null; return; }
+            const dt = new DataTransfer();
+            dt.items.add(out);
+            input.files = dt.files;
+            prev.src = URL.createObjectURL(out);
+            prev.hidden = adj.hidden = false;
+        };
+        input.addEventListener("change", () => { const f = input.files[0]; if (f) { original = f; run(f); } });
+        adj.addEventListener("click", () => { if (original) run(original); });
+    }
+    wireAvatarInput(document.getElementById("auth-avatar"));
+    wireAvatarInput(document.getElementById("edit-profile-avatar"));
 });
