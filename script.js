@@ -1121,7 +1121,7 @@ document.addEventListener("DOMContentLoaded", () => {
             heroSection.style.minHeight = `${Math.max(340, bannerPos.height || 380)}px`;
         }
 
-        if (bannerContainer) {
+       if (bannerContainer) {
             bannerContainer.style.height = "100%";
             if (bannerUrl) {
                 if (bannerImg) {
@@ -1136,7 +1136,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     bannerImg.removeAttribute("src");
                     bannerImg.style.display = "none";
                 }
-                if (bannerPlaceholder) bannerPlaceholder.style.display = "flex";
+                if (bannerPlaceholder) {
+                    // Exibe a mensagem de personalizar apenas se for o próprio perfil; caso contrário, oculta
+                    bannerPlaceholder.style.display = isMyProfile ? "flex" : "none";
+                    bannerPlaceholder.style.cursor = isMyProfile ? "pointer" : "default";
+                }
             }
         }
 
@@ -3302,14 +3306,30 @@ document.addEventListener("DOMContentLoaded", () => {
         let pendingModalBannerFile = null;
         let pendingModalBannerPos = { y: 50, scale: 100, height: 220 };
 
+        // Nova função de segurança: Verifica se a página carregada é o perfil do usuário logado
+        async function isMyProfileViewing() {
+            if (!supabase) return false;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return false;
+            const profilePage = document.getElementById("profile-page");
+            const loadedUserId = profilePage?.dataset?.userId || session.user.id;
+            return loadedUserId === session.user.id;
+        }
+
         if (placeholder) {
-            placeholder.addEventListener("click", () => {
+            placeholder.addEventListener("click", async () => {
+                const isMine = await isMyProfileViewing();
+                if (!isMine) return; // Bloqueia o clique se não for o próprio perfil
+
                 if (fileInput) fileInput.click();
             });
         }
 
         if (fileInput) {
             fileInput.addEventListener("change", async () => {
+                const isMine = await isMyProfileViewing();
+                if (!isMine) { fileInput.value = ""; return; } // Bloqueio duplo
+
                 const f = fileInput.files[0];
                 if (!f) return;
                 const result = await openBannerCropper(f);
@@ -3322,6 +3342,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (adjustBtn) {
             adjustBtn.addEventListener("click", async () => {
+                const isMine = await isMyProfileViewing();
+                if (!isMine) return; // Bloqueia a ação se não for o próprio perfil
+
                 const bannerImg = document.getElementById("profile-banner-img");
                 const currentSrc = bannerImg?.getAttribute("src");
                 if (!currentSrc) {
@@ -3346,6 +3369,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (removeBtn) {
             removeBtn.addEventListener("click", async () => {
+                const isMine = await isMyProfileViewing();
+                if (!isMine) return; // Bloqueia a ação se não for o próprio perfil
+
                 if (!confirm("Deseja realmente remover o banner do seu perfil?")) return;
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
@@ -3422,7 +3448,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const profilePage = document.getElementById("profile-page");
                 const loadedUserId = profilePage?.dataset?.userId || session.user.id;
-                if (loadedUserId !== session.user.id) return;
+                if (loadedUserId !== session.user.id) return; // Aqui a segurança já estava correta
 
                 directAvatarInput.click();
             });
