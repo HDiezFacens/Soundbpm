@@ -159,16 +159,51 @@
         </section>
 
         <!-- Página de Perfil (Ordem solicitada: Favoritos, Diário, Estatísticas, Gamificação, Atividade) -->
-        <section id="profile-page" class="section-container" style="display: none;">
-            <div style="display: flex; gap: 2rem; align-items: flex-end; margin-bottom: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 2rem; position: relative;">
-                <img id="profile-avatar-img" src="./Logo.png" alt="Avatar" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid var(--bg-card);">
-                <div>
-                    <h2 id="profile-username-display" style="font-size: 2.5rem; margin-bottom: 0.5rem;">Carregando...</h2>
-                    <div id="profile-title-line" class="profile-title-line"></div>
-                    <p id="profile-bio-display" style="color: var(--text-muted); font-size: 1.1rem; max-width: 600px;">...</p>
-                    <div id="profile-actions" class="profile-title-line" style="margin-top: 1rem;"></div>
+        <section id="profile-page" class="section-container profile-page-root" style="display: none;">
+            <!-- Hero do Perfil: Banner fluido sem bordas e avatar sobreposto -->
+            <div class="profile-hero-section">
+                <div id="profile-banner-container" class="profile-banner-wrap">
+                    <img id="profile-banner-img" class="profile-banner-img" alt="Banner do Perfil">
+                    <div class="profile-banner-overlay"></div>
+                    <div id="profile-banner-placeholder" class="profile-banner-placeholder" title="Clique para adicionar um banner">
+                        <span style="font-size: 1.8rem;">✨</span>
+                        <strong style="color: var(--text-main); font-size: 0.95rem;">Personalize seu perfil com uma capa</strong>
+                        <span style="font-size: 0.78rem; opacity: 0.85;">Clique aqui para escolher uma imagem e dimensionar</span>
+                    </div>
+                    <!-- Ações do Banner (para o dono do perfil) -->
+                    <div id="profile-banner-actions" class="profile-banner-actions">
+                        <button id="btn-adjust-banner" type="button" title="Ajustar enquadramento e tamanho">
+                            📐 Dimensionar
+                        </button>
+                        <label id="btn-upload-banner-label" title="Escolher nova imagem de banner">
+                            📷 Trocar Banner
+                            <input type="file" id="profile-banner-file-input" accept="image/*" style="display: none;">
+                        </label>
+                        <button id="btn-remove-banner" type="button" title="Remover banner" style="color: #ff6b6b;">
+                            🗑️
+                        </button>
+                    </div>
                 </div>
-                <button id="btn-edit-profile" class="btn-secondary-dark" style="position: absolute; right: 0; bottom: 2rem;">Editar Perfil</button>
+
+                <!-- Barra de Usuário com Avatar interativo diretamente sobre o banner -->
+                <div class="profile-user-bar">
+                    <div id="profile-avatar-wrap" class="profile-avatar-wrap" title="Clique para trocar sua foto de perfil">
+                        <img id="profile-avatar-img" src="./Logo.png" alt="Avatar">
+                        <div class="avatar-hover-overlay" id="avatar-hover-overlay">
+                            <span class="avatar-camera-icon">📷</span>
+                            <span class="avatar-hover-text">Trocar Foto</span>
+                        </div>
+                        <input type="file" id="direct-avatar-file-input" accept="image/*" style="display: none;">
+                    </div>
+
+                    <div style="flex: 1; padding-bottom: 0.3rem;">
+                        <h2 id="profile-username-display" style="font-size: 2.3rem; margin-bottom: 0.3rem; font-weight: 800; letter-spacing: -0.5px;">Carregando...</h2>
+                        <div id="profile-title-line" class="profile-title-line"></div>
+                        <p id="profile-bio-display" style="color: var(--text-muted); font-size: 1rem; max-width: 650px; line-height: 1.5; margin: 0.4rem 0 0 0;">...</p>
+                        <div id="profile-actions" class="profile-title-line" style="margin-top: 0.85rem;"></div>
+                    </div>
+                    <button id="btn-edit-profile" class="btn-secondary-dark" style="align-self: flex-start; margin-top: 0.5rem;">Editar Perfil</button>
+                </div>
             </div>
             
             <!-- 1. Meus Álbuns Favoritos -->
@@ -212,9 +247,18 @@
                         <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Biografia</label>
                         <textarea id="edit-profile-bio" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);"></textarea>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Nova Foto de Perfil</label>
+                    <div style="margin-bottom: 1.2rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Foto de Perfil</label>
                         <input type="file" id="edit-profile-avatar" accept="image/*" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Banner do Perfil</label>
+                        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="edit-profile-banner" accept="image/*" style="display: none;">
+                            <button type="button" id="btn-modal-choose-banner" class="btn-secondary-dark" style="font-size: 0.85rem; padding: 0.5rem 0.9rem;">📷 Escolher Banner</button>
+                            <button type="button" id="btn-modal-adjust-banner" class="btn-secondary-dark" style="font-size: 0.85rem; padding: 0.5rem 0.9rem; display: none;">📐 Dimensionar</button>
+                            <span id="modal-banner-name" style="font-size: 0.8rem; color: var(--accent-gold); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                        </div>
                     </div>
                     <button type="submit" id="edit-profile-submit" class="btn-primary-gold" style="width: 100%; padding: 0.9rem;">Salvar Alterações</button>
                 </form>

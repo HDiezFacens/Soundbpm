@@ -1066,12 +1066,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const isMyProfile = (userIdToLoad === myId);
 
+        const profilePage = document.getElementById("profile-page");
+        if (profilePage) profilePage.dataset.userId = userIdToLoad;
+
         const usernameDisplay = document.getElementById("profile-username-display");
         const avatarImg = document.getElementById("profile-avatar-img");
+        const avatarWrap = document.getElementById("profile-avatar-wrap");
+        const avatarOverlay = document.getElementById("avatar-hover-overlay");
         const bioDisplay = document.getElementById("profile-bio-display");
         const editBtn = document.getElementById("btn-edit-profile");
 
         if (editBtn) editBtn.style.display = isMyProfile ? "block" : "none";
+        if (avatarWrap) {
+            avatarWrap.style.cursor = isMyProfile ? "pointer" : "default";
+            avatarWrap.title = isMyProfile ? "Toque para alterar sua foto de perfil" : "Foto de perfil";
+        }
+        if (avatarOverlay) {
+            avatarOverlay.style.display = isMyProfile ? "flex" : "none";
+        }
 
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userIdToLoad).single();
         
@@ -1082,6 +1094,59 @@ document.addEventListener("DOMContentLoaded", () => {
         if (usernameDisplay) usernameDisplay.textContent = displayName;
         if (avatarImg) avatarImg.src = avatarUrl;
         if (bioDisplay) bioDisplay.textContent = bioText;
+
+        // Renderizar Banner do Perfil & Dimensionamento
+        const bannerContainer = document.getElementById("profile-banner-container");
+        const bannerImg = document.getElementById("profile-banner-img");
+        const bannerPlaceholder = document.getElementById("profile-banner-placeholder");
+        const bannerActions = document.getElementById("profile-banner-actions");
+
+        let savedBanner = null;
+        try {
+            savedBanner = JSON.parse(localStorage.getItem(`soundbpm_banner_${userIdToLoad}`) || "null");
+        } catch(e) {}
+
+        const bannerUrl = profile?.banner_url || savedBanner?.url || "";
+        let bannerPos = { y: 50, scale: 100, height: 380 };
+        if (profile?.banner_pos) {
+            try {
+                bannerPos = typeof profile.banner_pos === 'string' ? JSON.parse(profile.banner_pos) : profile.banner_pos;
+            } catch(e) {}
+        } else if (savedBanner?.pos) {
+            bannerPos = savedBanner.pos;
+        }
+
+        const heroSection = document.querySelector(".profile-hero-section");
+        if (heroSection) {
+            heroSection.style.minHeight = `${Math.max(340, bannerPos.height || 380)}px`;
+        }
+
+        if (bannerContainer) {
+            bannerContainer.style.height = "100%";
+            if (bannerUrl) {
+                if (bannerImg) {
+                    bannerImg.src = bannerUrl;
+                    bannerImg.style.display = "block";
+                    bannerImg.style.objectPosition = `center ${bannerPos.y ?? 50}%`;
+                    bannerImg.style.transform = `scale(${(bannerPos.scale ?? 100) / 100})`;
+                }
+                if (bannerPlaceholder) bannerPlaceholder.style.display = "none";
+            } else {
+                if (bannerImg) {
+                    bannerImg.removeAttribute("src");
+                    bannerImg.style.display = "none";
+                }
+                if (bannerPlaceholder) bannerPlaceholder.style.display = "flex";
+            }
+        }
+
+        if (bannerActions) {
+            bannerActions.style.display = isMyProfile ? "flex" : "none";
+            const removeBtn = document.getElementById("btn-remove-banner");
+            if (removeBtn) removeBtn.style.display = bannerUrl ? "inline-flex" : "none";
+            const adjustBtn = document.getElementById("btn-adjust-banner");
+            if (adjustBtn) adjustBtn.style.display = bannerUrl ? "inline-flex" : "none";
+        }
 
         gameCache = null;
         renderProfileGamification(userIdToLoad);
@@ -1197,7 +1262,106 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
    
-    let allNewsItems = [];
+    const defaultMusicNews = [
+        {
+            title: "Grammy Awards 2026: Academia anuncia mudanças no regulamento e novas categorias de música independente",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 3).toISOString(),
+            description: "A Recording Academy revelou novidades que aumentam a representatividade e valorizam produções originais e independentes no cenário mundial.",
+            source: "SoundBPM Notícias",
+            tag: "Premiação"
+        },
+        {
+            title: "Sabrina Carpenter bate novos recordes nas plataformas de streaming com 'Short n' Sweet'",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 8).toISOString(),
+            description: "Com hits consecutivos no topo da Billboard Hot 100, cantora consolida um dos momentos mais vitoriosos e comentados do pop recente.",
+            source: "Billboard & G1",
+            tag: "Charts"
+        },
+        {
+            title: "Kendrick Lamar expande universo sonoro e prepara grandes apresentações em festivais globais",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 18).toISOString(),
+            description: "Após o impacto monumental de GNX e do espetáculo do Super Bowl, o rapper confirma datas especiais que prometem marcar época no hip-hop.",
+            source: "Rolling Stone",
+            tag: "Turnê"
+        },
+        {
+            title: "The Weeknd dá pistas sobre conclusão de sua aclamada trilogia conceitual com 'Hurry Up Tomorrow'",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 28).toISOString(),
+            description: "Apresentação cinematográfica em São Paulo e teasers enigmáticos antecipam um dos lançamentos mais aguardados e comentados da década.",
+            source: "Pop & Arte",
+            tag: "Lançamento"
+        },
+        {
+            title: "O ressurgimento do vinil e o boom do shoegaze: a geração Z redescobre a audição imersiva",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 42).toISOString(),
+            description: "Vendas de discos de vinil superam previsões no Brasil, impulsionadas pelo público jovem em busca de autenticidade analógica e álbuns conceituais.",
+            source: "Música & Mercado",
+            tag: "Tendência"
+        },
+        {
+            title: "Charli xcx e o fenômeno 'Brat': como a estética verde-limão redefiniu o marketing da cultura pop",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 56).toISOString(),
+            description: "Álbum de remixes com participações estelares mantém a era em alta e inspira campanhas, pistas e tendências ao redor do planeta.",
+            source: "Cultura Pop",
+            tag: "Fenômeno"
+        },
+        {
+            title: "Billie Eilish celebra turnê 'Hit Me Hard and Soft' com cenografia sustentável pioneira",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 70).toISOString(),
+            description: "Artista reduz em 70% a pegada de carbono em estádios e arenas, estabelecendo novo padrão de responsabilidade ecológica para o entretenimento ao vivo.",
+            source: "G1 Música",
+            tag: "Ao Vivo"
+        },
+        {
+            title: "Tyler, The Creator confirma aclamação com 'CHROMAKOPIA' e lidera rankings de crítica",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 85).toISOString(),
+            description: "Com produção meticulosa e letras confessionais, trabalho entra para a lista de melhores discos do ano em dezenas de publicações especializadas.",
+            source: "Pitchfork & NME",
+            tag: "Crítica"
+        },
+        {
+            title: "Música brasileira em ascensão: MPB contemporânea e funk dominam festivais na Europa",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 100).toISOString(),
+            description: "Artistas brasileiros levam sonoridades autênticas para palcos de Lisboa, Londres, Paris e Berlim com ingressos completamente esgotados.",
+            source: "Indústria Musical",
+            tag: "Nacional"
+        },
+        {
+            title: "Inteligência artificial na produção musical: produtores debatem ética e inovação nos estúdios",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 115).toISOString(),
+            description: "Novas ferramentas auxiliam em mixagem e masterização, mas proteção aos direitos de voz dos intérpretes ganha foco nas cortes internacionais.",
+            source: "Tech & Sound",
+            tag: "Tecnologia"
+        },
+        {
+            title: "Lady Gaga prepara retorno apoteótico às pistas de dança com nova sonoridade eletrônica",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 130).toISOString(),
+            description: "Retorno da Mother Monster às raízes do electro-pop e dark techno mobiliza milhões de ouvintes ansiosos pela nova era musical.",
+            source: "Billboard Brasil",
+            tag: "Pop"
+        },
+        {
+            title: "Streaming de áudio de alta resolução (Hi-Res Lossless): o diferencial para os amantes de música",
+            link: "https://g1.globo.com/pop-arte/musica/",
+            pubDate: new Date(Date.now() - 3600000 * 150).toISOString(),
+            description: "Formatos FLAC e áudio espacial ganham espaço definitivo; especialistas explicam as reais nuances que transformam a experiência do catálogo.",
+            source: "SoundBPM Lab",
+            tag: "Audiófilo"
+        }
+    ];
+
+    let allNewsItems = [...defaultMusicNews];
     let showingAllNews = false;
     let allUpcomingItems = [];
     let showingAllUpcoming = false;
@@ -1208,64 +1372,96 @@ document.addEventListener("DOMContentLoaded", () => {
         const upcomingContainer = document.getElementById("upcoming-grid-container");
         const viewMoreUpcomingLink = document.getElementById("view-more-upcoming-link");
 
-        if (newsContainer) {
-            try {
-                const rssUrl = "https://g1.globo.com/rss/g1/pop-arte/musica/";
-                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-                
-                if (data.status === "ok" && data.items && data.items.length > 0) {
-                    allNewsItems = data.items;
-                    renderNewsList(3);
-
-                    if (viewAllNewsLink) {
-                        viewAllNewsLink.addEventListener("click", (e) => {
-                            e.preventDefault();
-                            showingAllNews = !showingAllNews;
-                            
-                            if (showingAllNews) {
-                                renderNewsList(allNewsItems.length);
-                                viewAllNewsLink.textContent = "Mostrar menos ←";
-                            } else {
-                                renderNewsList(3);
-                                viewAllNewsLink.textContent = "Ver todas as notícias →";
-                            }
-
-                            document.getElementById("news").scrollIntoView({ behavior: "smooth" });
-                        });
-                    }
-                } else {
-                    throw new Error("RSS vazio");
-                }
-            } catch(e) {
-                console.warn("Falha no RSS primário, carregando fallback estático de notícias...", e);
-                allNewsItems = [
-                    { title: "Os grandes lançamentos da semana no cenário musical", link: "#", pubDate: new Date().toISOString(), description: "Confira os álbuns e singles que estão dominando as paradas globais neste momento." },
-                    { title: "A evolução da produção sonora na era digital", link: "#", pubDate: new Date().toISOString(), description: "Como os artistas estão resgatando sonoridades retro com tecnologia moderna de mixagem." },
-                    { title: "Festivais de música confirmam calendários para os próximos meses", link: "#", pubDate: new Date().toISOString(), description: "Line-ups preliminares movimentam os fãs e geram grandes expectativas nas redes sociais." }
-                ];
-                renderNewsList(3);
-            }
-        }
-
         function renderNewsList(limit) {
             if (!newsContainer) return;
-            newsContainer.innerHTML = allNewsItems.slice(0, limit).map(item => {
+            const itemsToDisplay = allNewsItems.slice(0, limit);
+            newsContainer.innerHTML = itemsToDisplay.map(item => {
                 const date = new Date(item.pubDate);
-                const dataFormatada = `${isNaN(date.getDate()) ? 'Hoje' : date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear()}`;
+                const dataFormatada = isNaN(date.getDate()) ? 'Hoje' : `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+                const tag = item.tag || 'News';
+                const source = item.source || 'G1 Música';
+                const snippet = (item.description || '').replace(/<[^>]+>/g, '').substring(0, 115) + '...';
                 return `
                 <article class="news-card">
-                    <div class="news-tag">News</div>
-                    <h3><a href="${item.link}" target="_blank" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
-                    <p class="news-snippet">${item.description.replace(/<[^>]+>/g, '').substring(0, 100)}...</p>
+                    <div class="news-tag">${tag}</div>
+                    <h3><a href="${item.link}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
+                    <p class="news-snippet">${snippet}</p>
                     <div class="news-meta">
                         <span>${dataFormatada}</span>
-                        <span>G1 Música</span>
+                        <span>${source}</span>
                     </div>
                 </article>
                 `;
             }).join('');
+        }
+
+        if (newsContainer) {
+            // Renderiza imediatamente com os itens pré-carregados
+            renderNewsList(showingAllNews ? allNewsItems.length : 3);
+
+            // Configura o botão de alternar visualização (sempre ativo e funcional)
+            if (viewAllNewsLink) {
+                const newLink = viewAllNewsLink.cloneNode(true);
+                viewAllNewsLink.parentNode.replaceChild(newLink, viewAllNewsLink);
+
+                const updateBtnText = () => {
+                    newLink.textContent = showingAllNews 
+                        ? "Mostrar menos ←" 
+                        : `Ver todas as notícias (${allNewsItems.length}) →`;
+                };
+                updateBtnText();
+
+                newLink.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    showingAllNews = !showingAllNews;
+
+                    if (showingAllNews) {
+                        renderNewsList(allNewsItems.length);
+                        newLink.textContent = "Mostrar menos ←";
+                    } else {
+                        renderNewsList(3);
+                        updateBtnText();
+                        const newsSection = document.getElementById("news");
+                        if (newsSection) newsSection.scrollIntoView({ behavior: "smooth" });
+                    }
+                });
+            }
+
+            // Tenta buscar atualizações do feed RSS em segundo plano
+            (async () => {
+                try {
+                    const rssUrl = "https://g1.globo.com/rss/g1/pop-arte/musica/";
+                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const response = await fetch(apiUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    const data = await response.json();
+
+                    if (data.status === "ok" && data.items && data.items.length > 0) {
+                        const rssMapped = data.items.map(item => ({
+                            title: item.title,
+                            link: item.link || "https://g1.globo.com/pop-arte/musica/",
+                            pubDate: item.pubDate,
+                            description: item.description || '',
+                            source: 'G1 Música',
+                            tag: 'G1'
+                        }));
+                        const existingTitles = new Set(rssMapped.map(i => i.title.toLowerCase().trim()));
+                        const remainingDefaults = defaultMusicNews.filter(d => !existingTitles.has(d.title.toLowerCase().trim()));
+                        allNewsItems = [...rssMapped, ...remainingDefaults];
+
+                        renderNewsList(showingAllNews ? allNewsItems.length : 3);
+
+                        const currentBtn = document.getElementById("view-all-news-link");
+                        if (currentBtn && !showingAllNews) {
+                            currentBtn.textContent = `Ver todas as notícias (${allNewsItems.length}) →`;
+                        }
+                    }
+                } catch(err) {
+                    console.log("Notícias RSS locais ativas:", err.message);
+                }
+            })();
         }
 
         if (upcomingContainer) {
@@ -1447,12 +1643,36 @@ document.addEventListener("DOMContentLoaded", () => {
                     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
                     updatedFields.avatar_url = pub.publicUrl;
                 } else {
-                    console.error("Erro no upload:", upErr);
+                    console.error("Erro no upload da foto:", upErr);
                     alert("Erro ao fazer upload da foto: " + upErr.message);
                 }
             }
 
-            const { error } = await supabase.from("profiles").upsert([updatedFields]);
+            const bannerFile = document.getElementById("edit-profile-banner")?.files[0];
+            if (bannerFile) {
+                const bExt = bannerFile.name.split(".").pop() || "jpg";
+                const bPath = `banner-${session.user.id}-${Date.now()}.${bExt}`;
+                const { error: bErr } = await supabase.storage
+                    .from("avatars").upload(bPath, bannerFile, { upsert: true });
+                if (!bErr) {
+                    const { data: bPub } = supabase.storage.from("avatars").getPublicUrl(bPath);
+                    if (bPub?.publicUrl) {
+                        updatedFields.banner_url = bPub.publicUrl;
+                        const savedPos = JSON.parse(localStorage.getItem(`soundbpm_banner_pos_${session.user.id}`) || '{"y":50,"scale":100,"height":220}');
+                        updatedFields.banner_pos = JSON.stringify(savedPos);
+                        localStorage.setItem(`soundbpm_banner_${session.user.id}`, JSON.stringify({ url: bPub.publicUrl, pos: savedPos }));
+                    }
+                } else {
+                    console.error("Erro no upload do banner:", bErr);
+                }
+            }
+
+            let { error } = await supabase.from("profiles").upsert([updatedFields]);
+            if (error && (error.message.includes("banner_url") || error.message.includes("banner_pos"))) {
+                const { banner_url, banner_pos, ...safeFields } = updatedFields;
+                const retry = await supabase.from("profiles").upsert([safeFields]);
+                error = retry.error;
+            }
 
             submitBtn.textContent = "Salvar Alterações";
             submitBtn.disabled = false;
@@ -2788,4 +3008,474 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     wireAvatarInput(document.getElementById("auth-avatar"));
     wireAvatarInput(document.getElementById("edit-profile-avatar"));
+
+    // ═══════════════ AJUSTE DE BANNER: dimensionar, posicionar e recortar o banner ═══════════════
+    function openBannerCropper(fileOrUrl, initialPos = null) {
+        return new Promise((resolve) => {
+            const isFile = (fileOrUrl instanceof Blob || fileOrUrl instanceof File);
+            const url = isFile ? URL.createObjectURL(fileOrUrl) : fileOrUrl;
+            const img = new Image();
+            if (!isFile) img.crossOrigin = "anonymous";
+
+            img.onerror = () => {
+                if (isFile) URL.revokeObjectURL(url);
+                alert("Não foi possível carregar a imagem do banner.");
+                resolve(null);
+            };
+
+            img.onload = () => {
+                const STAGE_W = 560; // Largura de referência do palco no diálogo
+                let bannerHeight = initialPos?.height || 380; // Altura em pixels (300 - 520)
+                let stageH = Math.round((bannerHeight / 380) * 230);
+                const OUT_W = 1200;
+                let OUT_H = Math.round((bannerHeight / 380) * 600);
+
+                const cover = Math.max(STAGE_W / img.width, stageH / img.height);
+                const contain = Math.min(STAGE_W / img.width, stageH / img.height);
+                const minScale = contain * 0.5;
+                const maxScale = cover * 3.5;
+
+                let scale = initialPos?.scale ? (initialPos.scale / 100) * cover : cover;
+                let ox = 0;
+                let oy = initialPos?.y != null ? ((initialPos.y - 50) / 100) * (stageH - img.height * scale) : 0;
+                let drag = null;
+
+                const ov = document.createElement("div");
+                ov.className = "crop-overlay";
+                ov.innerHTML = `
+                    <div class="crop-card crop-card-banner" role="dialog" aria-label="Ajustar e dimensionar banner">
+                        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="font-size: 1.1rem; color: var(--accent-gold);">📐 Ajustar & Dimensionar Banner</strong>
+                            <button type="button" class="btn-secondary-dark crop-close-x" style="padding: 0.2rem 0.6rem; font-size: 1.1rem; line-height: 1;">&times;</button>
+                        </div>
+                        <p class="crop-hint" style="margin: 0; font-size: 0.85rem;">Arraste a imagem para enquadrar. Use os controles para dimensionar o zoom e a altura da capa do perfil.</p>
+                        
+                        <div class="crop-stage-banner" style="height: ${stageH}px;"><canvas width="${OUT_W}" height="${OUT_H}"></canvas></div>
+                        
+                        <div class="banner-controls-row">
+                            <div class="banner-control-item">
+                                <label>🔍 Zoom / Escala</label>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">−</span>
+                                    <input type="range" class="crop-range banner-zoom-range" min="${minScale}" max="${maxScale}" step="0.001" value="${scale}" style="flex: 1; accent-color: var(--accent-gold); cursor: pointer;">
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">+</span>
+                                </div>
+                                <span class="val-display banner-zoom-val">${Math.round((scale / cover) * 100)}%</span>
+                            </div>
+
+                            <div class="banner-control-item">
+                                <label>📐 Altura do Banner</label>
+                                <input type="range" class="banner-height-range" min="300" max="520" step="10" value="${bannerHeight}" style="flex: 1; accent-color: var(--accent-gold); cursor: pointer;">
+                                <span class="val-display banner-height-val">${bannerHeight}px</span>
+                            </div>
+
+                            <div class="banner-control-item">
+                                <label>↕️ Posição Vertical</label>
+                                <input type="range" class="banner-posy-range" min="0" max="100" step="1" value="50" style="flex: 1; accent-color: var(--accent-gold); cursor: pointer;">
+                                <span class="val-display banner-posy-val">50%</span>
+                            </div>
+                        </div>
+
+                        <div class="crop-modes">
+                            <button type="button" class="btn-secondary-dark" data-m="cover">Preencher</button>
+                            <button type="button" class="btn-secondary-dark" data-m="contain">Imagem inteira</button>
+                            <button type="button" class="btn-secondary-dark" data-m="reset">Centralizar</button>
+                        </div>
+
+                        <div class="crop-actions">
+                            <button type="button" class="btn-secondary-dark crop-cancel">Cancelar</button>
+                            <button type="button" class="btn-primary-gold crop-ok">Salvar & Aplicar</button>
+                        </div>
+                    </div>`;
+
+                const cv = ov.querySelector("canvas");
+                const ctx = cv.getContext("2d");
+                const zoomRange = ov.querySelector(".banner-zoom-range");
+                const zoomVal = ov.querySelector(".banner-zoom-val");
+                const heightRange = ov.querySelector(".banner-height-range");
+                const heightVal = ov.querySelector(".banner-height-val");
+                const posyRange = ov.querySelector(".banner-posy-range");
+                const posyVal = ov.querySelector(".banner-posy-val");
+                const stage = ov.querySelector(".crop-stage-banner");
+                const bg = "#0f1015";
+
+                const draw = () => {
+                    OUT_H = Math.round((bannerHeight / 220) * 440);
+                    if (cv.height !== OUT_H) cv.height = OUT_H;
+                    stageH = Math.round((bannerHeight / 220) * 190);
+                    stage.style.height = `${stageH}px`;
+
+                    const kW = OUT_W / STAGE_W;
+                    const kH = OUT_H / stageH;
+                    const w = img.width * scale * kW;
+                    const h = img.height * scale * kH;
+
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(0, 0, OUT_W, OUT_H);
+                    ctx.drawImage(img, OUT_W / 2 + ox * kW - w / 2, OUT_H / 2 + oy * kH - h / 2, w, h);
+                };
+
+                const setScale = (v) => {
+                    scale = Math.min(maxScale, Math.max(minScale, v));
+                    zoomRange.value = scale;
+                    zoomVal.textContent = `${Math.round((scale / cover) * 100)}%`;
+                    draw();
+                };
+
+                const updatePosYFromRange = (pct) => {
+                    const rangeY = Math.max(0, (img.height * scale - stageH));
+                    oy = (0.5 - pct / 100) * rangeY;
+                    posyVal.textContent = `${pct}%`;
+                    draw();
+                };
+
+                const updateRangeFromOY = () => {
+                    const rangeY = (img.height * scale - stageH);
+                    let pct = 50;
+                    if (rangeY > 0) {
+                        pct = Math.round((0.5 - oy / rangeY) * 100);
+                        pct = Math.max(0, Math.min(100, pct));
+                    }
+                    posyRange.value = pct;
+                    posyVal.textContent = `${pct}%`;
+                };
+
+                const clamp = (v, maxV) => Math.max(-maxV, Math.min(maxV, v));
+
+                const close = (result) => {
+                    document.removeEventListener("keydown", onKey);
+                    ov.classList.remove("show");
+                    setTimeout(() => ov.remove(), 250);
+                    if (isFile) URL.revokeObjectURL(url);
+                    resolve(result);
+                };
+
+                const onKey = (e) => { if (e.key === "Escape") close(null); };
+
+                stage.addEventListener("pointerdown", (e) => {
+                    drag = { x: e.clientX - ox, y: e.clientY - oy };
+                    stage.setPointerCapture(e.pointerId);
+                    stage.classList.add("dragging");
+                });
+
+                stage.addEventListener("pointermove", (e) => {
+                    if (!drag) return;
+                    ox = clamp(e.clientX - drag.x, STAGE_W);
+                    oy = clamp(e.clientY - drag.y, STAGE_W);
+                    updateRangeFromOY();
+                    draw();
+                });
+
+                ["pointerup", "pointercancel"].forEach(ev => stage.addEventListener(ev, () => {
+                    drag = null;
+                    stage.classList.remove("dragging");
+                }));
+
+                stage.addEventListener("wheel", (e) => {
+                    e.preventDefault();
+                    setScale(scale * (e.deltaY < 0 ? 1.05 : 0.95));
+                }, { passive: false });
+
+                zoomRange.addEventListener("input", () => setScale(parseFloat(zoomRange.value)));
+
+                heightRange.addEventListener("input", () => {
+                    bannerHeight = parseInt(heightRange.value, 10);
+                    heightVal.textContent = `${bannerHeight}px`;
+                    draw();
+                });
+
+                posyRange.addEventListener("input", () => {
+                    updatePosYFromRange(parseInt(posyRange.value, 10));
+                });
+
+                ov.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+                    ox = oy = 0;
+                    posyRange.value = 50;
+                    posyVal.textContent = "50%";
+                    if (b.dataset.m === "contain") setScale(contain);
+                    else if (b.dataset.m === "cover") setScale(cover);
+                    else setScale(cover);
+                }));
+
+                ov.querySelector(".crop-cancel").addEventListener("click", () => close(null));
+                ov.querySelector(".crop-close-x").addEventListener("click", () => close(null));
+                ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+
+                ov.querySelector(".crop-ok").addEventListener("click", () => {
+                    cv.toBlob((blob) => {
+                        if (!blob) { close(null); return; }
+                        const file = new File([blob], "banner.jpg", { type: "image/jpeg" });
+                        const pos = {
+                            y: parseInt(posyRange.value, 10) || 50,
+                            scale: Math.round((scale / cover) * 100),
+                            height: bannerHeight
+                        };
+                        close({ blob, file, pos });
+                    }, "image/jpeg", 0.92);
+                });
+
+                document.addEventListener("keydown", onKey);
+                document.body.appendChild(ov);
+                draw();
+                requestAnimationFrame(() => ov.classList.add("show"));
+            };
+            img.src = url;
+        });
+    }
+
+    async function saveAndApplyBanner(file, pos) {
+        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert("Você precisa estar logado para salvar seu banner.");
+            return;
+        }
+
+        const myId = session.user.id;
+        const bannerContainer = document.getElementById("profile-banner-container");
+        const bannerImg = document.getElementById("profile-banner-img");
+        const bannerPlaceholder = document.getElementById("profile-banner-placeholder");
+        const bannerActions = document.getElementById("profile-banner-actions");
+
+        const previewUrl = URL.createObjectURL(file);
+        if (bannerContainer) bannerContainer.style.height = `${pos?.height || 220}px`;
+        if (bannerImg) {
+            bannerImg.src = previewUrl;
+            bannerImg.style.display = "block";
+            bannerImg.style.objectPosition = `center ${pos?.y ?? 50}%`;
+            bannerImg.style.transform = `scale(${(pos?.scale ?? 100) / 100})`;
+        }
+        if (bannerPlaceholder) bannerPlaceholder.style.display = "none";
+        if (bannerActions) {
+            bannerActions.style.display = "flex";
+            const removeBtn = document.getElementById("btn-remove-banner");
+            if (removeBtn) removeBtn.style.display = "inline-flex";
+            const adjustBtn = document.getElementById("btn-adjust-banner");
+            if (adjustBtn) adjustBtn.style.display = "inline-flex";
+        }
+
+        localStorage.setItem(`soundbpm_banner_${myId}`, JSON.stringify({ url: previewUrl, pos }));
+        localStorage.setItem(`soundbpm_banner_pos_${myId}`, JSON.stringify(pos));
+
+        try {
+            const ext = "jpg";
+            const filePath = `banner-${myId}-${Date.now()}.${ext}`;
+            const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, file, {
+                upsert: true,
+                contentType: "image/jpeg"
+            });
+
+            let finalUrl = previewUrl;
+            if (!upErr) {
+                const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
+                if (pub?.publicUrl) finalUrl = pub.publicUrl;
+            }
+
+            localStorage.setItem(`soundbpm_banner_${myId}`, JSON.stringify({ url: finalUrl, pos }));
+
+            let updatedFields = {
+                banner_url: finalUrl,
+                banner_pos: JSON.stringify(pos)
+            };
+            let { error } = await supabase.from("profiles").update(updatedFields).eq("id", myId);
+            if (error) {
+                console.warn("Aviso ao salvar banner no Supabase (colunas banner_url/banner_pos podem precisar ser criadas):", error.message);
+            }
+
+            if (typeof gameToast === "function") gameToast("Banner dimensionado e salvo com sucesso! ✨");
+        } catch(err) {
+            console.error("Erro ao salvar banner:", err);
+            if (typeof gameToast === "function") gameToast("Banner dimensionado localmente! ✨");
+        }
+    }
+
+    function wireBannerControls() {
+        const fileInput = document.getElementById("profile-banner-file-input");
+        const placeholder = document.getElementById("profile-banner-placeholder");
+        const adjustBtn = document.getElementById("btn-adjust-banner");
+        const removeBtn = document.getElementById("btn-remove-banner");
+        const modalChooseBtn = document.getElementById("btn-modal-choose-banner");
+        const modalAdjustBtn = document.getElementById("btn-modal-adjust-banner");
+        const modalFileInput = document.getElementById("edit-profile-banner");
+        const modalBannerName = document.getElementById("modal-banner-name");
+
+        let pendingModalBannerFile = null;
+        let pendingModalBannerPos = { y: 50, scale: 100, height: 220 };
+
+        if (placeholder) {
+            placeholder.addEventListener("click", () => {
+                if (fileInput) fileInput.click();
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener("change", async () => {
+                const f = fileInput.files[0];
+                if (!f) return;
+                const result = await openBannerCropper(f);
+                if (result) {
+                    await saveAndApplyBanner(result.file, result.pos);
+                }
+                fileInput.value = "";
+            });
+        }
+
+        if (adjustBtn) {
+            adjustBtn.addEventListener("click", async () => {
+                const bannerImg = document.getElementById("profile-banner-img");
+                const currentSrc = bannerImg?.getAttribute("src");
+                if (!currentSrc) {
+                    if (fileInput) fileInput.click();
+                    return;
+                }
+                let currentPos = { y: 50, scale: 100, height: 220 };
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        const saved = JSON.parse(localStorage.getItem(`soundbpm_banner_pos_${session.user.id}`) || "null");
+                        if (saved) currentPos = saved;
+                    }
+                } catch(e) {}
+
+                const result = await openBannerCropper(currentSrc, currentPos);
+                if (result) {
+                    await saveAndApplyBanner(result.file, result.pos);
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener("click", async () => {
+                if (!confirm("Deseja realmente remover o banner do seu perfil?")) return;
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+                const myId = session.user.id;
+
+                localStorage.removeItem(`soundbpm_banner_${myId}`);
+                localStorage.removeItem(`soundbpm_banner_pos_${myId}`);
+
+                try {
+                    await supabase.from("profiles").update({ banner_url: null, banner_pos: null }).eq("id", myId);
+                } catch(e) {}
+
+                const bannerImg = document.getElementById("profile-banner-img");
+                const bannerPlaceholder = document.getElementById("profile-banner-placeholder");
+                const bannerContainer = document.getElementById("profile-banner-container");
+                if (bannerImg) { bannerImg.removeAttribute("src"); bannerImg.style.display = "none"; }
+                if (bannerPlaceholder) bannerPlaceholder.style.display = "flex";
+                if (bannerContainer) bannerContainer.style.height = "220px";
+                removeBtn.style.display = "none";
+                if (adjustBtn) adjustBtn.style.display = "none";
+
+                if (typeof gameToast === "function") gameToast("Banner removido.");
+            });
+        }
+
+        if (modalChooseBtn && modalFileInput) {
+            modalChooseBtn.addEventListener("click", () => modalFileInput.click());
+            modalFileInput.addEventListener("change", async () => {
+                const f = modalFileInput.files[0];
+                if (!f) return;
+                const result = await openBannerCropper(f);
+                if (result) {
+                    pendingModalBannerFile = result.file;
+                    pendingModalBannerPos = result.pos;
+                    const dt = new DataTransfer();
+                    dt.items.add(result.file);
+                    modalFileInput.files = dt.files;
+                    if (modalBannerName) modalBannerName.textContent = `✓ ${result.file.name} (${result.pos.height}px)`;
+                    if (modalAdjustBtn) modalAdjustBtn.style.display = "inline-flex";
+
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        localStorage.setItem(`soundbpm_banner_pos_${session.user.id}`, JSON.stringify(result.pos));
+                    }
+                }
+            });
+        }
+
+        if (modalAdjustBtn && modalFileInput) {
+            modalAdjustBtn.addEventListener("click", async () => {
+                const f = modalFileInput.files[0] || pendingModalBannerFile;
+                if (!f) return;
+                const result = await openBannerCropper(f, pendingModalBannerPos);
+                if (result) {
+                    pendingModalBannerFile = result.file;
+                    pendingModalBannerPos = result.pos;
+                    const dt = new DataTransfer();
+                    dt.items.add(result.file);
+                    modalFileInput.files = dt.files;
+                    if (modalBannerName) modalBannerName.textContent = `✓ ${result.file.name} (${result.pos.height}px)`;
+                }
+            });
+        }
+
+        // Trocar foto de perfil tocando diretamente na foto
+        const avatarWrap = document.getElementById("profile-avatar-wrap");
+        const directAvatarInput = document.getElementById("direct-avatar-file-input");
+
+        if (avatarWrap && directAvatarInput) {
+            avatarWrap.addEventListener("click", async (e) => {
+                if (!supabase) return;
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const profilePage = document.getElementById("profile-page");
+                const loadedUserId = profilePage?.dataset?.userId || session.user.id;
+                if (loadedUserId !== session.user.id) return;
+
+                directAvatarInput.click();
+            });
+
+            directAvatarInput.addEventListener("change", async () => {
+                const file = directAvatarInput.files[0];
+                if (!file) return;
+
+                const croppedFile = await openAvatarCropper(file);
+                if (!croppedFile) {
+                    directAvatarInput.value = "";
+                    return;
+                }
+
+                if (!supabase) return;
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+                const myId = session.user.id;
+
+                const avatarImg = document.getElementById("profile-avatar-img");
+                const previewUrl = URL.createObjectURL(croppedFile);
+                if (avatarImg) avatarImg.src = previewUrl;
+
+                try {
+                    const ext = "jpg";
+                    const filePath = `${myId}-${Date.now()}.${ext}`;
+                    const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, croppedFile, {
+                        upsert: true,
+                        contentType: "image/jpeg"
+                    });
+
+                    let finalUrl = previewUrl;
+                    if (!upErr) {
+                        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
+                        if (pub?.publicUrl) finalUrl = pub.publicUrl;
+                    }
+
+                    await supabase.from("profiles").update({ avatar_url: finalUrl }).eq("id", myId);
+
+                    const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+                    localUser.avatar = finalUrl;
+                    localStorage.setItem("soundbpm_user", JSON.stringify(localUser));
+
+                    updateLoginButtonState();
+                    if (typeof gameToast === "function") gameToast("Foto de perfil atualizada com sucesso! ✨");
+                } catch(err) {
+                    console.error("Erro ao atualizar foto de perfil:", err);
+                    if (typeof gameToast === "function") gameToast("Foto atualizada localmente! ✨");
+                }
+                directAvatarInput.value = "";
+            });
+        }
+    }
+
+    wireBannerControls();
 });

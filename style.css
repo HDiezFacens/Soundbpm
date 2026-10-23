@@ -169,12 +169,8 @@ ul {
     position: relative;
     width: 100vw;
     margin-left: calc(50% - 50vw);
-    
-    /* NOVO: Puxa a seção inteira 80px para cima, para ficar por baixo do cabeçalho */
     margin-top: -80px; 
-    /* NOVO: Compensa os 80px adicionando eles no padding, pro seu texto não colar no topo */
     padding: calc(6rem + 80px) 2rem 5rem 2rem; 
-    
     text-align: center;
     overflow: hidden;
     background-color: var(--bg-base);
@@ -183,14 +179,11 @@ ul {
 .hero-bg-backdrop {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    
-    /* Usa 100% 100% para a imagem não respeitar proporção e cobrir tudo antes do zoom */
     background-size: 100% 100%; 
     background-position: center;
     background-repeat: no-repeat;
-    
     filter: blur(40px) brightness(0.4);
-    transform: scale(1.3); /* Dá o zoom para esconder as bordas vazadas do blur */
+    transform: scale(1.3); 
     z-index: 1;
     transition: background-image 1s ease-in-out;
 }
@@ -201,7 +194,6 @@ ul {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Degrau suave para garantir que o texto fique legível sobre a imagem */
     background: linear-gradient(180deg, rgba(20, 24, 28, 0.3) 0%, var(--bg-base) 100%);
     z-index: 2;
 }
@@ -1102,7 +1094,6 @@ ul {
         display: none !important;
     }
 
-    /* Botão de excluir favorito refinado, menor e limpo */
     .remove-favorite-btn,
     #profile-favorites-grid .poster-image-wrap button,
     #profile-favorites-grid .poster-image-wrap .remove-favorite,
@@ -1147,21 +1138,32 @@ ul {
         padding: 10px;
     }
 
-    #profile-page[style*="display: block"],
-    #profile-page[style*="display: flex"] {
-        display: flex !important;
+    /* === AJUSTE DE MOBILE PARA O BANNER E PERFIL === */
+    .profile-hero-section {
+        margin-top: -4.5rem !important; /* Esconde o topo no mobile tbm */
+        min-height: 340px !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .profile-user-bar {
         flex-direction: column !important;
         align-items: center !important;
         text-align: center !important;
+        gap: 1rem !important;
+        padding: 0 1rem 1.5rem 1rem !important;
     }
 
-    #profile-page img,
-    #profile-avatar-img {
-        width: 80px !important;
-        height: 80px !important;
-        border-radius: 50% !important;
-        object-fit: cover !important;
-        margin: 0 auto 8px auto !important;
+    .profile-avatar-wrap {
+        width: 120px !important;
+        height: 120px !important;
+        border-width: 3px !important;
+    }
+
+    .profile-banner-actions {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        top: 24px !important;
+        right: 10px !important;
     }
 
     #profile-page button,
@@ -1259,18 +1261,12 @@ ul {
 
 /* =====================================================================
    v0.10 — SMOOTH: magnético, cards flutuantes, scroll reveal, tema claro e painéis
-   (apenas acréscimos: tudo usa as variáveis e o padrão visual existentes)
    ===================================================================== */
 :root {
     --fx-shadow: rgba(0, 0, 0, 0.45);
     --fx-glow-soft: rgba(223, 177, 91, 0.25);
 }
 
-/* ---------- TEMA CLARO ----------
-   Teoria das cores: o escuro usa fundo azul-ardósia + dourado (cores quase complementares).
-   No claro o par se inverte: papel quente (creme) + tinta ardósia, e o dourado escurece para
-   âmbar profundo para manter o contraste. Cards ficam brancos sobre o creme, como no escuro
-   os cards ficam mais claros que o fundo. */
 :root[data-theme="light"] {
     --bg-base: #f5f0e6;
     --bg-card: #ffffff;
@@ -1295,12 +1291,10 @@ ul {
 :root[data-theme="light"] .hero-overlay { background: linear-gradient(180deg, rgba(245, 240, 230, 0.72) 0%, var(--bg-base) 100%); }
 :root[data-theme="light"] .poster-overlay-actions { background: rgba(26, 34, 48, 0.62); }
 
-/* Transição animada entre os temas (cores, bordas, sombras e ícones mudam suavemente) */
 html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
     transition: background-color 0.55s ease, color 0.55s ease, border-color 0.55s ease, box-shadow 0.55s ease, fill 0.55s ease, stroke 0.55s ease !important;
 }
 
-/* Botão de tema: sol e lua trocam girando */
 .theme-toggle { position: relative; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border-subtle); background: transparent; color: var(--accent-gold); cursor: pointer; transition: var(--transition-base); }
 .theme-toggle:hover { border-color: var(--accent-gold); box-shadow: 0 0 14px var(--fx-glow-soft); }
 .theme-toggle svg { position: absolute; inset: 7px; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease; }
@@ -1309,13 +1303,11 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 :root[data-theme="light"] .theme-toggle .icon-sun  { opacity: 0; transform: rotate(90deg) scale(0.4); }
 :root[data-theme="light"] .theme-toggle .icon-moon { opacity: 1; transform: rotate(0) scale(1); }
 
-/* ---------- CARDS FLUTUANTES (músicas vindas da API) ---------- */
 .poster-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.25s ease, background-color 0.25s ease; }
 .poster-card:hover { transform: translateY(-10px) scale(1.04); box-shadow: 0 18px 38px var(--fx-shadow), 0 0 0 1px var(--accent-gold); position: relative; z-index: 5; }
 .upcoming-card, .news-card { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.25s ease, background-color 0.25s ease; }
 .upcoming-card:hover, .news-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 14px 30px var(--fx-shadow); }
 
-/* ---------- ELEMENTOS SURGINDO NA ROLAGEM ---------- */
 .sr { opacity: 0; transition: opacity 0.7s ease, transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .sr-up    { transform: translateY(34px); }
 .sr-left  { transform: translateX(-48px); }
@@ -1323,7 +1315,6 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 .sr-zoom  { transform: scale(0.94); }
 .sr.sr-in { opacity: 1; transform: none; }
 
-/* ---------- PAINÉIS EXPANSÍVEIS (FAQ, regras, menu do rodapé no celular) ---------- */
 .faq-block { margin-top: 4rem; }
 .acc-list { display: flex; flex-direction: column; gap: 0.7rem; max-width: 860px; }
 .acc { background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; transition: border-color 0.25s ease, box-shadow 0.35s ease, background-color 0.25s ease; }
@@ -1371,3 +1362,241 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 .crop-modes, .crop-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .crop-modes button { flex: 1; font-size: 0.7rem; padding: 0.5rem 0.4rem; }
 .crop-actions button { flex: 1; padding: 0.7rem; }
+
+/* ===== BANNER DO PERFIL, AVATAR & DIMENSIONAMENTO ===== */
+
+.profile-hero-section {
+    position: relative;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-top: -4.5rem; /* Ajuste para esconder o topo do banner embaixo do menu */
+    margin-bottom: 2.5rem;
+    min-height: 400px;
+    display: flex;
+    align-items: flex-end; 
+    justify-content: center;
+    border-bottom: 1px solid var(--border-subtle); 
+}
+
+.profile-banner-wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: linear-gradient(135deg, rgba(30, 32, 44, 0.95) 0%, rgba(18, 20, 28, 0.98) 100%);
+    border: none;
+    border-radius: 0; 
+    overflow: hidden;
+}
+
+.profile-banner-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80%;
+    background: linear-gradient(to top, rgba(20, 24, 28, 0.9) 0%, rgba(20, 24, 28, 0.6) 40%, transparent 100%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.profile-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 50%;
+    display: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    z-index: 1;
+    position: relative;
+    transition: object-position 0.15s ease;
+}
+
+.profile-banner-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: radial-gradient(circle at center, rgba(223, 177, 91, 0.08) 0%, transparent 70%);
+    transition: background 0.2s ease, color 0.2s ease;
+    z-index: 3;
+}
+
+.profile-banner-placeholder:hover {
+    background: radial-gradient(circle at center, rgba(223, 177, 91, 0.15) 0%, transparent 75%);
+    color: var(--text-main);
+}
+
+.profile-banner-actions {
+    position: absolute;
+    top: 36px; /* Desceu 16px para não bater com o menu fixo lá em cima */
+    right: max(20px, calc(50% - 580px)); 
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+    opacity: 0; 
+    pointer-events: none; 
+    transition: all 0.3s ease;
+}
+
+.profile-hero-section:hover .profile-banner-actions,
+.profile-hero-section:focus-within .profile-banner-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.profile-banner-actions button,
+.profile-banner-actions label {
+    background: rgba(14, 15, 22, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--text-main);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.profile-banner-actions button:hover,
+.profile-banner-actions label:hover {
+    background: rgba(223, 177, 91, 0.9);
+    border-color: var(--accent-gold);
+    color: #000;
+    transform: translateY(-2px);
+}
+
+.profile-user-bar {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 2rem 2rem 2rem;
+}
+
+.profile-avatar-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.15); 
+    background-color: var(--bg-card);
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.profile-avatar-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-hover-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--transition-base);
+    color: #fff;
+}
+
+.profile-avatar-wrap:hover .avatar-hover-overlay {
+    opacity: 1;
+}
+
+.crop-card-banner {
+    max-width: 680px;
+    width: 95vw;
+}
+
+.crop-stage-banner {
+    width: 100%;
+    height: 220px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 24px rgba(223, 177, 91, 0.2);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    background: #0d0e12;
+}
+
+.crop-stage-banner.dragging {
+    cursor: grabbing;
+}
+
+.crop-stage-banner canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.banner-controls-row {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+}
+
+.banner-control-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.banner-control-item label {
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.banner-control-item span.val-display {
+    min-width: 48px;
+    text-align: right;
+    font-family: monospace;
+    color: var(--accent-gold);
+}
+/* ===== POSICIONAMENTO DO BOTÃO EDITAR PERFIL ===== */
+.profile-user-bar > button,
+.profile-user-bar > a,
+#btn-edit-profile,
+#edit-profile-btn,
+.btn-edit-profile {
+    margin-left: auto !important; /* Empurra o botão totalmente para a direita */
+    align-self: flex-end !important; /* Força o botão a descer, ignorando o estilo do HTML */
+    margin-bottom: 0.5rem !important; /* Dá um pequeno respiro em relação à linha cinzenta */
+    transform: none !important; /* Remove qualquer desvio anterior */
+}
