@@ -52,6 +52,7 @@
                         <option value="people-page">Pessoas ▾</option>
                         <option value="ranking-page">Ranking ▾</option>
                         <option value="community">Comunidade ▾</option>
+                    <option value="diary-page">Diário Global ▾</option>
                     </select>
                 </div>
             </nav>
@@ -316,6 +317,32 @@
             </div>
         </section>
 
+        <!-- ══ PÁGINA DIÁRIO GLOBAL ══ -->
+        <section id="diary-page" class="section-container" style="display: none;">
+            <div class="section-header-flex">
+                <div>
+                    <h2>Diário Global</h2>
+                    <p>Todas as resenhas e vídeos publicados pela comunidade do SoundBPM.</p>
+                </div>
+            </div>
+            <div class="diary-tabs">
+                <button type="button" class="diary-tab active" data-tab="reviews">Resenhas</button>
+                <button type="button" class="diary-tab" data-tab="videos">Vídeos</button>
+            </div>
+            <div id="diary-reviews-panel">
+                <div id="diary-list" class="cm-list"></div>
+                <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="diary-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
+            </div>
+            <div id="diary-videos-panel" style="display: none;">
+                <div class="vd-toolbar">
+                    <p>Publique até 60 segundos de reação, review ou performance em vídeo.</p>
+                    <button type="button" id="btn-publish-video" class="btn-primary-gold">🎬 Publicar vídeo</button>
+                </div>
+                <div id="video-grid" class="vd-grid"></div>
+                <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="video-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
+            </div>
+        </section>
+
         <!-- PÁGINA: DETALHES DO ÁLBUM (ESTILO LETTERBOXD) -->
         <section id="album-detail-page" class="section-container" style="display: none;">
             <div style="display: flex; gap: 2.5rem; align-items: flex-start; margin-bottom: 3rem; background: var(--bg-card); padding: 2rem; border-radius: 8px; border: 1px solid var(--border-subtle); flex-wrap: wrap;">
@@ -422,50 +449,14 @@
         <section id="community" class="section-container bg-tinted">
             <div class="section-header-flex">
                 <div>
-                    <h2>Atividade Recente no Diário da Comunidade</h2>
-                    <p>Veja as últimas avaliações detalhadas publicadas pelos membros cadastrados.</p>
+                    <h2>Resenhas Mais Bem Avaliadas</h2>
+                    <p>As 3 resenhas em destaque da comunidade. Curta e comente para ajudar uma resenha a subir.</p>
                 </div>
-                <a href="#" class="view-more-link">Ver diário global &rarr;</a>
+                <a href="#diary-page" id="view-global-diary-link" class="view-more-link">Ver diário global &rarr;</a>
             </div>
 
-            <div class="diary-stream">
-                <div class="diary-item">
-                    <div class="diary-avatar"></div>
-                    <div class="diary-content">
-                        <div class="diary-top-line">
-                            <strong>Mariana Costa</strong> avaliou <strong>After Hours</strong>
-                            <span class="diary-stars">★★★★★</span>
-                        </div>
-                        <p class="diary-review-text">"Uma das melhores introduções de disco da década. A consistência da produção do início ao fim é impecável."</p>
-                        <span class="diary-date">Registrado ontem</span>
-                    </div>
-                </div>
+            <div id="home-top-reviews" class="cm-list"><p class="cm-empty">Carregando resenhas...</p></div>
 
-                <div class="diary-item">
-                    <div class="diary-avatar"></div>
-                    <div class="diary-content">
-                        <div class="diary-top-line">
-                            <strong>Gabriel Martins</strong> avaliou <strong>Blonde</strong>
-                            <span class="diary-stars">★★★★★</span>
-                        </div>
-                        <p class="diary-review-text">"Ouvi o álbum inteiro com fones de ouvido no escuro. A experiência é transcendental, cada faixa tem uma textura única."</p>
-                        <span class="diary-date">Registrado há 2 dias</span>
-                    </div>
-                </div>
-
-                <div class="diary-item">
-                    <div class="diary-avatar"></div>
-                    <div class="diary-content">
-                        <div class="diary-top-line">
-                            <strong>Larissa Souza</strong> avaliou <strong>IGOR</strong>
-                            <span class="diary-stars">★★★★☆</span>
-                        </div>
-                        <p class="diary-review-text">"O conceito visual e sonoro criado pelo Tyler neste projeto é monumental. Destaque absoluto para 'EARFQUAKE'."</p>
-                        <span class="diary-date">Registrado há 3 dias</span>
-                    </div>
-                </div>
-            </div>
-        
             <div class="faq-block">
                 <div class="section-header-flex">
                     <div>

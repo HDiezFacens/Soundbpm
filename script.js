@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                     email: email,
                     password: password,
-                    options: { data: { username: username, bio: "Explorando o mundo da música." } }
+                    options: { emailRedirectTo: location.href.split(/[?#]/)[0], data: { username: username, bio: "Explorando o mundo da música." } }
                 });
 
                 if (signUpError) {
@@ -636,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPopularContent();
 
     const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-    const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page"];
+    const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page", "diary-page"];
 
     window.navigateTo = function(pageId, pushHistory = true) {
         if (pageId === "home" || pageId === "explore") {
@@ -777,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span style="font-weight: 600; font-size: 0.85rem; color: var(--accent-gold);">${username}</span>
                             <span style="margin-left: auto; color: var(--accent-orange); font-size: 0.85rem;">${stars}</span>
                         </div>
-                        <p style="margin: 0; font-size: 0.85rem; font-style: italic; color: var(--text-main); white-space: pre-line;">"${gameEsc(r.review_text || 'Sem texto.')}"</p>
+                        ${reviewBodyHtml(r.review_text, 'margin: 0; font-size: 0.85rem; font-style: italic; color: var(--text-main); white-space: pre-line;')}
                         <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 0.3rem;">${date}</span>
                     </div>`;
                 }).join('');
@@ -1202,7 +1202,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
                             </div>
                             <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
-                            <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;">"${gameEsc(r.review_text || 'Sem texto de resenha.')}"</p>
+                            ${reviewBodyHtml(r.review_text, 'margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;')}
                             
                             ${shareButtonHtml}
                             
@@ -1266,106 +1266,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
    
-    const defaultMusicNews = [
-        {
-            title: "Grammy Awards 2026: Academia anuncia mudanças no regulamento e novas categorias de música independente",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 3).toISOString(),
-            description: "A Recording Academy revelou novidades que aumentam a representatividade e valorizam produções originais e independentes no cenário mundial.",
-            source: "SoundBPM Notícias",
-            tag: "Premiação"
-        },
-        {
-            title: "Sabrina Carpenter bate novos recordes nas plataformas de streaming com 'Short n' Sweet'",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 8).toISOString(),
-            description: "Com hits consecutivos no topo da Billboard Hot 100, cantora consolida um dos momentos mais vitoriosos e comentados do pop recente.",
-            source: "Billboard & G1",
-            tag: "Charts"
-        },
-        {
-            title: "Kendrick Lamar expande universo sonoro e prepara grandes apresentações em festivais globais",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 18).toISOString(),
-            description: "Após o impacto monumental de GNX e do espetáculo do Super Bowl, o rapper confirma datas especiais que prometem marcar época no hip-hop.",
-            source: "Rolling Stone",
-            tag: "Turnê"
-        },
-        {
-            title: "The Weeknd dá pistas sobre conclusão de sua aclamada trilogia conceitual com 'Hurry Up Tomorrow'",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 28).toISOString(),
-            description: "Apresentação cinematográfica em São Paulo e teasers enigmáticos antecipam um dos lançamentos mais aguardados e comentados da década.",
-            source: "Pop & Arte",
-            tag: "Lançamento"
-        },
-        {
-            title: "O ressurgimento do vinil e o boom do shoegaze: a geração Z redescobre a audição imersiva",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 42).toISOString(),
-            description: "Vendas de discos de vinil superam previsões no Brasil, impulsionadas pelo público jovem em busca de autenticidade analógica e álbuns conceituais.",
-            source: "Música & Mercado",
-            tag: "Tendência"
-        },
-        {
-            title: "Charli xcx e o fenômeno 'Brat': como a estética verde-limão redefiniu o marketing da cultura pop",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 56).toISOString(),
-            description: "Álbum de remixes com participações estelares mantém a era em alta e inspira campanhas, pistas e tendências ao redor do planeta.",
-            source: "Cultura Pop",
-            tag: "Fenômeno"
-        },
-        {
-            title: "Billie Eilish celebra turnê 'Hit Me Hard and Soft' com cenografia sustentável pioneira",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 70).toISOString(),
-            description: "Artista reduz em 70% a pegada de carbono em estádios e arenas, estabelecendo novo padrão de responsabilidade ecológica para o entretenimento ao vivo.",
-            source: "G1 Música",
-            tag: "Ao Vivo"
-        },
-        {
-            title: "Tyler, The Creator confirma aclamação com 'CHROMAKOPIA' e lidera rankings de crítica",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 85).toISOString(),
-            description: "Com produção meticulosa e letras confessionais, trabalho entra para a lista de melhores discos do ano em dezenas de publicações especializadas.",
-            source: "Pitchfork & NME",
-            tag: "Crítica"
-        },
-        {
-            title: "Música brasileira em ascensão: MPB contemporânea e funk dominam festivais na Europa",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 100).toISOString(),
-            description: "Artistas brasileiros levam sonoridades autênticas para palcos de Lisboa, Londres, Paris e Berlim com ingressos completamente esgotados.",
-            source: "Indústria Musical",
-            tag: "Nacional"
-        },
-        {
-            title: "Inteligência artificial na produção musical: produtores debatem ética e inovação nos estúdios",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 115).toISOString(),
-            description: "Novas ferramentas auxiliam em mixagem e masterização, mas proteção aos direitos de voz dos intérpretes ganha foco nas cortes internacionais.",
-            source: "Tech & Sound",
-            tag: "Tecnologia"
-        },
-        {
-            title: "Lady Gaga prepara retorno apoteótico às pistas de dança com nova sonoridade eletrônica",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 130).toISOString(),
-            description: "Retorno da Mother Monster às raízes do electro-pop e dark techno mobiliza milhões de ouvintes ansiosos pela nova era musical.",
-            source: "Billboard Brasil",
-            tag: "Pop"
-        },
-        {
-            title: "Streaming de áudio de alta resolução (Hi-Res Lossless): o diferencial para os amantes de música",
-            link: "https://g1.globo.com/pop-arte/musica/",
-            pubDate: new Date(Date.now() - 3600000 * 150).toISOString(),
-            description: "Formatos FLAC e áudio espacial ganham espaço definitivo; especialistas explicam as reais nuances que transformam a experiência do catálogo.",
-            source: "SoundBPM Lab",
-            tag: "Audiófilo"
-        }
-    ];
+    const defaultMusicNews = []; // removido: não exibimos notícias de reserva inventadas
 
     let allNewsItems = [...defaultMusicNews];
+    let newsState = "loading", newsCachedAt = null;
     let showingAllNews = false;
     let allUpcomingItems = [];
     let showingAllUpcoming = false;
@@ -1378,25 +1282,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function renderNewsList(limit) {
             if (!newsContainer) return;
-            const itemsToDisplay = allNewsItems.slice(0, limit);
-            newsContainer.innerHTML = itemsToDisplay.map(item => {
-                const date = new Date(item.pubDate);
-                const dataFormatada = isNaN(date.getDate()) ? 'Hoje' : `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
-                const tag = item.tag || 'News';
-                const source = item.source || 'G1 Música';
-                const snippet = (item.description || '').replace(/<[^>]+>/g, '').substring(0, 115) + '...';
+            if (newsState === "loading") { newsContainer.innerHTML = `<p class="news-note">Carregando notícias de música...</p>`; return; }
+            if (!allNewsItems.length) {
+                newsContainer.innerHTML = `<p class="news-note">Não foi possível carregar as notícias agora. <a href="#" id="news-retry">Tentar novamente</a> ou acesse <a href="https://g1.globo.com/pop-arte/musica/" target="_blank" rel="noopener noreferrer">g1.globo.com/pop-arte/musica</a>.</p>`;
+                return;
+            }
+            const note = newsCachedAt ? `<p class="news-note">Sem conexão com as fontes agora. Exibindo notícias salvas em ${new Date(newsCachedAt).toLocaleString("pt-BR")}.</p>` : "";
+            newsContainer.innerHTML = note + allNewsItems.slice(0, limit).map(item => {
+                const ok = item.date instanceof Date && !isNaN(item.date);
+                const snippet = item.description ? gameEsc(item.description.length > 115 ? item.description.slice(0, 115).trim() + "…" : item.description) : "";
                 return `
                 <article class="news-card">
-                    <div class="news-tag">${tag}</div>
-                    <h3><a href="${item.link}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${item.title}</a></h3>
-                    <p class="news-snippet">${snippet}</p>
+                    <div class="news-tag">${gameEsc(item.tag || "Notícia")}</div>
+                    <h3><a href="${gameEsc(item.link)}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${gameEsc(item.title)}</a></h3>
+                    ${snippet ? `<p class="news-snippet">${snippet}</p>` : ""}
                     <div class="news-meta">
-                        <span>${dataFormatada}</span>
-                        <span>${source}</span>
+                        <span>${ok ? item.date.toLocaleDateString("pt-BR") : ""}</span>
+                        <span>${gameEsc(item.source || "")}</span>
                     </div>
-                </article>
-                `;
-            }).join('');
+                </article>`;
+            }).join("");
         }
 
         if (newsContainer) {
@@ -1431,41 +1336,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // Tenta buscar atualizações do feed RSS em segundo plano
-            (async () => {
-                try {
-                    const rssUrl = "https://g1.globo.com/rss/g1/pop-arte/musica/";
-                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 4000);
-                    const response = await fetch(apiUrl, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    const data = await response.json();
-
-                    if (data.status === "ok" && data.items && data.items.length > 0) {
-                        const rssMapped = data.items.map(item => ({
-                            title: item.title,
-                            link: item.link || "https://g1.globo.com/pop-arte/musica/",
-                            pubDate: item.pubDate,
-                            description: item.description || '',
-                            source: 'G1 Música',
-                            tag: 'G1'
-                        }));
-                        const existingTitles = new Set(rssMapped.map(i => i.title.toLowerCase().trim()));
-                        const remainingDefaults = defaultMusicNews.filter(d => !existingTitles.has(d.title.toLowerCase().trim()));
-                        allNewsItems = [...rssMapped, ...remainingDefaults];
-
-                        renderNewsList(showingAllNews ? allNewsItems.length : 3);
-
-                        const currentBtn = document.getElementById("view-all-news-link");
-                        if (currentBtn && !showingAllNews) {
-                            currentBtn.textContent = `Ver todas as notícias (${allNewsItems.length}) →`;
-                        }
-                    }
-                } catch(err) {
-                    console.log("Notícias RSS locais ativas:", err.message);
+            // Busca notícias reais (G1, Rolling Stone Brasil e Billboard Brasil); nada é inventado
+            const loadNews = async () => {
+                newsState = "loading"; newsCachedAt = null; renderNewsList(3);
+                const res = await fetchRealNews();
+                allNewsItems = res.items; newsCachedAt = res.cached ? res.ts : null; newsState = "done";
+                renderNewsList(showingAllNews ? allNewsItems.length : 3);
+                const btn = document.getElementById("view-all-news-link");
+                if (btn) {
+                    btn.style.display = allNewsItems.length > 3 ? "" : "none";
+                    if (!showingAllNews) btn.textContent = `Ver todas as notícias (${allNewsItems.length}) →`;
                 }
-            })();
+            };
+            newsContainer.addEventListener("click", (e) => { if (e.target.id === "news-retry") { e.preventDefault(); loadNews(); } });
+            loadNews();
         }
 
         if (upcomingContainer) {
@@ -2669,8 +2553,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    async function shareText(text) {
-        const url = location.href.split("#")[0];
+    async function shareText(text, link) {
+        const url = link || location.href.split("#")[0];
         try {
             if (navigator.share) { await navigator.share({ text, url }); return; }
             await navigator.clipboard.writeText(text + " " + url);
@@ -2727,13 +2611,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const act = document.getElementById("profile-activity");
         if (act) {
             act.innerHTML = feed.length ? feed.map((a, i) => `<div class="activity-item"><span style="font-size:1.3rem;">${a.icon}</span>
-                <div class="activity-body"><strong>${gameEsc(name)}</strong> ${gameEsc(a.txt)} <em>${gameEsc(a.album)}</em><span class="activity-date">${gameEsc(a.artist)} • ${fmtDateBR(a.date)}</span></div>
-                <button class="activity-share" data-i="${i}" title="Compartilhar">🔗</button></div>`).join("")
+                <div class="activity-body"><strong>${gameEsc(name)}</strong> ${gameEsc(a.txt)} <em>${gameEsc(a.album)}</em><span class="activity-date">${gameEsc(a.artist)} • ${fmtDateBR(a.date)}</span></div></div>`).join("")
                 : `<p style="color: var(--text-muted);">Nenhuma atividade ainda.</p>`;
-            act.querySelectorAll(".activity-share").forEach(b => b.addEventListener("click", () => {
-                const a = feed[b.dataset.i];
-                shareText(`${name} ${a.txt} "${a.album}" de ${a.artist} no SoundBPM 🎵`);
-            }));
         }
 
         const actions = document.getElementById("profile-actions");
@@ -2757,7 +2636,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else add("Aceitar pedido", "btn-primary-gold", async () => { await acceptFriendRequest(rel.requester_id, null, rel.id); loadUserProfile(userId); });
         }
         add("🔗 Compartilhar perfil", "btn-secondary-dark", () =>
-            shareText(`Perfil de ${name} no SoundBPM: ${st.n} resenhas • média ${st.avg.toFixed(1)}★ • ${friendIds.size} amigos 🎵`));
+            shareText(`Perfil de ${name} no SoundBPM: ${st.n} resenhas • média ${st.avg.toFixed(1)}★ • ${friendIds.size} amigos 🎵`, profileLink(userId)));
     }
 
     // ═══════════════ v0.10 SMOOTH: tema, magnético, scroll reveal e painéis ═══════════════
@@ -2779,41 +2658,6 @@ document.addEventListener("DOMContentLoaded", () => {
             clearTimeout(t);
             t = setTimeout(() => root.classList.remove("theme-anim"), 700);
         });
-    })();
-
-    // ---- Botões magnéticos: o botão é atraído suavemente pelo cursor ----
-    (function initMagnetic() {
-        if (fxReduceMotion || window.matchMedia("(hover: none)").matches) return;
-        const SEL = ".btn-primary-gold, .btn-secondary-dark, .btn-login-nav, .btn-notify, .theme-toggle, [data-magnetic]";
-        const RADIUS = 80, PULL = 0.32, MAX = 12;
-        const state = new WeakMap();
-        let mx = -9999, my = -9999, raf = null;
-
-        function frame() {
-            let busy = false;
-            document.querySelectorAll(SEL).forEach(el => {
-                const r = el.getBoundingClientRect();
-                if (!r.width) return;
-                const s = state.get(el) || { x: 0, y: 0 };
-                state.set(el, s);
-                const dx = Math.max(r.left - mx, 0, mx - r.right), dy = Math.max(r.top - my, 0, my - r.bottom);
-                let tx = 0, ty = 0;
-                if (!el.disabled && Math.hypot(dx, dy) < RADIUS) {
-                    tx = Math.max(-MAX, Math.min(MAX, (mx - (r.left + r.width / 2)) * PULL));
-                    ty = Math.max(-MAX, Math.min(MAX, (my - (r.top + r.height / 2)) * PULL));
-                }
-                s.x += (tx - s.x) * 0.18;
-                s.y += (ty - s.y) * 0.18;
-                const settled = Math.abs(tx - s.x) < 0.05 && Math.abs(ty - s.y) < 0.05;
-                if (settled && tx === 0 && ty === 0) { if (s.x || s.y) { s.x = s.y = 0; el.style.translate = ""; } return; }
-                el.style.translate = `${s.x.toFixed(2)}px ${s.y.toFixed(2)}px`;
-                if (!settled) busy = true;
-            });
-            raf = busy ? requestAnimationFrame(frame) : null;
-        }
-        const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
-        document.addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; kick(); }, { passive: true });
-        document.addEventListener("mouseleave", () => { mx = my = -9999; kick(); });
     })();
 
     // ---- Elementos surgindo na rolagem (fade + subida / deslize lateral / zoom) ----
@@ -3504,4 +3348,465 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     wireBannerControls();
+
+    // ═══════════════ v0.11 — COMUNIDADE, VÍDEOS, STORY, NOTÍCIAS E LINKS ═══════════════
+    const CM_AVATAR = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+    const CM_SQL_HINT = "Curtidas, comentários e vídeos ainda não foram ativados no banco. Rode o arquivo supabase_comunidade_videos.sql no Supabase.";
+
+    // ---- Resenhas sem texto: separa comentário, nota por faixa e placeholders antigos ----
+    function parseReviewText(raw) {
+        let t = String(raw || "").trim(), tracks = "";
+        const m = t.match(/^\[Avaliação Faixa a Faixa\]\n([\s\S]*?)(?:\n\nNota: "([\s\S]*)")?$/);
+        if (m) { tracks = (m[1] || "").trim(); t = (m[2] || "").trim(); }
+        if (/^(sem texto( de resenha)?|sem coment[áa]rio)\.?$/i.test(t)) t = "";
+        return { comment: t, tracks };
+    }
+    function reviewBodyHtml(raw, style) {
+        const { comment, tracks } = parseReviewText(raw);
+        let html = "";
+        if (comment) html += `<p class="rv-text" style="${style || ""}">"${gameEsc(comment)}"</p>`;
+        if (tracks) html += `<details class="rv-tracks"><summary>🎼 Nota por faixa</summary><p>${gameEsc(tracks)}</p></details>`;
+        return html;
+    }
+    function timeAgo(d) {
+        const s = (Date.now() - new Date(d).getTime()) / 1000;
+        if (s < 60) return "agora";
+        if (s < 3600) return `há ${Math.floor(s / 60)} min`;
+        if (s < 86400) return `há ${Math.floor(s / 3600)} h`;
+        if (s < 604800) return `há ${Math.floor(s / 86400)} d`;
+        return new Date(d).toLocaleDateString("pt-BR");
+    }
+    function fetchTimeout(url, ms) {
+        const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+        return fetch(url, { signal: c.signal }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r; }).finally(() => clearTimeout(t));
+    }
+
+    // ---- Notícias reais: várias fontes, vários proxies, cache honesto ----
+    function htmlToText(html) { return new DOMParser().parseFromString(String(html || ""), "text/html").body.textContent.replace(/\s+/g, " ").trim(); }
+    function parseNewsDate(s) {
+        if (!s) return null;
+        const d = /^\d{4}-\d{2}-\d{2} \d{2}:/.test(s) ? new Date(s.replace(" ", "T") + "Z") : new Date(s);
+        return isNaN(d) ? null : d;
+    }
+    function parseXmlFeed(text) {
+        const doc = new DOMParser().parseFromString(text, "text/xml");
+        if (doc.querySelector("parsererror")) throw new Error("XML inválido");
+        const tag = (el, n) => { const x = el.getElementsByTagName(n)[0]; return x ? x.textContent : ""; };
+        return [...doc.querySelectorAll("item, entry")].map(el => {
+            const l = el.getElementsByTagName("link")[0];
+            return {
+                title: htmlToText(tag(el, "title")),
+                link: (l && (l.getAttribute("href") || l.textContent) || "").trim(),
+                date: parseNewsDate(tag(el, "pubDate") || tag(el, "published") || tag(el, "updated") || tag(el, "dc:date")),
+                description: htmlToText(tag(el, "description") || tag(el, "summary") || tag(el, "content:encoded"))
+            };
+        });
+    }
+    async function fetchOneFeed(feed) {
+        const enc = encodeURIComponent(feed.url);
+        const attempts = [
+            async () => {
+                const d = await (await fetchTimeout(`https://api.rss2json.com/v1/api.json?rss_url=${enc}`, 7000)).json();
+                if (d.status !== "ok") throw new Error("rss2json");
+                return d.items.map(i => ({ title: htmlToText(i.title), link: i.link, date: parseNewsDate(i.pubDate), description: htmlToText(i.description || i.content) }));
+            },
+            async () => parseXmlFeed(await (await fetchTimeout(`https://api.allorigins.win/raw?url=${enc}`, 8000)).text()),
+            async () => parseXmlFeed(await (await fetchTimeout(`https://corsproxy.io/?${enc}`, 8000)).text())
+        ];
+        for (const run of attempts) {
+            try { const items = await run(); if (items.length) return items.map(i => ({ ...i, source: feed.source, tag: feed.tag })); } catch (e) { /* tenta o próximo caminho */ }
+        }
+        return [];
+    }
+    async function fetchRealNews() {
+        const FEEDS = [
+            { url: "https://g1.globo.com/rss/g1/pop-arte/musica/", source: "G1 Música", tag: "G1" },
+            { url: "https://rollingstone.com.br/feed/", source: "Rolling Stone Brasil", tag: "Rolling Stone" },
+            { url: "https://billboard.com.br/feed/", source: "Billboard Brasil", tag: "Billboard" }
+        ];
+        const KEY = "soundbpm_news_cache_v1", seen = new Set();
+        const all = (await Promise.all(FEEDS.map(fetchOneFeed))).flat()
+            .filter(i => i.title && /^https?:\/\//i.test(i.link) && !seen.has(i.link) && seen.add(i.link))
+            .sort((a, b) => (b.date || 0) - (a.date || 0)).slice(0, 15);
+        if (all.length) {
+            try { localStorage.setItem(KEY, JSON.stringify({ ts: Date.now(), items: all.map(i => ({ ...i, date: i.date ? i.date.toISOString() : null })) })); } catch (e) {}
+            return { items: all, cached: false };
+        }
+        try {
+            const c = JSON.parse(localStorage.getItem(KEY));
+            if (c && c.items && c.items.length) return { items: c.items.map(i => ({ ...i, date: i.date ? new Date(i.date) : null })), cached: true, ts: c.ts };
+        } catch (e) {}
+        return { items: [], cached: false };
+    }
+
+    // ---- Comunidade: curtir e comentar resenhas ----
+    let cmMe = null;
+    async function cmGetMe() { const { data: { session } } = await supabase.auth.getSession(); cmMe = session ? session.user : null; return cmMe; }
+
+    async function cmLoadMeta(reviews) {
+        const ids = reviews.map(r => r.id), uids = [...new Set(reviews.map(r => r.user_id))];
+        const [pf, lk, cm] = await Promise.all([
+            supabase.from("profiles").select("id, username, avatar_url").in("id", uids),
+            supabase.from("review_likes").select("review_id, user_id").in("review_id", ids),
+            supabase.from("review_comments").select("review_id").in("review_id", ids)
+        ]);
+        const likes = new Map(), comments = new Map();
+        (lk.data || []).forEach(l => { const o = likes.get(l.review_id) || { n: 0, mine: false }; o.n++; if (cmMe && l.user_id === cmMe.id) o.mine = true; likes.set(l.review_id, o); });
+        (cm.data || []).forEach(c => comments.set(c.review_id, (comments.get(c.review_id) || 0) + 1));
+        return { profiles: new Map((pf.data || []).map(p => [p.id, p])), likes, comments };
+    }
+
+    function cmCardHtml(r, meta) {
+        const p = meta.profiles.get(r.user_id) || {}, lk = meta.likes.get(r.id) || { n: 0, mine: false }, cc = meta.comments.get(r.id) || 0;
+        const rt = Math.round(r.rating), stars = "★".repeat(rt) + "☆".repeat(5 - rt), uid = gameEsc(r.user_id);
+        return `<article class="cm-review" data-rid="${gameEsc(r.id)}" data-owner="${uid}">
+            ${r.cover_url ? `<img class="cm-cover" src="${gameEsc(r.cover_url)}" alt="" loading="lazy">` : ""}
+            <div class="cm-main">
+                <div class="cm-top">
+                    <img class="cm-avatar" src="${gameEsc(p.avatar_url || CM_AVATAR)}" alt="" data-uid="${uid}">
+                    <strong class="cm-user" data-uid="${uid}">${gameEsc(p.username || "Membro")}</strong>
+                    <span class="cm-when">${timeAgo(r.created_at)}</span>
+                </div>
+                <div class="cm-line">avaliou <strong>${gameEsc(r.album_name)}</strong> <span class="cm-artist">de ${gameEsc(r.artist_name)}</span></div>
+                <div class="cm-stars">${stars} <b>${r.rating}</b></div>
+                ${reviewBodyHtml(r.review_text, "")}
+                <div class="cm-actions">
+                    <button type="button" class="cm-btn cm-like ${lk.mine ? "on" : ""}" data-act="like" aria-pressed="${lk.mine}"><span class="cm-heart">♥</span><span class="cm-n">${lk.n}</span></button>
+                    <button type="button" class="cm-btn" data-act="comments">💬 <span class="cm-cn">${cc}</span></button>
+                </div>
+                <div class="cm-comments"><div><div class="cm-comments-inner"></div></div></div>
+            </div></article>`;
+    }
+
+    async function cmToggleLike(card, btn) {
+        const me = await cmGetMe();
+        if (!me) { gameToast("Entre na sua conta para curtir."); const m = document.getElementById("login-modal"); if (m) m.classList.add("active"); return; }
+        const on = btn.classList.contains("on"), nEl = btn.querySelector(".cm-n"), n0 = parseInt(nEl.textContent, 10) || 0;
+        const paint = (v, n) => { btn.classList.toggle("on", v); btn.setAttribute("aria-pressed", String(v)); nEl.textContent = Math.max(0, n); };
+        paint(!on, n0 + (on ? -1 : 1));
+        const rid = card.dataset.rid;
+        const { error } = on ? await supabase.from("review_likes").delete().eq("review_id", rid).eq("user_id", me.id)
+                             : await supabase.from("review_likes").insert([{ review_id: rid, user_id: me.id }]);
+        if (error) { paint(on, n0); gameToast(CM_SQL_HINT); console.error(error); }
+    }
+
+    async function cmRenderComments(card) {
+        const inner = card.querySelector(".cm-comments-inner"), me = await cmGetMe();
+        const { data, error } = await supabase.from("review_comments").select("id, user_id, body, created_at").eq("review_id", card.dataset.rid).order("created_at", { ascending: true });
+        if (error) { inner.innerHTML = `<p class="cm-empty">${CM_SQL_HINT}</p>`; return; }
+        const uids = [...new Set(data.map(c => c.user_id))];
+        const { data: pf } = uids.length ? await supabase.from("profiles").select("id, username, avatar_url").in("id", uids) : { data: [] };
+        const pm = new Map((pf || []).map(p => [p.id, p]));
+        inner.innerHTML = (data.length ? data.map(c => {
+            const p = pm.get(c.user_id) || {}, canDel = me && (me.id === c.user_id || me.id === card.dataset.owner);
+            return `<div class="cm-comment" data-cid="${gameEsc(c.id)}">
+                <img class="cm-avatar sm" src="${gameEsc(p.avatar_url || CM_AVATAR)}" alt="" data-uid="${gameEsc(c.user_id)}">
+                <div class="cm-cbody"><strong class="cm-user" data-uid="${gameEsc(c.user_id)}">${gameEsc(p.username || "Membro")}</strong> <span class="cm-when">${timeAgo(c.created_at)}</span><p>${gameEsc(c.body)}</p></div>
+                ${canDel ? `<button type="button" class="cm-del" data-act="delcomment" title="Excluir comentário">🗑</button>` : ""}</div>`;
+        }).join("") : `<p class="cm-empty">Seja o primeiro a comentar.</p>`)
+        + (me ? `<form class="cm-form"><input type="text" class="cm-input" maxlength="500" placeholder="Escreva um comentário..." required><button type="submit" class="btn-primary-gold">Enviar</button></form>`
+              : `<button type="button" class="btn-secondary-dark" data-act="login">Entre para comentar</button>`);
+        card.querySelector(".cm-cn").textContent = data.length;
+    }
+
+    function cmBind(box) {
+        if (box.dataset.bound) return;
+        box.dataset.bound = "1";
+        box.addEventListener("click", async (e) => {
+            const u = e.target.closest("[data-uid]");
+            if (u) { window.openUserProfile(u.dataset.uid); return; }
+            const act = e.target.closest("[data-act]"), card = e.target.closest(".cm-review");
+            if (!act || !card) return;
+            if (act.dataset.act === "like") cmToggleLike(card, act);
+            if (act.dataset.act === "login") { const m = document.getElementById("login-modal"); if (m) m.classList.add("active"); }
+            if (act.dataset.act === "comments") {
+                const panel = card.querySelector(".cm-comments"), open = !panel.classList.contains("open");
+                panel.classList.toggle("open", open);
+                if (open) cmRenderComments(card);
+            }
+            if (act.dataset.act === "delcomment") {
+                const { error } = await supabase.from("review_comments").delete().eq("id", act.closest(".cm-comment").dataset.cid);
+                if (error) gameToast("Não foi possível excluir o comentário."); else cmRenderComments(card);
+            }
+        });
+        box.addEventListener("submit", async (e) => {
+            if (!e.target.classList.contains("cm-form")) return;
+            e.preventDefault();
+            const card = e.target.closest(".cm-review"), input = e.target.querySelector("input"), body = input.value.trim(), me = await cmGetMe();
+            if (!body || !me) return;
+            input.disabled = true;
+            const { error } = await supabase.from("review_comments").insert([{ review_id: card.dataset.rid, user_id: me.id, body }]);
+            if (error) { input.disabled = false; gameToast(CM_SQL_HINT); console.error(error); return; }
+            cmRenderComments(card);
+        });
+    }
+
+    async function loadHomeTopReviews() {
+        const box = document.getElementById("home-top-reviews");
+        if (!box || !supabase) return;
+        await cmGetMe();
+        const { data: rows, error } = await supabase.from("reviews").select("*").order("rating", { ascending: false }).order("created_at", { ascending: false }).limit(60);
+        if (error || !rows || !rows.length) {
+            box.innerHTML = `<p class="cm-empty">${error ? "Não foi possível carregar as resenhas agora." : "Ainda não há resenhas publicadas. Seja o primeiro a avaliar um álbum!"}</p>`;
+            return;
+        }
+        const meta = await cmLoadMeta(rows), likesOf = r => (meta.likes.get(r.id) || { n: 0 }).n;
+        const withText = rows.filter(r => parseReviewText(r.review_text).comment);
+        const top = [...(withText.length >= 3 ? withText : rows)]
+            .sort((a, b) => likesOf(b) - likesOf(a) || b.rating - a.rating || new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
+        box.innerHTML = top.map(r => cmCardHtml(r, meta)).join("");
+        cmBind(box);
+    }
+
+    // ---- Diário Global: todas as resenhas (e vídeos) da plataforma ----
+    const diaryState = { offset: 0, done: false, loading: false }, DIARY_PAGE = 12;
+    async function loadDiaryPage(reset) {
+        const list = document.getElementById("diary-list"), more = document.getElementById("diary-more");
+        if (!list || !supabase || diaryState.loading) return;
+        diaryState.loading = true;
+        if (reset) { diaryState.offset = 0; diaryState.done = false; list.innerHTML = `<p class="cm-empty">Carregando resenhas...</p>`; }
+        await cmGetMe();
+        const { data: rows, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false }).range(diaryState.offset, diaryState.offset + DIARY_PAGE - 1);
+        diaryState.loading = false;
+        if (error) { list.innerHTML = `<p class="cm-empty">Não foi possível carregar as resenhas agora.</p>`; more.style.display = "none"; return; }
+        if (reset) list.innerHTML = "";
+        if (!rows.length && reset) { list.innerHTML = `<p class="cm-empty">Ainda não há resenhas publicadas.</p>`; more.style.display = "none"; return; }
+        const meta = await cmLoadMeta(rows);
+        list.insertAdjacentHTML("beforeend", rows.map(r => cmCardHtml(r, meta)).join(""));
+        cmBind(list);
+        diaryState.offset += rows.length;
+        diaryState.done = rows.length < DIARY_PAGE;
+        more.style.display = diaryState.done ? "none" : "";
+    }
+
+    // ---- Vídeos (estilo Reels/TikTok: cards verticais + player em tela cheia) ----
+    const vdState = { offset: 0, loading: false }, VD_PAGE = 12, vdItems = new Map();
+    async function loadVideos(reset) {
+        const grid = document.getElementById("video-grid"), more = document.getElementById("video-more");
+        if (!grid || vdState.loading) return;
+        vdState.loading = true;
+        if (reset) { vdState.offset = 0; vdItems.clear(); grid.innerHTML = `<p class="cm-empty">Carregando vídeos...</p>`; }
+        await cmGetMe();
+        const { data, error } = await supabase.from("videos").select("*").order("created_at", { ascending: false }).range(vdState.offset, vdState.offset + VD_PAGE - 1);
+        vdState.loading = false;
+        if (error) { grid.innerHTML = `<p class="cm-empty">${CM_SQL_HINT}</p>`; more.style.display = "none"; return; }
+        if (reset) grid.innerHTML = "";
+        if (!data.length && reset) { grid.innerHTML = `<p class="cm-empty">Nenhum vídeo ainda. Publique o primeiro!</p>`; more.style.display = "none"; return; }
+        const uids = [...new Set(data.map(v => v.user_id))];
+        const { data: pf } = uids.length ? await supabase.from("profiles").select("id, username, avatar_url").in("id", uids) : { data: [] };
+        const pm = new Map((pf || []).map(p => [p.id, p]));
+        grid.insertAdjacentHTML("beforeend", data.map(v => {
+            v.user = pm.get(v.user_id) || {}; vdItems.set(v.id, v);
+            return `<div class="vd-card" data-vid="${gameEsc(v.id)}"><video src="${gameEsc(v.video_url)}#t=0.1" preload="metadata" muted playsinline></video>
+                <div class="vd-shade"></div><span class="vd-play">▶</span>
+                <div class="vd-meta"><strong>${gameEsc(v.user.username || "Membro")}</strong>${v.caption ? `<span>${gameEsc(v.caption)}</span>` : ""}</div></div>`;
+        }).join(""));
+        vdState.offset += data.length;
+        more.style.display = data.length < VD_PAGE ? "none" : "";
+    }
+
+    function openModalShell(html) {
+        const ov = document.createElement("div");
+        ov.className = "crop-overlay";
+        ov.innerHTML = `<div class="crop-card vd-modal">${html}</div>`;
+        const close = () => { document.removeEventListener("keydown", onKey); ov.classList.remove("show"); ov.querySelectorAll("video").forEach(v => v.pause()); setTimeout(() => ov.remove(), 250); };
+        const onKey = (e) => { if (e.key === "Escape") close(); };
+        ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+        document.addEventListener("keydown", onKey);
+        document.body.appendChild(ov);
+        requestAnimationFrame(() => ov.classList.add("show"));
+        return { ov, close };
+    }
+
+    function openVideoPlayer(v) {
+        const mine = cmMe && cmMe.id === v.user_id;
+        const { ov, close } = openModalShell(`
+            <video class="vd-player" src="${gameEsc(v.video_url)}" controls autoplay playsinline loop></video>
+            <div class="vd-info"><strong class="cm-user" data-uid="${gameEsc(v.user_id)}">${gameEsc(v.user.username || "Membro")}</strong> <span class="cm-when">${timeAgo(v.created_at)}</span>
+                ${v.tag ? `<div class="vd-tag">🎵 ${gameEsc(v.tag)}</div>` : ""}${v.caption ? `<p>${gameEsc(v.caption)}</p>` : ""}</div>
+            <div class="crop-actions">${mine ? `<button type="button" class="btn-secondary-dark vd-del">Excluir</button>` : ""}<button type="button" class="btn-primary-gold vd-close">Fechar</button></div>`);
+        ov.querySelector(".vd-close").addEventListener("click", close);
+        ov.querySelector(".cm-user").addEventListener("click", () => { close(); window.openUserProfile(v.user_id); });
+        const del = ov.querySelector(".vd-del");
+        if (del) del.addEventListener("click", async () => {
+            if (!confirm("Excluir este vídeo?")) return;
+            await supabase.storage.from("videos").remove([v.storage_path]);
+            const { error } = await supabase.from("videos").delete().eq("id", v.id);
+            if (error) { gameToast("Não foi possível excluir o vídeo."); return; }
+            close(); loadVideos(true); gameToast("Vídeo excluído.");
+        });
+    }
+
+    async function openVideoUpload() {
+        const me = await cmGetMe();
+        if (!me) { gameToast("Entre na sua conta para publicar vídeos."); const m = document.getElementById("login-modal"); if (m) m.classList.add("active"); return; }
+        const { ov, close } = openModalShell(`
+            <strong>Publicar vídeo</strong>
+            <p class="crop-hint">MP4, WebM ou MOV • até 60 segundos • até 40 MB</p>
+            <input type="file" class="cm-input" accept="video/mp4,video/webm,video/quicktime">
+            <video class="vd-preview" controls muted playsinline style="display:none;"></video>
+            <input type="text" class="cm-input vd-tag-in" maxlength="80" placeholder="Álbum ou música relacionados (opcional)">
+            <textarea class="cm-input vd-cap-in" maxlength="300" rows="3" placeholder="Legenda (opcional)"></textarea>
+            <div class="vd-progress" style="display:none;"><span></span></div>
+            <div class="crop-actions"><button type="button" class="btn-secondary-dark vd-cancel">Cancelar</button><button type="button" class="btn-primary-gold vd-send" disabled>Publicar</button></div>`);
+        const file = ov.querySelector('input[type="file"]'), prev = ov.querySelector(".vd-preview"), send = ov.querySelector(".vd-send"), bar = ov.querySelector(".vd-progress");
+        let chosen = null, duration = 0;
+        ov.querySelector(".vd-cancel").addEventListener("click", close);
+        file.addEventListener("change", () => {
+            const f = file.files[0]; chosen = null; send.disabled = true; prev.style.display = "none";
+            if (!f) return;
+            if (!/^video\/(mp4|webm|quicktime)$/.test(f.type)) { gameToast("Formato não suportado. Use MP4, WebM ou MOV."); file.value = ""; return; }
+            if (f.size > 40 * 1024 * 1024) { gameToast("O vídeo passa de 40 MB."); file.value = ""; return; }
+            const url = URL.createObjectURL(f); prev.src = url;
+            prev.onloadedmetadata = () => {
+                duration = prev.duration;
+                if (duration > 60.5) { gameToast("O vídeo passa de 60 segundos."); file.value = ""; return; }
+                chosen = f; prev.style.display = ""; send.disabled = false;
+            };
+        });
+        send.addEventListener("click", async () => {
+            if (!chosen) return;
+            send.disabled = true; bar.style.display = ""; send.textContent = "Enviando...";
+            const ext = (chosen.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "");
+            const path = `${me.id}/${Date.now()}.${ext}`;
+            const up = await supabase.storage.from("videos").upload(path, chosen, { contentType: chosen.type, cacheControl: "3600" });
+            if (up.error) { bar.style.display = "none"; send.disabled = false; send.textContent = "Publicar"; gameToast(CM_SQL_HINT); console.error(up.error); return; }
+            const url = supabase.storage.from("videos").getPublicUrl(path).data.publicUrl;
+            const { error } = await supabase.from("videos").insert([{
+                user_id: me.id, video_url: url, storage_path: path, duration: Math.round(duration * 10) / 10,
+                caption: ov.querySelector(".vd-cap-in").value.trim() || null, tag: ov.querySelector(".vd-tag-in").value.trim() || null
+            }]);
+            if (error) { await supabase.storage.from("videos").remove([path]); bar.style.display = "none"; send.disabled = false; send.textContent = "Publicar"; gameToast(CM_SQL_HINT); console.error(error); return; }
+            close(); gameToast("Vídeo publicado!"); loadVideos(true);
+        });
+    }
+
+    // ---- Eventos da página Diário Global ----
+    document.querySelectorAll(".diary-tab").forEach(tab => tab.addEventListener("click", () => {
+        document.querySelectorAll(".diary-tab").forEach(t => t.classList.toggle("active", t === tab));
+        const vids = tab.dataset.tab === "videos";
+        document.getElementById("diary-reviews-panel").style.display = vids ? "none" : "";
+        document.getElementById("diary-videos-panel").style.display = vids ? "" : "none";
+        if (vids) loadVideos(true); else loadDiaryPage(true);
+    }));
+    const diaryMore = document.getElementById("diary-more"), videoMore = document.getElementById("video-more");
+    if (diaryMore) diaryMore.addEventListener("click", () => loadDiaryPage(false));
+    if (videoMore) videoMore.addEventListener("click", () => loadVideos(false));
+    const publishBtn = document.getElementById("btn-publish-video");
+    if (publishBtn) publishBtn.addEventListener("click", openVideoUpload);
+    const videoGrid = document.getElementById("video-grid");
+    if (videoGrid) videoGrid.addEventListener("click", (e) => { const c = e.target.closest(".vd-card"); if (c && vdItems.has(c.dataset.vid)) openVideoPlayer(vdItems.get(c.dataset.vid)); });
+    const globalDiaryLink = document.getElementById("view-global-diary-link");
+    if (globalDiaryLink) globalDiaryLink.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); navigateTo("diary-page"); });
+
+    const navBase = window.navigateTo;
+    window.navigateTo = function (pageId, pushHistory = true) {
+        navBase(pageId, pushHistory);
+        if (pageId === "diary-page") {
+            document.querySelectorAll(".diary-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === "reviews"));
+            document.getElementById("diary-reviews-panel").style.display = "";
+            document.getElementById("diary-videos-panel").style.display = "none";
+            loadDiaryPage(true);
+        }
+        if (pageId === "home" || pageId === "explore") loadHomeTopReviews();
+    };
+
+    // ---- Links de perfil que funcionam (?u=ID) ----
+    function profileLink(id) {
+        if (location.protocol === "file:") gameToast("Este link só funciona com o site publicado (não com o arquivo aberto do computador).");
+        return location.href.split(/[?#]/)[0] + "?u=" + id;
+    }
+    let pendingProfileId = new URLSearchParams(location.search).get("u");
+    if (pendingProfileId && supabase) {
+        supabase.auth.onAuthStateChange((_event, session) => {
+            if (session && session.user && pendingProfileId) {
+                const id = pendingProfileId; pendingProfileId = null;
+                history.replaceState(null, "", location.href.split(/[?#]/)[0]);
+                setTimeout(() => window.openUserProfile(id), 800);
+            }
+        });
+        setTimeout(() => { if (pendingProfileId) gameToast("Faça login para ver o perfil compartilhado."); }, 2500);
+    }
+
+    // ---- Imagem do Instagram Story (nova versão) ----
+    window.shareToInstagramStory = async function (albumName, artistName, coverUrl, rating, reviewText) {
+        if (typeof html2canvas === "undefined") { gameToast("A biblioteca html2canvas não carregou. Verifique o HTML."); return; }
+        const unesc = s => new DOMParser().parseFromString(String(s || ""), "text/html").documentElement.textContent;
+        let { comment } = parseReviewText(unesc(reviewText));
+        if (comment.length > 230) comment = comment.slice(0, 227).trim() + "…";
+        const local = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+        const username = gameEsc(local.username || "Usuário"), avatar = local.avatar || CM_AVATAR;
+        const title = albumName.length > 46 ? albumName.slice(0, 43).trim() + "…" : albumName;
+        const loadImg = src => new Promise(res => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+        const coverImg = await loadImg(coverUrl);
+
+        let bgUrl = "", tint = "223,177,91";
+        if (coverImg) {
+            try {
+                const c = document.createElement("canvas"); c.width = c.height = 24;
+                const x = c.getContext("2d"); x.drawImage(coverImg, 0, 0, 24, 24);
+                bgUrl = c.toDataURL("image/jpeg", 0.9);
+                const d = x.getImageData(0, 0, 24, 24).data; let r = 0, g = 0, b = 0; const n = d.length / 4;
+                for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+                tint = `${Math.round(r / n)},${Math.round(g / n)},${Math.round(b / n)}`;
+            } catch (e) { /* capa sem CORS: usa o fundo padrão */ }
+        }
+        const star = f => `<span style="position:relative;display:inline-block;color:rgba(255,255,255,0.18);">★<span style="position:absolute;left:0;top:0;width:${f * 100}%;overflow:hidden;color:#ffb020;">★</span></span>`;
+        const stars = [0, 1, 2, 3, 4].map(i => star(Math.max(0, Math.min(1, rating - i)))).join("");
+        const size = comment ? 640 : 760;
+
+        const card = document.createElement("div");
+        card.style.cssText = "position:absolute;left:-9999px;top:0;width:1080px;height:1920px;overflow:hidden;background:#0b0e12;color:#fff;font-family:Inter,'Segoe UI',sans-serif;";
+        card.innerHTML = `
+            ${bgUrl ? `<div style="position:absolute;inset:0;background:url(${bgUrl}) center/cover;"></div>` : ""}
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,14,18,0.55) 0%,rgba(11,14,18,0.8) 55%,rgba(11,14,18,0.97) 100%);"></div>
+            <div style="position:absolute;top:-260px;left:-60px;width:1200px;height:1200px;border-radius:50%;background:radial-gradient(circle,rgba(${tint},0.5),rgba(${tint},0) 65%);"></div>
+            <div style="position:relative;height:100%;box-sizing:border-box;padding:110px 90px 100px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;">
+                <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+                    <div style="font-size:34px;font-weight:800;letter-spacing:9px;">SOUND<span style="color:#dfb15b;">BPM</span></div>
+                    <div style="display:flex;align-items:center;gap:22px;">
+                        <img src="${gameEsc(avatar)}" crossorigin="anonymous" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid #dfb15b;">
+                        <div style="text-align:left;"><div style="font-size:40px;font-weight:700;">${username}</div><div style="font-size:26px;color:#aab4c0;">avaliou um álbum</div></div>
+                    </div>
+                </div>
+                <div style="position:relative;width:900px;height:${size}px;">
+                    <div style="position:absolute;left:${size - 120}px;top:${Math.round(size * 0.06)}px;width:${Math.round(size * 0.9)}px;height:${Math.round(size * 0.9)}px;border-radius:50%;background:#0d0f12;border:3px solid rgba(255,255,255,0.1);">
+                        <div style="position:absolute;inset:14%;border-radius:50%;border:2px solid rgba(255,255,255,0.08);"></div>
+                        <div style="position:absolute;inset:30%;border-radius:50%;border:2px solid rgba(255,255,255,0.08);"></div>
+                        <div style="position:absolute;inset:40%;border-radius:50%;background:#dfb15b;"></div>
+                    </div>
+                    ${coverImg ? `<img src="${gameEsc(coverUrl)}" crossorigin="anonymous" style="position:absolute;left:0;top:0;width:${size}px;height:${size}px;border-radius:28px;object-fit:cover;box-shadow:0 50px 120px rgba(${tint},0.55),0 20px 60px rgba(0,0,0,0.6);">`
+                              : `<div style="position:absolute;left:0;top:0;width:${size}px;height:${size}px;border-radius:28px;background:#1c2228;"></div>`}
+                </div>
+                <div style="width:100%;">
+                    <div style="font-size:68px;font-weight:800;line-height:1.1;margin-bottom:14px;">${gameEsc(title)}</div>
+                    <div style="font-size:40px;color:#c4ccd6;margin-bottom:34px;">${gameEsc(artistName)}</div>
+                    <div style="font-size:92px;letter-spacing:8px;line-height:1;">${stars}</div>
+                    <div style="margin-top:26px;display:inline-block;padding:10px 38px;border-radius:50px;background:rgba(223,177,91,0.16);border:2px solid rgba(223,177,91,0.55);color:#dfb15b;font-size:46px;font-weight:800;">${rating} <span style="font-size:30px;opacity:0.7;">/ 5</span></div>
+                </div>
+                ${comment ? `<div style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.07);border-left:8px solid #dfb15b;border-radius:18px;padding:34px 44px;text-align:left;font-size:38px;line-height:1.45;font-style:italic;color:#eef0f3;">"${gameEsc(comment)}"</div>` : ""}
+                <div style="font-size:28px;letter-spacing:3px;color:#8a95a3;">AVALIE E DESCUBRA MÚSICA NO <span style="color:#dfb15b;font-weight:800;">SOUNDBPM</span></div>
+            </div>`;
+        document.body.appendChild(card);
+        gameToast("Gerando imagem para o Instagram...");
+        try {
+            const canvas = await html2canvas(card, { useCORS: true, allowTaint: false, scale: 1, backgroundColor: "#0b0e12" });
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], `soundbpm_${albumName.replace(/\s+/g, "_")}.png`, { type: "image/png" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], title: "Resenha no SoundBPM", text: `A minha avaliação de ${albumName} no SoundBPM!` }); }
+                    catch (err) { console.log("Compartilhamento cancelado", err); }
+                } else {
+                    const url = URL.createObjectURL(blob), a = document.createElement("a");
+                    a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                    gameToast("Imagem baixada! Agora é só postar nos seus Stories.");
+                }
+            }, "image/png", 1.0);
+        } catch (error) {
+            console.error("Erro ao gerar a imagem:", error);
+            gameToast("Não foi possível gerar a imagem. A capa pode não permitir compartilhamento (CORS).");
+        } finally { card.remove(); }
+    };
+
+    loadHomeTopReviews();
 });
