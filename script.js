@@ -3426,24 +3426,63 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return [];
     }
-    async function fetchRealNews() {
-        const FEEDS = [
-            { url: "https://g1.globo.com/rss/g1/pop-arte/musica/", source: "G1 Música", tag: "G1" },
-            { url: "https://rollingstone.com.br/feed/", source: "Rolling Stone Brasil", tag: "Rolling Stone" },
-            { url: "https://billboard.com.br/feed/", source: "Billboard Brasil", tag: "Billboard" }
-        ];
-        const KEY = "soundbpm_news_cache_v1", seen = new Set();
-        const all = (await Promise.all(FEEDS.map(fetchOneFeed))).flat()
-            .filter(i => i.title && /^https?:\/\//i.test(i.link) && !seen.has(i.link) && seen.add(i.link))
-            .sort((a, b) => (b.date || 0) - (a.date || 0)).slice(0, 15);
-        if (all.length) {
-            try { localStorage.setItem(KEY, JSON.stringify({ ts: Date.now(), items: all.map(i => ({ ...i, date: i.date ? i.date.toISOString() : null })) })); } catch (e) {}
-            return { items: all, cached: false };
-        }
+   async function fetchRealNews() {
+        const KEY = "soundbpm_news_cache_supabase_v7";
+        
+        // Substitua pelo URL da sua Edge Function do Supabase
+        const SUPABASE_URL = "https://mfpjuyqcieqtcdbkvgwu.supabase.co";
+        const functionUrl = `${SUPABASE_URL}/functions/v1/g1-news-proxy`;
+
+        let items = [];
+
         try {
-            const c = JSON.parse(localStorage.getItem(KEY));
-            if (c && c.items && c.items.length) return { items: c.items.map(i => ({ ...i, date: i.date ? new Date(i.date) : null })), cached: true, ts: c.ts };
+            // Requisita o XML através da Edge Function do Supabase (ignora o CORS do localhost)
+            const response = await fetch(functionUrl, {
+                method: "GET",
+                headers: {
+                    "apikey": "sb_publishable_0yXhFfS--QMrzTIJATHvUA_wfealgxV"
+                },
+                signal: AbortSignal.timeout(6000)
+            });
+
+            if (response.ok) {
+                const xmlText = await response.text();
+                const parsedItems = parseXmlFeed(xmlText); // Usa a função existente no seu código para ler o XML
+
+                if (parsedItems && parsedItems.length > 0) {
+                    items = parsedItems.map(i => ({
+                        ...i,
+                        source: "G1 Música",
+                        tag: "G1"
+                    }));
+
+                    // Guarda em cache local para otimizar carregamentos futuros
+                    try {
+                        localStorage.setItem(KEY, JSON.stringify({ 
+                            ts: Date.now(), 
+                            items: items.map(i => ({ ...i, date: i.date ? i.date.toISOString() : null })) 
+                        }));
+                    } catch (e) {}
+
+                    return { items, cached: false };
+                }
+            }
+        } catch (e) {
+            console.warn("Aviso: Falha ao carregar notícias via Edge Function, a tentar cache...", e);
+        }
+
+        // Se falhar a rede, recupera do cache local do navegador
+        try {
+            const cached = JSON.parse(localStorage.getItem(KEY));
+            if (cached && cached.items && cached.items.length) {
+                return { 
+                    items: cached.items.map(i => ({ ...i, date: i.date ? new Date(i.date) : null })), 
+                    cached: true, 
+                    ts: cached.ts 
+                };
+            }
         } catch (e) {}
+
         return { items: [], cached: false };
     }
 
