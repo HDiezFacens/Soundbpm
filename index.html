@@ -52,7 +52,7 @@
                         <option value="people-page">Pessoas ▾</option>
                         <option value="ranking-page">Ranking ▾</option>
                         <option value="community">Comunidade ▾</option>
-                    <option value="diary-page">Diário Global ▾</option>
+                        <option value="diary-page">Diário Global ▾</option>
                     </select>
                 </div>
             </nav>
@@ -519,7 +519,12 @@
 
     <div id="login-modal" class="modal-overlay">
         <div class="modal-card">
-            <button class="close-modal">&times;</button>
+            <button
+                type="button"
+                class="close-modal"
+                id="close-login-modal"
+                aria-label="Fechar login"
+            >&times;</button>
             
             <div class="modal-header-tabs" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
                 <button id="tab-login-btn" class="modal-tab active" style="background: none; border: none; color: var(--accent-gold); font-weight: 700; font-size: 1.1rem; cursor: pointer;">Entrar</button>
@@ -533,9 +538,35 @@
                         <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Nome de Usuário</label>
                         <input type="text" id="auth-username" placeholder="Seu apelido no SoundBPM" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
                     </div>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Foto de Perfil (Opcional)</label>
-                        <input type="file" id="auth-avatar" accept="image/*" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                    <div class="auth-avatar-field">
+                        <label class="auth-avatar-field-label">
+                            Foto de Perfil (Opcional)
+                        </label>
+
+                        <input
+                            type="file"
+                            id="auth-avatar"
+                            accept="image/*"
+                            class="auth-avatar-input"
+                        >
+
+                        <label
+                            for="auth-avatar"
+                            class="auth-avatar-upload"
+                        >
+                            <span class="auth-avatar-upload-icon">
+                                📷
+                            </span>
+
+                            <span class="auth-avatar-upload-copy">
+                                <strong>Adicionar foto de perfil</strong>
+                                <small>JPG, PNG ou WEBP</small>
+                            </span>
+
+                            <span class="auth-avatar-upload-plus">
+                                ＋
+                            </span>
+                        </label>
                     </div>
                 </div>
                 

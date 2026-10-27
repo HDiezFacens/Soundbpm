@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // RESOLUÇÃO DE HOISTING: Variáveis do modal movidas para o topo para evitar quebra no fluxo de autenticação
     const modal = document.getElementById("login-modal");
     const openLoginBtn = document.getElementById("open-login-modal");
-    const closeLoginBtn = document.querySelector(".close-modal");
+    const closeLoginBtn = document.getElementById("close-login-modal");
 
     // Limpa simulações antigas para que o site nunca abra simulado por padrão
     if (localStorage.getItem("spotify_access_token") === "simulated_token") {
@@ -3285,14 +3285,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const directAvatarInput = document.getElementById("direct-avatar-file-input");
 
         if (avatarWrap && directAvatarInput) {
+            // Impede que o clique sintético no input borbulhe de volta para o wrapper
+            directAvatarInput.addEventListener("click", (e) => e.stopPropagation());
+
             avatarWrap.addEventListener("click", async (e) => {
+                // Dupla segurança: clique vindo do próprio input não reabre o seletor
+                if (e.target === directAvatarInput) {
+                    return;
+                }
+
                 if (!supabase) return;
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
 
                 const profilePage = document.getElementById("profile-page");
                 const loadedUserId = profilePage?.dataset?.userId || session.user.id;
-                if (loadedUserId !== session.user.id) return; // Aqui a segurança já estava correta
+                if (loadedUserId !== session.user.id) return; // Bloqueia se não for o próprio perfil
 
                 directAvatarInput.click();
             });
