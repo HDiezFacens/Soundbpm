@@ -1,0 +1,60 @@
+/* ==========================================================================
+   SoundBPM - Notícias Musicais e Feed Informativo
+   ========================================================================== */
+.news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.75rem;
+}
+
+.news-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    padding: 1.75rem;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: var(--transition-base);
+}
+
+.news-card:hover {
+    border-color: var(--text-muted);
+}
+
+.news-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    background-color: rgba(223, 177, 91, 0.1);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    width: fit-content;
+}
+
+.news-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.news-snippet {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.news-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+
+.news-note { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.9rem; padding: 0.6rem 0; }
+.news-note a { color: var(--accent-gold); }
+

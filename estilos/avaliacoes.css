@@ -1,0 +1,16 @@
+/* ==========================================================================
+   SoundBPM - Sistema de Avaliações (Estrelas, Faixa a Faixa e Resenhas)
+   ========================================================================== */
+#star-rating-selector span {
+    transition: transform 0.1s ease;
+}
+#star-rating-selector span:hover {
+    transform: scale(1.15);
+}
+
+
+
+.rv-text { margin-top: 0.4rem; font-style: italic; font-size: 0.9rem; white-space: pre-line; overflow-wrap: anywhere; }
+.rv-tracks { margin-top: 0.4rem; font-size: 0.8rem; color: var(--text-muted); }
+.rv-tracks summary { cursor: pointer; }
+.rv-tracks p { margin-top: 0.3rem; overflow-wrap: anywhere; }

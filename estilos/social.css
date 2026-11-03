@@ -1,0 +1,71 @@
+/* ==========================================================================
+   SoundBPM - Social: Notificações, Busca de Usuários e Amigos
+   ========================================================================== */
+/* Sino e painel de notificações */
+#notification-bell-wrap { position: relative; }
+#notification-panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    width: 320px;
+    max-height: 420px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px var(--fx-shadow, rgba(0,0,0,0.4));
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+#notification-panel.active { display: block; }
+.notif-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.85rem;
+    transition: background-color 0.2s ease;
+}
+.notif-item:hover { background-color: var(--border-subtle); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread { background-color: rgba(223, 177, 91, 0.08); font-weight: 600; }
+.notif-actions { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
+.notif-actions button {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+}
+
+/* Página de busca de pessoas */
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+}
+.user-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.6rem;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.user-card:hover {
+    border-color: var(--accent-gold);
+    transform: translateY(-2px);
+}
+.user-card img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-gold);
+}

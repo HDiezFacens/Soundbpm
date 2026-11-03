@@ -1,0 +1,85 @@
+/* ==========================================================================
+   SoundBPM - Estilos Base, Reset e Tipografia
+   ========================================================================== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    line-height: 1.5;
+    overflow-x: hidden;
+    padding-top: 80px;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+
+
+.btn-primary-gold {
+    background-color: var(--accent-gold);
+    color: #000;
+    font-weight: 700;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition-base);
+    text-transform: uppercase;
+}
+
+.btn-primary-gold:hover {
+    background-color: var(--accent-gold-hover);
+}
+
+.btn-secondary-dark {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    font-weight: 700;
+    border: 1px solid var(--border-subtle);
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition-base);
+    text-transform: uppercase;
+}
+
+.btn-secondary-dark:hover {
+    background-color: var(--bg-card-hover);
+    border-color: var(--text-muted);
+}
+
+
+
+.section-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+}
+
+.bg-tinted {
+    background-color: var(--bg-tint);
+    max-width: 100%;
+}
+
+.section-container.bg-tinted {
+    padding: 3rem calc((100% - 1200px) / 2 + 2rem);
+}
+
