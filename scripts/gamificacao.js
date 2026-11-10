@@ -517,3 +517,686 @@ window.shareToInstagramStory = async function (albumName, artistName, coverUrl, 
     } finally { card.remove(); }
 };
 
+
+// 3. Gerador de Vídeo Animado para TikTok / Reels (Review Faixa a Faixa com Vinil e Áudio)
+let tiktokAnimId = null;
+let tiktokAudioObj = null;
+
+// Helper para extrair as faixas da avaliação se houver
+function extractTrackRatings(rawReviewText) {
+    const unesc = s => new DOMParser().parseFromString(String(s || ""), "text/html").documentElement.textContent;
+    const cleanText = unesc(rawReviewText || "");
+    const { tracks, comment } = parseReviewText(cleanText);
+
+    const trackList = [];
+    if (tracks) {
+        const parts = tracks.split(/\s*\|\s*|\n+/).map(p => p.trim()).filter(Boolean);
+        for (const part of parts) {
+            const colonIdx = part.lastIndexOf(":");
+            if (colonIdx !== -1) {
+                const name = part.slice(0, colonIdx).trim();
+                const numStr = part.slice(colonIdx + 1).replace(/[★☆\s]/g, "");
+                const trackRating = parseFloat(numStr) || 5;
+                trackList.push({ name, rating: trackRating });
+            }
+        }
+    }
+    return { trackList, comment: comment || "" };
+}
+
+window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rating, reviewText) {
+    const modal = document.getElementById("tiktok-video-modal");
+    const canvas = document.getElementById("tiktok-canvas");
+    const statusOverlay = document.getElementById("tiktok-status-overlay");
+    const statusText = document.getElementById("tiktok-status-text");
+    const spinner = document.getElementById("tiktok-spinner");
+    const progWrap = document.getElementById("tiktok-progress-bar-wrap");
+    const progBar = document.getElementById("tiktok-progress-bar");
+    const recordBtn = document.getElementById("btn-start-record-tiktok");
+    const cancelBtn = document.getElementById("btn-cancel-tiktok");
+    const closeBtn = document.getElementById("close-tiktok-video-modal");
+
+    if (!modal || !canvas) return;
+
+    modal.classList.add("active");
+    if (statusOverlay) statusOverlay.style.display = "flex";
+    if (progWrap) progWrap.style.display = "none";
+    if (progBar) progBar.style.width = "0%";
+    if (spinner) spinner.style.display = "block";
+    if (statusText) statusText.textContent = "Analisando faixas e preparando animação...";
+    if (recordBtn) { recordBtn.disabled = true; recordBtn.textContent = "Preparando..."; }
+
+    // Limpa estado anterior se houver
+    if (tiktokAnimId) { cancelAnimationFrame(tiktokAnimId); tiktokAnimId = null; }
+    if (tiktokAudioObj) { tiktokAudioObj.pause(); tiktokAudioObj.src = ""; tiktokAudioObj = null; }
+
+    const ctx = canvas.getContext("2d");
+    const local = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+    const username = local.username || "Usuário";
+    const userAvatarUrl = local.avatar || "";
+
+    // Extrai faixas da resenha (se o usuário avaliou faixa a faixa)
+    const { trackList, comment: commentClean } = extractTrackRatings(reviewText);
+    const hasTrackByTrack = trackList.length > 0;
+
+    // Calcula tempo total do vídeo:
+    // Se tiver faixa a faixa: 2s (intro) + 1.3s por faixa + 3.5s (veredito final)
+    // Se for geral: 2.2s (intro) + 3.8s (nota/ondas) + 4.0s (resenha/veredito) = 10s
+    const introDuration = 2000;
+    const trackDuration = 1300;
+    const finalDuration = 3500;
+    const totalVideoMs = hasTrackByTrack 
+        ? introDuration + (trackList.length * trackDuration) + finalDuration 
+        : 10000;
+
+    // Carrega a imagem da capa e avatar
+    const loadImg = src => new Promise(res => {
+        if (!src) return res(null);
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        img.src = src;
+    });
+
+    const [coverImage, avatarImage] = await Promise.all([
+        loadImg(coverUrl),
+        userAvatarUrl ? loadImg(userAvatarUrl) : Promise.resolve(null)
+    ]);
+
+    // Busca prévia de áudio
+    let audioUrl = null;
+    try {
+        const query = `${albumName} ${artistName}`.trim();
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
+        const data = await res.json();
+        if (data.results && data.results.length > 0 && data.results[0].previewUrl) {
+            audioUrl = data.results[0].previewUrl;
+        }
+    } catch (e) {
+        console.warn("Erro ao buscar áudio do TikTok:", e);
+    }
+
+    if (audioUrl) {
+        tiktokAudioObj = new Audio(audioUrl);
+        tiktokAudioObj.crossOrigin = "anonymous";
+        tiktokAudioObj.loop = true;
+    }
+
+    // Controle de tempo da animação
+    let animStartTime = performance.now();
+    let angle = 0;
+    const cw = canvas.width;  // 720
+    const ch = canvas.height; // 1280
+
+    function drawFrame(now) {
+        const elapsed = (now - animStartTime) % totalVideoMs;
+        ctx.clearRect(0, 0, cw, ch);
+
+        // 1. Fundo dark premium com gradiente
+        ctx.fillStyle = "#080b0f";
+        ctx.fillRect(0, 0, cw, ch);
+
+        // 2. Aura radial brilhante de fundo
+        const aura = ctx.createRadialGradient(360, 440, 50, 360, 440, 420);
+        aura.addColorStop(0, "rgba(223, 177, 91, 0.25)");
+        aura.addColorStop(1, "rgba(8, 11, 15, 0)");
+        ctx.fillStyle = aura;
+        ctx.fillRect(0, 0, cw, ch);
+
+        // 3. Header Fixo: Marca SOUNDBPM + Autor
+        ctx.save();
+        ctx.textAlign = "left";
+        ctx.font = "bold 26px Inter, sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText("SOUND", 55, 95);
+        const w1 = ctx.measureText("SOUND").width;
+        ctx.fillStyle = "#dfb15b";
+        ctx.fillText("BPM", 55 + w1, 95);
+
+        // Avatar do autor
+        const avX = 540, avY = 90, avR = 26;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+        ctx.clip();
+        if (avatarImage) {
+            ctx.drawImage(avatarImage, avX - avR, avY - avR, avR * 2, avR * 2);
+        } else {
+            ctx.fillStyle = "#222831";
+            ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
+            ctx.fillStyle = "#aab4c0";
+            ctx.beginPath();
+            ctx.arc(avX, avY - 4, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+        ctx.strokeStyle = "#dfb15b";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px Inter, sans-serif";
+        const shortUser = username.length > 12 ? username.slice(0, 10) + "…" : username;
+        ctx.fillText(shortUser, 580, 88);
+        ctx.fillStyle = "#aab4c0";
+        ctx.font = "14px Inter, sans-serif";
+        ctx.fillText("avaliou no SoundBPM", 580, 108);
+        ctx.restore();
+
+        angle += 0.03; // Rotação contínua do vinil
+
+        // ========================================================
+        // CENAS DINÂMICAS: FAIXA A FAIXA OU GERAL
+        // ========================================================
+        if (hasTrackByTrack) {
+            const tracksTotalTime = trackList.length * trackDuration;
+            const finalStart = introDuration + tracksTotalTime;
+
+            if (elapsed < introDuration) {
+                // ----------------------------------------------------
+                // CENA 1: INTRODUÇÃO DO ÁLBUM
+                // ----------------------------------------------------
+                const introProgress = elapsed / introDuration;
+
+                // Badge de Introdução
+                ctx.save();
+                ctx.textAlign = "center";
+                ctx.fillStyle = "rgba(223, 177, 91, 0.15)";
+                ctx.beginPath();
+                ctx.roundRect(200, 160, 320, 38, 19);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(223, 177, 91, 0.6)";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.fillStyle = "#dfb15b";
+                ctx.font = "bold 15px Inter, sans-serif";
+                ctx.fillText("FAIXA A FAIXA  |  REVIEW COMPLETO", 360, 184);
+                ctx.restore();
+
+                // Vinil deslizando
+                const vinylOffset = Math.min(1, introProgress * 1.5) * 120;
+                drawVinyl(ctx, 360 + vinylOffset, 420, 160, angle);
+
+                // Capa do Álbum
+                drawCover(ctx, 160, 260, 320, coverImage);
+
+                // Título e Artista
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 38px Inter, sans-serif";
+                ctx.fillText(truncateText(ctx, albumName, 600), 360, 680);
+                ctx.fillStyle = "#c4ccd6";
+                ctx.font = "600 24px Inter, sans-serif";
+                ctx.fillText(truncateText(ctx, artistName, 600), 360, 725);
+
+                // Chamada animada
+                ctx.fillStyle = "#dfb15b";
+                ctx.font = "italic 22px Inter, sans-serif";
+                ctx.fillText(`Avaliando todas as ${trackList.length} faixas...`, 360, 810);
+
+                // Ondas sonoras na intro
+                drawWaveform(ctx, elapsed, 360, 890);
+
+            } else if (elapsed < finalStart) {
+                // ----------------------------------------------------
+                // CENA 2: APRESENTAÇÃO FAIXA A FAIXA
+                // ----------------------------------------------------
+                const trackTime = elapsed - introDuration;
+                const trackIdx = Math.min(trackList.length - 1, Math.floor(trackTime / trackDuration));
+                const currentTrack = trackList[trackIdx];
+                const trackSubTime = (trackTime % trackDuration) / trackDuration; // 0.0 a 1.0
+
+                // Topo da cena: Miniatura da Capa e Vinil Girando
+                drawVinyl(ctx, 430, 230, 75, angle);
+                drawCover(ctx, 220, 160, 140, coverImage, 12);
+
+                // Nome do Álbum e Artista discretos acima da faixa
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#c4ccd6";
+                ctx.font = "500 19px Inter, sans-serif";
+                ctx.fillText(`${albumName} • ${artistName}`, 360, 345);
+
+                // Card Central da Faixa Atual
+                const cardX = 60, cardY = 385, cardW = 600, cardH = 340;
+                ctx.save();
+                ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+                ctx.shadowColor = "rgba(0,0,0,0.6)";
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.roundRect(cardX, cardY, cardW, cardH, 24);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(223, 177, 91, 0.4)";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+
+                // Indicador: FAIXA X DE Y
+                ctx.textAlign = "center";
+                ctx.fillStyle = "rgba(223, 177, 91, 0.2)";
+                ctx.beginPath();
+                ctx.roundRect(240, cardY + 28, 240, 36, 18);
+                ctx.fill();
+                ctx.fillStyle = "#dfb15b";
+                ctx.font = "bold 15px Inter, sans-serif";
+                ctx.fillText(`FAIXA ${trackIdx + 1} DE ${trackList.length}`, 360, cardY + 52);
+
+                // Nome da Faixa Grande e em Destaque
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 36px Inter, sans-serif";
+                const trackTitle = truncateText(ctx, currentTrack.name, 540);
+                ctx.fillText(trackTitle, 360, cardY + 125);
+
+                // Estrelas da Faixa
+                const trackStars = formatStars(currentTrack.rating);
+                ctx.fillStyle = "#ffb020";
+                ctx.font = "46px sans-serif";
+                ctx.fillText(trackStars, 360, cardY + 195);
+
+                // Badge Gigante com a Nota da Faixa
+                const scoreStr = `${currentTrack.rating.toFixed(1)} ★`;
+                ctx.save();
+                ctx.fillStyle = "#dfb15b";
+                ctx.font = "bold 34px Inter, sans-serif";
+                ctx.fillText(scoreStr, 360, cardY + 265);
+                ctx.restore();
+
+                // Ondas sonoras animadas
+                drawWaveform(ctx, elapsed, 360, 785);
+
+                // Barra de Progresso do Álbum no Rodapé
+                const progressW = 540;
+                const progressX = (cw - progressW) / 2;
+                const progressY = 870;
+                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+                ctx.beginPath();
+                ctx.roundRect(progressX, progressY, progressW, 8, 4);
+                ctx.fill();
+
+                const filledW = ((trackIdx + trackSubTime) / trackList.length) * progressW;
+                ctx.fillStyle = "#dfb15b";
+                ctx.beginPath();
+                ctx.roundRect(progressX, progressY, Math.max(8, filledW), 8, 4);
+                ctx.fill();
+
+            } else {
+                // ----------------------------------------------------
+                // CENA 3: O VEREDITO FINAL (MÉDIA GERAL + RESENHA)
+                // ----------------------------------------------------
+                renderFinalVerdict(ctx, albumName, artistName, coverImage, rating, commentClean, angle, elapsed);
+            }
+
+        } else {
+            // --------------------------------------------------------
+            // AVALIAÇÃO GERAL TRADICIONAL (SEM FAIXA A FAIXA)
+            // --------------------------------------------------------
+            if (elapsed < 2500) {
+                // Cena 1: Vinil saindo e apresentação
+                const prog = elapsed / 2500;
+                const vOff = Math.min(1, prog * 1.4) * 130;
+                drawVinyl(ctx, 360 + vOff, 410, 160, angle);
+                drawCover(ctx, 160, 250, 320, coverImage);
+
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 38px Inter, sans-serif";
+                ctx.fillText(truncateText(ctx, albumName, 600), 360, 680);
+                ctx.fillStyle = "#c4ccd6";
+                ctx.font = "600 24px Inter, sans-serif";
+                ctx.fillText(truncateText(ctx, artistName, 600), 360, 725);
+                drawWaveform(ctx, elapsed, 360, 800);
+
+            } else {
+                // Cena 2 e 3: Veredito e Resenha Completa
+                renderFinalVerdict(ctx, albumName, artistName, coverImage, rating, commentClean, angle, elapsed);
+            }
+        }
+
+        // Rodapé Fixo
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#8a95a3";
+        ctx.font = "600 18px Inter, sans-serif";
+        ctx.fillText("AVALIE E DESCUBRA MÚSICA NO SOUNDBPM", 360, 1220);
+
+        tiktokAnimId = requestAnimationFrame(drawFrame);
+    }
+
+    // Funções auxiliares de desenho
+    function drawVinyl(ctx, x, y, r, rot) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = "#0c0f13";
+        ctx.shadowColor = "rgba(0,0,0,0.85)";
+        ctx.shadowBlur = 35;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+        ctx.lineWidth = 1.5;
+        [0.86, 0.72, 0.60, 0.48, 0.36].forEach(pct => {
+            ctx.beginPath();
+            ctx.arc(0, 0, r * pct, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+        ctx.fillStyle = "#dfb15b";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.07, 0, Math.PI * 2);
+        ctx.fillStyle = "#000000";
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawCover(ctx, x, y, size, img, rad = 20) {
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.9)";
+        ctx.shadowBlur = 35;
+        ctx.shadowOffsetY = 15;
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, size, size, rad);
+        ctx.clip();
+
+        if (img) {
+            ctx.drawImage(img, x, y, size, size);
+        } else {
+            ctx.fillStyle = "#1c2228";
+            ctx.fillRect(x, y, size, size);
+            ctx.fillStyle = "#dfb15b";
+            ctx.font = `bold ${Math.round(size * 0.25)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillText("🎵", x + size / 2, y + size / 2 + 15);
+        }
+        ctx.restore();
+    }
+
+    function drawWaveform(ctx, timeMs, centerX, centerY) {
+        const time = timeMs * 0.006;
+        const count = 30;
+        const bw = 7, gap = 5;
+        const totalW = count * (bw + gap);
+        const startX = centerX - totalW / 2;
+
+        for (let i = 0; i < count; i++) {
+            const h = Math.abs(Math.sin(time + i * 0.3) * Math.cos(time * 0.6 + i * 0.2)) * 32 + 8;
+            const bx = startX + i * (bw + gap);
+            const by = centerY - h / 2;
+
+            const g = ctx.createLinearGradient(0, by, 0, by + h);
+            g.addColorStop(0, "#dfb15b");
+            g.addColorStop(1, "#ff9f1c");
+
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, h, 3);
+            ctx.fill();
+        }
+    }
+
+    function renderFinalVerdict(ctx, aName, artName, cImg, finalRate, comTxt, rot, timeMs) {
+        ctx.save();
+
+        // Título do Veredito
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(223, 177, 91, 0.2)";
+        ctx.beginPath();
+        ctx.roundRect(220, 160, 280, 38, 19);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(223, 177, 91, 0.6)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = "#dfb15b";
+        ctx.font = "bold 15px Inter, sans-serif";
+        ctx.fillText("★ VEREDITO FINAL ★", 360, 184);
+
+        // Capa com Vinil no Veredito
+        drawVinyl(ctx, 430, 360, 135, rot);
+        drawCover(ctx, 160, 240, 240, cImg, 18);
+
+        // Nome do Álbum e Artista
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 34px Inter, sans-serif";
+        ctx.fillText(truncateText(ctx, aName, 580), 360, 545);
+        ctx.fillStyle = "#c4ccd6";
+        ctx.font = "600 22px Inter, sans-serif";
+        ctx.fillText(truncateText(ctx, artName, 580), 360, 585);
+
+        // Média Final Gigante
+        ctx.fillStyle = "#ffb020";
+        ctx.font = "52px sans-serif";
+        ctx.fillText(formatStars(finalRate), 360, 665);
+
+        // Badge Nota Final
+        const scoreTxt = `${finalRate.toFixed(1)} / 5.0`;
+        ctx.fillStyle = "rgba(223, 177, 91, 0.2)";
+        ctx.beginPath();
+        ctx.roundRect(240, 695, 240, 48, 24);
+        ctx.fill();
+        ctx.strokeStyle = "#dfb15b";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = "#dfb15b";
+        ctx.font = "bold 30px Inter, sans-serif";
+        ctx.fillText(scoreTxt, 360, 730);
+
+        // Resenha do Usuário
+        if (comTxt) {
+            const bw = 580, bh = 180, bx = (cw - bw) / 2, by = 780;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, bh, 18);
+            ctx.fill();
+
+            ctx.fillStyle = "#dfb15b";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, 8, bh, [18, 0, 0, 18]);
+            ctx.fill();
+
+            ctx.fillStyle = "#eef0f3";
+            ctx.font = "italic 22px Inter, sans-serif";
+            ctx.textAlign = "left";
+
+            const words = `"${comTxt}"`.split(" ");
+            let line = "", ly = by + 45;
+            for (let n = 0; n < words.length; n++) {
+                const test = line + words[n] + " ";
+                if (ctx.measureText(test).width > bw - 50 && n > 0) {
+                    ctx.fillText(line, bx + 30, ly);
+                    line = words[n] + " ";
+                    ly += 32;
+                    if (ly > by + bh - 20) break;
+                } else {
+                    line = test;
+                }
+            }
+            if (line && ly <= by + bh - 20) ctx.fillText(line, bx + 30, ly);
+        } else {
+            drawWaveform(ctx, timeMs, 360, 830);
+        }
+
+        ctx.restore();
+    }
+
+    function formatStars(val) {
+        const full = Math.floor(val);
+        const half = (val % 1 !== 0);
+        let s = "★".repeat(full);
+        if (half) s += "½";
+        s += "☆".repeat(Math.max(0, 5 - Math.ceil(val)));
+        return s;
+    }
+
+    function truncateText(c, str, maxW) {
+        let t = String(str || "");
+        if (c.measureText(t).width <= maxW) return t;
+        while (t.length > 3 && c.measureText(t + "…").width > maxW) {
+            t = t.slice(0, -1);
+        }
+        return t + "…";
+    }
+
+    // Inicia o motor de animação no Canvas
+    tiktokAnimId = requestAnimationFrame(drawFrame);
+
+    // Atualiza o botão de gravação com a duração exata calculada
+    const totalSecs = Math.round(totalVideoMs / 1000);
+    if (statusOverlay) statusOverlay.style.display = "none";
+    if (recordBtn) {
+        recordBtn.disabled = false;
+        recordBtn.textContent = hasTrackByTrack 
+            ? `🎥 Gravar Vídeo Faixa a Faixa (${totalSecs}s)` 
+            : `🎥 Gravar Vídeo TikTok (${totalSecs}s)`;
+    }
+
+    // Fechar modal
+    const closeModal = () => {
+        if (tiktokAnimId) { cancelAnimationFrame(tiktokAnimId); tiktokAnimId = null; }
+        if (tiktokAudioObj) { tiktokAudioObj.pause(); tiktokAudioObj.src = ""; tiktokAudioObj = null; }
+        modal.classList.remove("active");
+    };
+
+    if (cancelBtn) cancelBtn.onclick = closeModal;
+    if (closeBtn) closeBtn.onclick = closeModal;
+
+    // ========================================================
+    // GRAVAÇÃO ROBUSTA COM DURAÇÃO EXATA E MEDIARECORDER
+    // ========================================================
+    if (recordBtn) {
+        recordBtn.onclick = async () => {
+            recordBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            if (statusOverlay) statusOverlay.style.display = "flex";
+            if (spinner) spinner.style.display = "block";
+            if (progWrap) progWrap.style.display = "block";
+
+            // Reinicia animação do início exato (t = 0) para o vídeo ser gravado desde a abertura
+            animStartTime = performance.now();
+
+            // Captura o stream de 30 FPS do Canvas
+            const stream = canvas.captureStream(30);
+
+            // Cria trilha de áudio segura via Web Audio API
+            let audioCtx = null;
+            let osc = null;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") await audioCtx.resume();
+
+                const audioDest = audioCtx.createMediaStreamDestination();
+
+                // Gera um tom de fundo harmônico leve em volume sutil para garantir sincronismo
+                osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(55, audioCtx.currentTime); // 55Hz - rumble suave de vinil
+                gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioDest);
+                osc.start();
+
+                // Conecta a trilha de áudio no stream do vídeo
+                audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+
+                // Se houver música, toca no player local para o usuário escutar durante a gravação
+                if (tiktokAudioObj) {
+                    tiktokAudioObj.currentTime = 0;
+                    tiktokAudioObj.play().catch(e => console.log(e));
+                }
+            } catch (aErr) {
+                console.warn("Áudio synth error:", aErr);
+            }
+
+            // Seleciona formato suportado
+            const mimeTypes = [
+                "video/mp4;codecs=avc1,mp4a.40.2",
+                "video/mp4",
+                "video/webm;codecs=vp9,opus",
+                "video/webm;codecs=vp8,opus",
+                "video/webm"
+            ];
+            let selectedMime = "";
+            for (const m of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(m)) {
+                    selectedMime = m;
+                    break;
+                }
+            }
+
+            let recorder;
+            try {
+                recorder = new MediaRecorder(stream, selectedMime ? { mimeType: selectedMime } : {});
+            } catch (e) {
+                recorder = new MediaRecorder(stream);
+            }
+
+            const recordedChunks = [];
+            recorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+                if (tiktokAudioObj) tiktokAudioObj.pause();
+                if (osc) { try { osc.stop(); } catch(e){} }
+                if (audioCtx) { try { audioCtx.close(); } catch(e){} }
+
+                const isMp4 = selectedMime.includes("mp4");
+                const ext = isMp4 ? "mp4" : "webm";
+                const rawBlob = new Blob(recordedChunks, { type: selectedMime || "video/webm" });
+
+                // Dispara o download automático do arquivo de vídeo com a duração correta
+                const url = URL.createObjectURL(rawBlob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `soundbpm_${hasTrackByTrack ? "faixa_a_faixa_" : ""}${albumName.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+                if (statusOverlay) statusOverlay.style.display = "none";
+                recordBtn.disabled = false;
+                if (cancelBtn) cancelBtn.disabled = false;
+                if (window.gameToast) window.gameToast("Vídeo gravado e baixado com sucesso! ✨");
+            };
+
+            // Inicia gravando com timeslice de 100ms para emissão contínua de dados
+            recorder.start(100);
+
+            const recStart = Date.now();
+            const timer = setInterval(() => {
+                const nowMs = Date.now();
+                const elapsedMs = nowMs - recStart;
+                const pct = Math.min(100, Math.round((elapsedMs / totalVideoMs) * 100));
+
+                if (progBar) progBar.style.width = pct + "%";
+                if (statusText) {
+                    const curSec = (elapsedMs / 1000).toFixed(1);
+                    const totSec = (totalVideoMs / 1000).toFixed(0);
+                    statusText.textContent = `Gravando vídeo: ${curSec}s de ${totSec}s (${pct}%)`;
+                }
+
+                if (elapsedMs >= totalVideoMs) {
+                    clearInterval(timer);
+                    if (recorder.state === "recording") {
+                        recorder.stop();
+                    }
+                }
+            }, 100);
+        };
+    }
+};
+

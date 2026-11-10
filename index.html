@@ -627,6 +627,36 @@
     </div>
 
 
+    <!-- Modal do Gerador de Vídeo TikTok / Reels -->
+    <div id="tiktok-video-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 1.5rem; max-height: 95vh; overflow-y: auto;">
+            <button class="close-modal" id="close-tiktok-video-modal">&times;</button>
+            <h3 style="color: var(--accent-gold); font-size: 1.25rem; margin-bottom: 0.2rem;">🎬 Criador de Vídeo TikTok / Reels</h3>
+            <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1rem;">Vídeo vertical animado com disco de vinil e prévia musical.</p>
+
+            <div style="position: relative; width: 280px; height: 497px; margin: 0 auto 1.2rem; border-radius: 16px; overflow: hidden; background: #0b0e12; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border: 1px solid var(--border-subtle);">
+                <canvas id="tiktok-canvas" width="720" height="1280" style="width: 100%; height: 100%; display: block; object-fit: contain;"></canvas>
+                <div id="tiktok-status-overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; padding: 1rem; color: #fff;">
+                    <span id="tiktok-spinner" style="font-size: 2rem;">⏳</span>
+                    <p id="tiktok-status-text" style="font-size: 0.9rem; font-weight: 600;">Preparando animação e áudio...</p>
+                    <div id="tiktok-progress-bar-wrap" style="width: 80%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; display: none;">
+                        <div id="tiktok-progress-bar" style="width: 0%; height: 100%; background: var(--accent-gold); transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
+                <button id="btn-start-record-tiktok" class="btn-primary-gold" style="padding: 0.6rem 1.4rem; font-size: 0.9rem; font-weight: 700;">
+                    🎥 Gravar e Baixar Vídeo (10s)
+                </button>
+                <button id="btn-cancel-tiktok" class="btn-secondary-dark" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Modal de Avaliação / Resenha -->
     <div id="review-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 520px; text-align: left; max-height: 90vh; overflow-y: auto;">
