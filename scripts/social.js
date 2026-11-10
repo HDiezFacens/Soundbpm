@@ -55,12 +55,12 @@ async function loadNotifications() {
     }
 
     list.innerHTML = notifs.map(n => {
-        const avatar = n.from_user?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces";
+        const avatar = n.from_user?.avatar_url || "";
         const time = new Date(n.created_at).toLocaleDateString("pt-BR");
         const unreadStyle = n.read ? "" : "background: rgba(212,175,55,0.07); border-left: 3px solid var(--accent-gold);";
         return `
         <div style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; ${unreadStyle}">
-            <img src="${avatar}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+            ${avatarHtml(avatar, 38)}
             <div style="flex: 1;">
                 <p style="margin: 0 0 0.2rem 0; font-size: 0.9rem;">${n.message}</p>
                 <span style="font-size: 0.75rem; color: var(--text-muted);">${time}</span>
@@ -119,10 +119,10 @@ async function loadPeoplePage() {
             });
 
             friendsList.innerHTML = Array.from(uniqueFriendsMap.values()).map(({ friendshipId, friend }) => {
-                const avatar = friend?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+                const avatar = friend?.avatar_url || "";
                 return `
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${friend?.id}')">
-                    <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                    ${avatarHtml(avatar, 52)}
                     <div style="flex:1;">
                         <strong style="color: var(--accent-gold);">${friend?.username || "Usuário"}</strong>
                     </div>
@@ -144,10 +144,10 @@ async function loadPeoplePage() {
     if (reqList) {
         if (requests && requests.length > 0) {
             reqList.innerHTML = requests.map(r => {
-                const avatar = r.requester?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=52&h=52&fit=crop&crop=faces";
+                const avatar = r.requester?.avatar_url || "";
                 return `
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid #e74c3c33;">
-                    <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">
+                    ${avatarHtml(avatar, 52, "cursor:pointer;").replace('></', ' onclick="openUserProfile(\'${r.requester?.id}\')" ></')}
                     <div style="flex:1;">
                         <strong style="color: var(--accent-gold); cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">${r.requester?.username || "Usuário"}</strong>
                         <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">Quer ser seu amigo</p>
@@ -192,10 +192,10 @@ if (peopleSearch) {
 
             resultsDiv.innerHTML = profiles.map(p => {
                 if (p.id === myId) return "";
-                const avatar = p.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=52&h=52&fit=crop&crop=faces";
+                const avatar = p.avatar_url || "";
                 return `
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${p.id}')">
-                    <img src="${avatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover;">
+                    ${avatarHtml(avatar, 52)}
                     <div style="flex:1;">
                         <strong style="color: var(--accent-gold);">${p.username || "Usuário"}</strong>
                         <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${p.bio || ""}</p>

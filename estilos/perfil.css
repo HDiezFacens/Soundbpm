@@ -163,16 +163,35 @@
     height: 160px;
     border-radius: 50%;
     border: 4px solid rgba(255, 255, 255, 0.15); 
-    background-color: var(--bg-card);
+    background-color: var(--bg-elevated, #2a2a3e);
     overflow: hidden;
     flex-shrink: 0;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Silhueta padrão quando não há foto */
+.profile-avatar-wrap::before {
+    content: "";
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 38%, var(--text-muted, #888) 28%, transparent 29%),
+                radial-gradient(ellipse 60% 40% at 50% 100%, var(--text-muted, #888) 55%, transparent 56%);
+    opacity: 0.35;
+    pointer-events: none;
 }
 
 .profile-avatar-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    position: relative;
+    z-index: 1;
+}
+
+/* Quando tem foto, esconde a silhueta */
+.profile-avatar-wrap.tem-foto::before {
+    display: none;
 }
 
 .avatar-hover-overlay {

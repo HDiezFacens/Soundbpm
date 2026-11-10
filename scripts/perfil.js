@@ -42,14 +42,24 @@ window.loadUserProfile = async function(targetUserId = null) {
         avatarOverlay.style.display = isMyProfile ? "flex" : "none";
     }
 
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userIdToLoad).single();
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userIdToLoad).maybeSingle();
     
     let displayName = profile?.username || "Usuário";
-    let avatarUrl = profile?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+    let avatarUrl = profile?.avatar_url || "";
     let bioText = profile?.bio || (isMyProfile ? "Explorando o mundo da música." : "Membro do SoundBPM.");
 
     if (usernameDisplay) usernameDisplay.textContent = displayName;
-    if (avatarImg) avatarImg.src = avatarUrl;
+    if (avatarImg) {
+        if (avatarUrl) {
+            avatarImg.src = avatarUrl;
+            avatarImg.style.display = "";
+            if (avatarWrap) avatarWrap.classList.add("tem-foto");
+        } else {
+            avatarImg.src = "";
+            avatarImg.style.display = "none";
+            if (avatarWrap) avatarWrap.classList.remove("tem-foto");
+        }
+    }
     if (bioDisplay) bioDisplay.textContent = bioText;
 
     // Renderizar Banner do Perfil & Dimensionamento
@@ -198,8 +208,8 @@ window.loadUserProfile = async function(targetUserId = null) {
 };
 
 window.openUserProfile = function(userId = null) {
-    navigateTo("profile-page");
-    loadUserProfile(userId);
+    if (window.navigateTo) window.navigateTo("profile-page");
+    if (window.loadUserProfile) window.loadUserProfile(userId);
 };
 
 window.removeProfileFavorite = async function(id) {
@@ -877,8 +887,13 @@ function wireBannerControls() {
             const myId = session.user.id;
 
             const avatarImg = document.getElementById("profile-avatar-img");
+            const avatarWrap = document.getElementById("profile-avatar-wrap");
             const previewUrl = URL.createObjectURL(croppedFile);
-            if (avatarImg) avatarImg.src = previewUrl;
+            if (avatarImg) {
+                avatarImg.src = previewUrl;
+                avatarImg.style.display = "";
+            }
+            if (avatarWrap) avatarWrap.classList.add("tem-foto");
 
             try {
                 const ext = "jpg";

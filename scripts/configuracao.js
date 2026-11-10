@@ -161,3 +161,25 @@ function profileLink(id) {
 }
 
 window.profileLink = profileLink;
+
+// Avatar sem foto: retorna <img> se tiver URL, ou <div> com silhueta SVG se não tiver
+function avatarHtml(url, size, extraStyle) {
+    size = size || 40;
+    extraStyle = extraStyle || "";
+    var base = "border-radius:50%;width:" + size + "px;height:" + size + "px;object-fit:cover;flex-shrink:0;" + extraStyle;
+    if (url) {
+        return '<img src="' + gameEsc(url) + '" style="' + base + '" onerror="this.replaceWith(window._avatarSvgEl(' + size + '))">';
+    }
+    return '<div style="' + base + ';background:var(--bg-elevated,#2a2a3e);display:flex;align-items:center;justify-content:center;">' +
+        '<svg width="' + Math.round(size * 0.55) + '" height="' + Math.round(size * 0.55) + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<circle cx="12" cy="8" r="4" fill="var(--text-muted,#888)"/>' +
+        '<path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="var(--text-muted,#888)" stroke-width="1.8" stroke-linecap="round" fill="none"/>' +
+        '</svg></div>';
+}
+// Helper para o onerror do <img>
+window._avatarSvgEl = function(size) {
+    var d = document.createElement('div');
+    d.innerHTML = avatarHtml(null, size);
+    return d.firstChild;
+};
+window.avatarHtml = avatarHtml;

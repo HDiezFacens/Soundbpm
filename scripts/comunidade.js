@@ -9,7 +9,7 @@ var timeAgo = window.timeAgo;
 var reviewBodyHtml = window.reviewBodyHtml;
 var navigateTo = window.navigateTo;
 
-const CM_AVATAR = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+const CM_AVATAR = "";
 const CM_SQL_HINT = "Curtidas, comentários e vídeos ainda não foram ativados no banco. Rode o arquivo supabase_comunidade_videos.sql no Supabase.";
 
 
@@ -36,7 +36,7 @@ function cmCardHtml(r, meta) {
         ${r.cover_url ? `<img class="cm-cover" src="${gameEsc(r.cover_url)}" alt="" loading="lazy">` : ""}
         <div class="cm-main">
             <div class="cm-top">
-                <img class="cm-avatar" src="${gameEsc(p.avatar_url || CM_AVATAR)}" alt="" data-uid="${uid}">
+                ${p.avatar_url ? '<img class="cm-avatar" src="' + gameEsc(p.avatar_url) + '" alt="" data-uid="' + uid + '">' : '<div class="cm-avatar" data-uid="' + uid + '" style="background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;">' + avatarHtml(null,44) + '</div>'}
                 <strong class="cm-user" data-uid="${uid}">${gameEsc(p.username || "Membro")}</strong>
                 <span class="cm-when">${timeAgo(r.created_at)}</span>
             </div>
@@ -73,7 +73,7 @@ async function cmRenderComments(card) {
     inner.innerHTML = (data.length ? data.map(c => {
         const p = pm.get(c.user_id) || {}, canDel = me && (me.id === c.user_id || me.id === card.dataset.owner);
         return `<div class="cm-comment" data-cid="${gameEsc(c.id)}">
-            <img class="cm-avatar sm" src="${gameEsc(p.avatar_url || CM_AVATAR)}" alt="" data-uid="${gameEsc(c.user_id)}">
+            ${p.avatar_url ? '<img class="cm-avatar sm" src="' + gameEsc(p.avatar_url) + '" alt="" data-uid="' + gameEsc(c.user_id) + '">' : '<div class="cm-avatar sm" data-uid="' + gameEsc(c.user_id) + '" style="background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;">' + avatarHtml(null,32) + '</div>'}
             <div class="cm-cbody"><strong class="cm-user" data-uid="${gameEsc(c.user_id)}">${gameEsc(p.username || "Membro")}</strong> <span class="cm-when">${timeAgo(c.created_at)}</span><p>${gameEsc(c.body)}</p></div>
             ${canDel ? `<button type="button" class="cm-del" data-act="delcomment" title="Excluir comentário">🗑</button>` : ""}</div>`;
     }).join("") : `<p class="cm-empty">Seja o primeiro a comentar.</p>`)

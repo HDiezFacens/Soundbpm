@@ -204,7 +204,7 @@ if (authForm) {
         if (modal) modal.classList.remove("active");
         await checkSupabaseSession();
         await updateLoginButtonState();
-        openUserProfile(); 
+        if (window.openUserProfile) window.openUserProfile(); 
     });
 }
 
@@ -213,7 +213,7 @@ if (openLoginBtn && modal) {
         if (supabase) {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                openUserProfile();
+                if (window.openUserProfile) window.openUserProfile();
             } else {
                 modal.classList.add("active");
             }
@@ -236,11 +236,11 @@ async function updateLoginButtonState() {
     if (openLoginBtn) {
         const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
         const displayName = localUser.username || "Meu Perfil";
-        const avatarUrl = localUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces";
+        const avatarUrl = localUser.avatar || "";
 
         openLoginBtn.innerHTML = `
             <div style="display: flex; align-items: center; gap: 0.6rem; background: transparent; border: none; padding: 0;">
-                <img src="${avatarUrl}" alt="Avatar" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-gold);">
+                ${avatarHtml(avatarUrl, 28, "border:1px solid var(--accent-gold);")}
                 <span style="font-weight: 600; color: var(--text-main);">${displayName}</span>
             </div>
         `;

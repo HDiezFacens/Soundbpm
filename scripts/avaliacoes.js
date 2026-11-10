@@ -160,12 +160,33 @@ function updateCalculatedAverage() {
     if (avgElement) avgElement.textContent = `${starsStr} (${avg})`;
 }
 
-window.openReviewModal = function(albumName, artistName, coverUrl, collectionId = '') {
+window.openReviewModal = async function(albumName, artistName, coverUrl, collectionId = '') {
     const localUser = localStorage.getItem("soundbpm_user");
     if (!localUser && !localStorage.getItem("spotify_access_token")) {
         alert("Você precisa fazer login para avaliar álbuns e criar seu diário!");
-        document.getElementById('login-modal').classList.add('active');
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) loginModal.classList.add('active');
         return;
+    }
+
+    if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            const { data: existingReview } = await supabase
+                .from("reviews")
+                .select("id, rating")
+                .eq("user_id", session.user.id)
+                .ilike("album_name", albumName)
+                .ilike("artist_name", artistName)
+                .maybeSingle();
+
+            if (existingReview) {
+                const msg = `Você já avaliou o álbum "${albumName}" com nota ${existingReview.rating}★! Cada álbum só pode ser avaliado uma vez.`;
+                if (window.gameToast) window.gameToast(msg);
+                else alert(msg);
+                return;
+            }
+        }
     }
 
     document.getElementById("review-modal-title").textContent = albumName;
@@ -198,7 +219,7 @@ if (reviewForm) {
         e.preventDefault();
         if (!supabase) return;
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { alert("You must be logged in."); return; }
+        if (!session) { alert("Você precisa estar logado para avaliar."); return; }
 
         const submitBtn = document.getElementById("submit-review-btn");
         submitBtn.textContent = "Salvando no Diário...";
@@ -207,6 +228,23 @@ if (reviewForm) {
         const albumName = document.getElementById("review-modal-title").textContent;
         const artistName = document.getElementById("review-modal-artist").textContent;
         const coverUrl = reviewModal.dataset.cover || "";
+
+        // Verificação para impedir múltiplas avaliações do mesmo álbum
+        const { data: existingReview } = await supabase
+            .from("reviews")
+            .select("id, rating")
+            .eq("user_id", session.user.id)
+            .ilike("album_name", albumName)
+            .ilike("artist_name", artistName)
+            .maybeSingle();
+
+        if (existingReview) {
+            alert(`Você já avaliou o álbum "${albumName}" (nota ${existingReview.rating}★). Cada álbum só pode ser avaliado uma vez!`);
+            submitBtn.textContent = "Salvar no Diário";
+            submitBtn.disabled = false;
+            if (reviewModal) reviewModal.classList.remove("active");
+            return;
+        }
         
         let finalRating = 5;
         let reviewNote = document.getElementById("review-text-input").value.trim();
@@ -234,6 +272,7 @@ if (reviewForm) {
             reviewModal.classList.remove("active");
             document.getElementById("review-text-input").value = "";
             if (typeof loadUserProfile === 'function') loadUserProfile();
+            if (window.loadHomeTopReviews) window.loadHomeTopReviews();
         }
     });
 }

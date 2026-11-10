@@ -299,6 +299,26 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
             .eq('album_name', albumName)
             .order('created_at', { ascending: false });
 
+        let myReview = null;
+        const { data: sessData } = await supabase.auth.getSession();
+        if (sessData?.session?.user && albumReviews) {
+            myReview = albumReviews.find(r => r.user_id === sessData.session.user.id);
+        }
+        const reviewBtn = document.getElementById("detail-review-btn");
+        if (reviewBtn) {
+            if (myReview) {
+                reviewBtn.textContent = `★ Avaliado (${myReview.rating}★)`;
+                reviewBtn.onclick = () => {
+                    const msg = `Você já avaliou o álbum "${albumName}" com nota ${myReview.rating}★! Cada álbum só pode ser avaliado uma vez.`;
+                    if (window.gameToast) window.gameToast(msg);
+                    else alert(msg);
+                };
+            } else {
+                reviewBtn.textContent = "★ Avaliar";
+                reviewBtn.onclick = () => openReviewModal(albumName, artistName, coverUrl, collectionId);
+            }
+        }
+
         if (albumReviews && albumReviews.length > 0) {
             const totalRating = albumReviews.reduce((acc, r) => acc + r.rating, 0);
             const avgRating = (totalRating / albumReviews.length).toFixed(1);
@@ -306,7 +326,7 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
             document.getElementById("detail-album-rating-avg").innerHTML = `${starsCount} <span style="color: var(--text-main); font-weight: 600;">${avgRating}</span> <span style="color: var(--text-muted); font-size: 0.9rem;">(${albumReviews.length} resenha${albumReviews.length > 1 ? 's' : ''})</span>`;
 
             reviewsContainer.innerHTML = albumReviews.map(r => {
-                const avatar = r.profiles?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces";
+                const avatar = r.profiles?.avatar_url || "";
                 const username = r.profiles?.username || "Membro";
                 const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
                 const date = new Date(r.created_at).toLocaleDateString('pt-BR');
@@ -314,7 +334,7 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
                 return `
                 <div style="background: var(--bg-base); padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle);">
                     <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; cursor: pointer;" onclick="openUserProfile('${r.user_id}')">
-                        <img src="${avatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover;">
+                        ${avatarHtml(avatar, 26)}
                         <span style="font-weight: 600; font-size: 0.85rem; color: var(--accent-gold);">${username}</span>
                         <span style="margin-left: auto; color: var(--accent-orange); font-size: 0.85rem;">${stars}</span>
                     </div>

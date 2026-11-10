@@ -217,11 +217,11 @@ async function loadRankingPage() {
     const medals = ["🥇", "🥈", "🥉"];
     const unit = { xp: "XP", reviews: "resenhas", badges: "conquistas", loginNow: "dias" }[rankingSort];
     list.innerHTML = users.map((u, i) => {
-        const avatar = u.profile.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces";
+        const avatar = u.profile.avatar_url || "";
         return `
         <div class="rank-row ${u.id === myId ? "me" : ""}" onclick="openUserProfile('${gameEsc(u.id)}')">
             <span class="rank-pos">${medals[i] || i + 1}</span>
-            <img src="${gameEsc(avatar)}" alt="Avatar">
+            ${avatarHtml(avatar, 48)}
             <div class="rank-info">
                 <strong>${gameEsc(u.profile.username || "Usuário")}${u.id === myId ? " (você)" : ""}</strong>
                 <span>🏅 ${gameEsc(u.stats.title)} • ${u.stats.tier.icon} ${u.stats.tier.name}${u.stats.loginNow ? " • 🔥 " + u.stats.loginNow : ""}</span>
@@ -444,7 +444,7 @@ window.shareToInstagramStory = async function (albumName, artistName, coverUrl, 
     let { comment } = parseReviewText(unesc(reviewText));
     if (comment.length > 230) comment = comment.slice(0, 227).trim() + "…";
     const local = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
-    const username = gameEsc(local.username || "Usuário"), avatar = local.avatar || CM_AVATAR;
+    const username = gameEsc(local.username || "Usuário"), avatar = local.avatar || "";
     const title = albumName.length > 46 ? albumName.slice(0, 43).trim() + "…" : albumName;
     const loadImg = src => new Promise(res => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
     const coverImg = await loadImg(coverUrl);
@@ -474,7 +474,7 @@ window.shareToInstagramStory = async function (albumName, artistName, coverUrl, 
             <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
                 <div style="font-size:34px;font-weight:800;letter-spacing:9px;">SOUND<span style="color:#dfb15b;">BPM</span></div>
                 <div style="display:flex;align-items:center;gap:22px;">
-                    <img src="${gameEsc(avatar)}" crossorigin="anonymous" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid #dfb15b;">
+                    ${avatar ? '<img src="' + gameEsc(avatar) + '" crossorigin="anonymous" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid #dfb15b;">' : avatarHtml(null, 88, "border:4px solid #dfb15b;")}
                     <div style="text-align:left;"><div style="font-size:40px;font-weight:700;">${username}</div><div style="font-size:26px;color:#aab4c0;">avaliou um álbum</div></div>
                 </div>
             </div>
