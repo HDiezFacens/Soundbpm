@@ -231,7 +231,7 @@ window.populateDashboard = async function() {
 
 
 
-// 7. Simulação e Web Player
+// 7. Simulação e Web Player com Reprodução Real de Áudio e Spotify
 const simulateBtn = document.getElementById("simulate-login-btn");
 const webPlayer = document.getElementById("web-player");
 if (simulateBtn) {
@@ -245,16 +245,144 @@ if (simulateBtn) {
     });
 }
 
+let soundbpmAudio = null;
+let isAudioPlaying = false;
+let currentTrackData = null;
 
-
-window.playMockTrack = function(track, artist, image) {
+window.playMockTrack = async function(track, artist, image, audioPreviewUrl = null) {
     const playerTrack = document.getElementById("player-track");
     const playerArtist = document.getElementById("player-artist");
     const playerImg = document.getElementById("player-img");
+    const playBtn = document.getElementById("player-play-btn");
+    const spotifyLink = document.getElementById("player-spotify-link");
     
-    if (playerTrack) playerTrack.textContent = track;
-    if (playerArtist) playerArtist.textContent = artist;
-    if (playerImg) playerImg.src = image;
+    if (webPlayer) webPlayer.classList.remove("hidden");
+    if (playerTrack) playerTrack.textContent = track || "Faixa selecionada";
+    if (playerArtist) playerArtist.textContent = artist || "Artista";
+    if (playerImg && image) playerImg.src = image;
+
+    const spotifySearchUrl = `https://open.spotify.com/search/${encodeURIComponent((track || '') + ' ' + (artist || ''))}`;
+    if (spotifyLink) {
+        spotifyLink.href = spotifySearchUrl;
+        spotifyLink.title = `Ouvir "${track}" no Spotify`;
+    }
+
+    currentTrackData = { track, artist, image, spotifyUrl: spotifySearchUrl };
+
+    // Se já havia áudio tocando, interrompe
+    if (soundbpmAudio) {
+        soundbpmAudio.pause();
+        soundbpmAudio.src = "";
+        soundbpmAudio = null;
+        isAudioPlaying = false;
+    }
+
+    if (playBtn) playBtn.textContent = "⏳";
+
+    let previewUrl = audioPreviewUrl;
+
+    // Se não tiver preview direto, busca na API pública do iTunes por uma amostra de 30s
+    if (!previewUrl) {
+        try {
+            const query = `${track} ${artist}`.trim();
+            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
+            const data = await res.json();
+            if (data.results && data.results.length > 0 && data.results[0].previewUrl) {
+                previewUrl = data.results[0].previewUrl;
+            }
+        } catch (e) {
+            console.warn("Falha ao buscar prévia sonora no iTunes:", e);
+        }
+    }
+
+    if (previewUrl) {
+        try {
+            soundbpmAudio = new Audio(previewUrl);
+            soundbpmAudio.volume = 0.85;
+
+            soundbpmAudio.onplay = () => {
+                isAudioPlaying = true;
+                if (playBtn) playBtn.textContent = "⏸";
+            };
+
+            soundbpmAudio.onpause = () => {
+                isAudioPlaying = false;
+                if (playBtn) playBtn.textContent = "▶";
+            };
+
+            soundbpmAudio.onended = () => {
+                isAudioPlaying = false;
+                if (playBtn) playBtn.textContent = "▶";
+            };
+
+            soundbpmAudio.onerror = () => {
+                isAudioPlaying = false;
+                if (playBtn) playBtn.textContent = "▶";
+                if (window.gameToast) window.gameToast("Prévia indisponível. Clique em 'Spotify' ↗");
+            };
+
+            await soundbpmAudio.play();
+            if (window.gameToast) window.gameToast(`Tocando prévia de "${track}" 🎵`);
+        } catch (playErr) {
+            console.log("Autoplay bloqueado pelo navegador ou erro:", playErr);
+            isAudioPlaying = false;
+            if (playBtn) playBtn.textContent = "▶";
+            if (window.gameToast) window.gameToast("Clique no ▶ para iniciar ou em 'Spotify' ↗");
+        }
+    } else {
+        if (playBtn) playBtn.textContent = "▶";
+        if (window.gameToast) window.gameToast("Prévia de 30s não encontrada. Clique em 'Spotify' para ouvir completa! 🎧");
+    }
 };
+
+// Configuração dos controles do Web Player
+const playerPlayBtn = document.getElementById("player-play-btn");
+const playerPrevBtn = document.getElementById("player-prev-btn");
+const playerNextBtn = document.getElementById("player-next-btn");
+const playerCloseBtn = document.getElementById("player-close-btn");
+
+if (playerPlayBtn) {
+    playerPlayBtn.addEventListener("click", () => {
+        if (soundbpmAudio && soundbpmAudio.src) {
+            if (isAudioPlaying) {
+                soundbpmAudio.pause();
+            } else {
+                soundbpmAudio.play().catch(e => console.warn("Erro ao reproduzir:", e));
+            }
+        } else if (currentTrackData?.spotifyUrl) {
+            window.open(currentTrackData.spotifyUrl, "_blank");
+        }
+    });
+}
+
+if (playerPrevBtn) {
+    playerPrevBtn.addEventListener("click", () => {
+        if (soundbpmAudio) {
+            soundbpmAudio.currentTime = 0;
+            soundbpmAudio.play().catch(e => console.warn(e));
+        }
+    });
+}
+
+if (playerNextBtn) {
+    playerNextBtn.addEventListener("click", () => {
+        if (soundbpmAudio) {
+            soundbpmAudio.pause();
+            soundbpmAudio.currentTime = 0;
+            isAudioPlaying = false;
+            if (playerPlayBtn) playerPlayBtn.textContent = "▶";
+        }
+    });
+}
+
+if (playerCloseBtn) {
+    playerCloseBtn.addEventListener("click", () => {
+        if (soundbpmAudio) {
+            soundbpmAudio.pause();
+            isAudioPlaying = false;
+        }
+        if (webPlayer) webPlayer.classList.add("hidden");
+    });
+}
 
 

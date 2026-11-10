@@ -157,16 +157,57 @@
 .player-controls .play-btn {
     font-size: 2rem;
     color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    transition: transform 0.2s;
 }
 
-.player-logo {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.player-controls .play-btn:hover {
+    transform: scale(1.1);
+}
+
+.player-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.8rem;
     width: 300px;
-    text-align: right;
+}
+
+.btn-spotify-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1DB954;
+    color: #000 !important;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+    white-space: nowrap;
+}
+
+.btn-spotify-player:hover {
+    transform: scale(1.05);
+    background: #1ed760;
+}
+
+@media (max-width: 768px) {
+    .player-actions {
+        width: auto;
+        gap: 0.4rem;
+    }
+    .btn-spotify-player {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
 }
 
 

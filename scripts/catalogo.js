@@ -225,17 +225,20 @@ if (searchInput) {
     searchInput.addEventListener("input", (e) => {
         clearTimeout(timeoutId);
         const query = e.target.value.trim();
-        
-        if (query.length > 2) {
-            timeoutId = setTimeout(async () => {
-                if (sectionMainTitle) sectionMainTitle.textContent = `Resultados da Pesquisa: "${query}"`;
-                if (sectionMainSubtitle) sectionMainSubtitle.textContent = `Álbuns encontrados no catálogo.`;
+        if (query.length > 1) {
+            timeoutId = setTimeout(() => {
+                performGlobalCatalogSearch(query);
+            }, 450);
+        } else if (query.length === 0) {
+            performGlobalCatalogSearch("");
+        }
+    });
 
-                const albums = await fetchCatalogData(query);
-                renderAlbums(albums);
-            }, 500);
-        } else if (query.length <= 2) {
-            loadPopularContent();
+    searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            clearTimeout(timeoutId);
+            performGlobalCatalogSearch(searchInput.value);
         }
     });
 }
@@ -273,10 +276,17 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
                     const totalSecs = Math.floor((s.duration_ms || 0) / 1000);
                     const mins = Math.floor(totalSecs / 60);
                     const secs = String(totalSecs % 60).padStart(2, '0');
+                    const songNameSafe = (s.name || '').replace(/'/g, "\\'");
+                    const songArtistSafe = (artistName || '').replace(/'/g, "\\'");
+                    const songCoverSafe = (coverUrl || '').replace(/'/g, "\\'");
+                    const previewUrlSafe = (s.preview_url || '');
                     return `
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border-subtle);">
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${idx+1}. ${s.name}</span>
-                        <span style="color: var(--text-muted);">${mins}:${secs}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 0.45rem 0; border-bottom: 1px solid var(--border-subtle);">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${idx+1}. ${s.name}</span>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">${mins}:${secs}</span>
+                            <button class="action-icon-btn" style="width:26px; height:26px; font-size:0.75rem; line-height: 1;" title="Ouvir faixa" onclick="playMockTrack('${songNameSafe}', '${songArtistSafe}', '${songCoverSafe}', '${previewUrlSafe}')">▶</button>
+                        </div>
                     </div>
                 `;
                 }).join('');
@@ -371,13 +381,13 @@ window.addToBacklog = async function(albumName, artistName, coverUrl) {
 
 
 
-// 3. Catálogo Completo (Página de Álbuns) e Favoritos
+// 3. Catálogo Completo (Página de Álbuns), Busca Global e Favoritos
 const albumsPageSearch = document.getElementById("albums-page-search");
 const albumsPageGrid = document.getElementById("albums-page-grid");
 
 async function loadAlbumsPageContent(query) {
     if (!albumsPageGrid) return;
-    albumsPageGrid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Carregando...</p>";
+    albumsPageGrid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;'>Buscando álbuns...</p>";
     
     let data;
     if (query === "__TRENDING__") {
@@ -388,7 +398,7 @@ async function loadAlbumsPageContent(query) {
     
     albumsPageGrid.innerHTML = "";
     if (!data || data.length === 0) {
-        albumsPageGrid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted);'>Nenhum álbum encontrado.</p>";
+        albumsPageGrid.innerHTML = `<p style='grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;'>Nenhum álbum encontrado para "${gameEsc(query)}". Tente outro artista ou título.</p>`;
         return;
     }
     
@@ -398,17 +408,54 @@ async function loadAlbumsPageContent(query) {
 }
 window.loadAlbumsPageContent = loadAlbumsPageContent;
 
+async function performGlobalCatalogSearch(query) {
+    const q = (query || "").trim();
+    const albumsTitle = document.getElementById("albums-page-title");
+    const albumsSubtitle = document.getElementById("albums-page-subtitle");
+
+    // Sempre direciona o usuário para a página de catálogo
+    if (window.navigateTo) {
+        window.navigateTo("albums-page");
+    }
+
+    // Sincroniza os dois campos de pesquisa (cabeçalho e catálogo)
+    if (searchInput && searchInput.value !== q) searchInput.value = q;
+    if (albumsPageSearch && albumsPageSearch.value !== q) albumsPageSearch.value = q;
+
+    // Rola suavemente até o topo dos resultados
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    if (q.length > 1) {
+        if (albumsTitle) albumsTitle.textContent = `Resultados da Pesquisa: "${q}"`;
+        if (albumsSubtitle) albumsSubtitle.textContent = `Álbuns e artistas encontrados no catálogo do SoundBPM.`;
+        await loadAlbumsPageContent(q);
+    } else {
+        if (albumsTitle) albumsTitle.textContent = "Catálogo Completo";
+        if (albumsSubtitle) albumsSubtitle.textContent = "Explore uma infinidade de álbuns e lançamentos do mundo todo.";
+        await loadAlbumsPageContent("__TRENDING__");
+    }
+}
+window.performGlobalCatalogSearch = performGlobalCatalogSearch;
+
 if (albumsPageSearch) {
     let timeoutId;
     albumsPageSearch.addEventListener("input", (e) => {
         clearTimeout(timeoutId);
         const query = e.target.value.trim();
-        if (query.length > 2) {
+        if (query.length > 1) {
             timeoutId = setTimeout(() => {
-                loadAlbumsPageContent(query);
-            }, 500);
+                performGlobalCatalogSearch(query);
+            }, 450);
         } else if (query.length === 0) {
-            loadAlbumsPageContent("__TRENDING__");
+            performGlobalCatalogSearch("");
+        }
+    });
+
+    albumsPageSearch.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            clearTimeout(timeoutId);
+            performGlobalCatalogSearch(albumsPageSearch.value);
         }
     });
 }
