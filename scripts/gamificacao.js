@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Motor de Gamificação: Níveis, Patamares, Conquistas e Ranking
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var gameToast = window.gameToast;
 
 // 1. Patamares, Insígnias, Níveis e Estatísticas do Perfil

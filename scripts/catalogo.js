@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Catálogo de Álbuns, Busca, Detalhes e Minha Lista (Backlog)
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var getHighResImage = window.getHighResImage;
 var gameToast = window.gameToast;
 var navigateTo = window.navigateTo;

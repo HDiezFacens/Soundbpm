@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Autenticação, Cadastro, Login e Sessão de Usuário
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var gameToast = window.gameToast;
 var fileToDataURL = window.fileToDataURL;
 

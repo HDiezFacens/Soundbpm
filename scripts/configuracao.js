@@ -13,17 +13,15 @@ if (localStorage.getItem("spotify_access_token") === "simulated_token") {
 const SUPABASE_URL = "https://mfpjuyqcieqtcdbkvgwu.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_0yXhFfS--QMrzTIJATHvUA_wfealgxV";
 
-let supabase = null;
-if (window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabaseClient = null;
+if (window.supabase && window.supabase.createClient) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } else {
     console.error("SDK do Supabase não carregado corretamente.");
 }
 
-
-
-window.supabase = supabase;
-window.supabaseClient = supabase;
+// NÃO sobrescreva window.supabase — esse namespace pertence ao SDK!
+window.supabaseClient = supabaseClient;
 
 // 3. Configurações do Spotify Web API
 const SPOTIFY_CLIENT_ID = "17faef55f3dd41ce94e8b27d82addf1c";

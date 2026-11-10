@@ -1,11 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Integração Spotify (OAuth PKCE, API e Web Player)
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var SPOTIFY_CLIENT_ID = window.SPOTIFY_CLIENT_ID;
-var REDIRECT_URI = window.REDIRECT_URI;
-var SCOPES = window.SCOPES;
 
 // 1. Funções de Criptografia PKCE
 async function generateRandomString(length) {

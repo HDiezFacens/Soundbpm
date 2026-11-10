@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Feed da Comunidade, Diário Global e Vídeos Musicais (Reels)
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var gameToast = window.gameToast;
 var timeAgo = window.timeAgo;
 var reviewBodyHtml = window.reviewBodyHtml;

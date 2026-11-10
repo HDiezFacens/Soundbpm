@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Feed de Notícias Musicais e Radar de Lançamentos
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var parseXmlFeed = window.parseXmlFeed;
 
 // 1. Busca de Notícias Reais (Edge Function + Cache Local)
@@ -206,9 +206,10 @@ async function loadNewsAndUpcoming() {
             allUpcomingItems = Array.from(uniqueMap.values());
             renderUpcomingList(4);
 
-            if (viewMoreUpcomingLink) {
-                const newLink = viewMoreUpcomingLink.cloneNode(true);
-                viewMoreUpcomingLink.parentNode.replaceChild(newLink, viewMoreUpcomingLink);
+            const freshUpcomingLink = document.getElementById("view-more-upcoming-link");
+            if (freshUpcomingLink && freshUpcomingLink.parentNode) {
+                const newLink = freshUpcomingLink.cloneNode(true);
+                freshUpcomingLink.parentNode.replaceChild(newLink, freshUpcomingLink);
                 
                 newLink.addEventListener("click", (e) => {
                     e.preventDefault();

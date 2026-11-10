@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Perfil do Usuário, Estatísticas, Banner e Avatar Personalizados
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var gameToast = window.gameToast;
 var fileToDataURL = window.fileToDataURL;
 var getHighResImage = window.getHighResImage;

@@ -1,3 +1,5 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Arquivo Principal de Inicialização (Bootstrap da Aplicação)
    ========================================================================== */

@@ -1,9 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Sistema de Avaliações, Resenhas e Faixa a Faixa
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
-var gameEsc = window.gameEsc;
 var gameToast = window.gameToast;
 var navigateTo = window.navigateTo;
 

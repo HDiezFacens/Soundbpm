@@ -1,8 +1,9 @@
+var supabase = window.supabaseClient;
+
 /* ==========================================================================
    SoundBPM - Roteador SPA, Histórico, Navegação e Alternância de Temas
    ========================================================================== */
 
-var supabase = window.supabaseClient || window.supabase;
 
 // 1. Roteador SPA e Histórico
 const homeSections = ["explore", "trending", "news", "upcoming", "community"];

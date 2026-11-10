@@ -14,10 +14,7 @@
     --border-subtle: #3a4452;
     --transition-base: all 0.2s ease;
 }
-
-
-
-   ===================================================================== */
+/* ========================================================================== */
 :root {
     --fx-shadow: rgba(0, 0, 0, 0.45);
     --fx-glow-soft: rgba(223, 177, 91, 0.25);
@@ -84,4 +81,3 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 .acc-inner { overflow: hidden; min-height: 0; }
 .acc-inner > div { padding: 0 1.25rem 1.1rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s; }
 .acc.open .acc-inner > div { opacity: 1; transform: none; }
-
