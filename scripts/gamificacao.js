@@ -364,23 +364,6 @@ async function renderProfileExtras(ctx) {
 
 const fxReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-(function initTheme() {
-    const root = document.documentElement, btn = document.getElementById("theme-toggle");
-    if (!btn) return;
-    const sync = () => btn.setAttribute("aria-pressed", root.getAttribute("data-theme") === "light");
-    sync();
-    let t = null;
-    btn.addEventListener("click", () => {
-        const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-        root.classList.add("theme-anim");
-        if (next === "light") root.setAttribute("data-theme", "light"); else root.removeAttribute("data-theme");
-        try { localStorage.setItem("soundbpm_theme", next); } catch (e) {}
-        sync();
-        clearTimeout(t);
-        t = setTimeout(() => root.classList.remove("theme-anim"), 700);
-    });
-})();
-
 (function initScrollReveal() {
     if (fxReduceMotion || !("IntersectionObserver" in window)) return;
     const RULES = [

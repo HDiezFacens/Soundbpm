@@ -80,9 +80,7 @@ async function fetchAlbumTracks(collectionId) {
     if (!container) return;
     container.innerHTML = "<p style='color: var(--text-muted); font-size: 0.85rem;'>Carregando faixas...</p>";
     try {
-        const { data, error } = await supabase.functions.invoke('spotify-search', {
-            body: { albumId: collectionId }
-        });
+        const { data, error } = await window.invokeSpotifySearch({ albumId: collectionId });
 
         if (error || !data) {
             throw new Error("Erro ao carregar faixas");

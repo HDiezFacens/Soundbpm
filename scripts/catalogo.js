@@ -19,7 +19,14 @@ const searchInput = document.getElementById("search-input");
 let carouselInterval;
 
 const searchCache = new Map();
-let spotifySearchCooldownUntil = 0;
+const SPOTIFY_COOLDOWN_STORAGE_KEY = "soundbpm_spotify_search_cooldown_until";
+let spotifySearchCooldownUntil = Number(localStorage.getItem(SPOTIFY_COOLDOWN_STORAGE_KEY)) || 0;
+
+function getSpotifySearchCooldownUntil() {
+    const storedUntil = Number(localStorage.getItem(SPOTIFY_COOLDOWN_STORAGE_KEY)) || 0;
+    spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, storedUntil);
+    return spotifySearchCooldownUntil;
+}
 
 async function updateSpotifySearchCooldown(error) {
     const response = error && error.context;
@@ -30,14 +37,34 @@ async function updateSpotifySearchCooldown(error) {
     try {
         const body = await response.clone().json();
         if (body?.error?.reason === "QUOTA_EXCEEDED" && !response.headers?.get("Retry-After")) {
-            retryAfter = 300;
+            retryAfter = 3600;
         }
     } catch (_) {}
 
     spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, Date.now() + retryAfter * 1000);
+    localStorage.setItem(SPOTIFY_COOLDOWN_STORAGE_KEY, String(spotifySearchCooldownUntil));
     console.warn(`Spotify limitou as buscas. Nova tentativa em ${retryAfter}s.`);
     return true;
 }
+
+window.invokeSpotifySearch = async function(body) {
+    if (getSpotifySearchCooldownUntil() > Date.now()) {
+        return { data: null, error: new Error("Busca do Spotify temporariamente pausada pelo limite de uso.") };
+    }
+    if (!supabase) {
+        return { data: null, error: new Error("Supabase não inicializado.") };
+    }
+
+    const result = await supabase.functions.invoke("spotify-search", { body });
+    if (result.error) {
+        await updateSpotifySearchCooldown(result.error);
+    } else if (result.data?.error?.reason === "QUOTA_EXCEEDED") {
+        const retryAfter = 3600;
+        spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, Date.now() + retryAfter * 1000);
+        localStorage.setItem(SPOTIFY_COOLDOWN_STORAGE_KEY, String(spotifySearchCooldownUntil));
+    }
+    return result;
+};
 
 async function fetchCatalogDataFromITunes(query) {
     try {
@@ -70,7 +97,7 @@ async function fetchCatalogData(query) {
         return searchCache.get(query);
     }
 
-    if (Date.now() < spotifySearchCooldownUntil) {
+    if (getSpotifySearchCooldownUntil() > Date.now()) {
         return await fetchCatalogDataFromITunes(query);
     }
 
@@ -79,9 +106,7 @@ async function fetchCatalogData(query) {
             throw new Error("Supabase não inicializado.");
         }
 
-        const { data, error } = await supabase.functions.invoke('spotify-search', {
-            body: { query }
-        });
+        const { data, error } = await window.invokeSpotifySearch({ query });
 
         if (error) {
             await updateSpotifySearchCooldown(error);
@@ -289,9 +314,7 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
 
     if (collectionId && collectionId !== 'undefined' && collectionId !== 'null' && collectionId !== '') {
         try {
-            const { data, error } = await supabase.functions.invoke('spotify-search', {
-                body: { albumId: collectionId }
-            });
+            const { data, error } = await window.invokeSpotifySearch({ albumId: collectionId });
 
             if (error || !data) {
                 throw new Error("Erro ao carregar faixas");

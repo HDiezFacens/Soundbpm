@@ -155,8 +155,12 @@ if (viewAllTrendingLink) {
 // 5. Alternador de Tema Claro / Escuro
 const themeToggleBtn = document.getElementById("theme-toggle");
 if (themeToggleBtn) {
+    const root = document.documentElement;
+    const syncThemeButton = () => themeToggleBtn.setAttribute("aria-pressed", String(root.getAttribute("data-theme") === "light"));
+    syncThemeButton();
+    let themeAnimationTimeout;
+
     themeToggleBtn.addEventListener("click", () => {
-        const root = document.documentElement;
         const currentTheme = root.getAttribute("data-theme");
         const newTheme = currentTheme === "light" ? "dark" : "light";
         
@@ -167,7 +171,9 @@ if (themeToggleBtn) {
             root.removeAttribute("data-theme");
         }
         try { localStorage.setItem("soundbpm_theme", newTheme); } catch(e) {}
-        setTimeout(() => root.classList.remove("theme-anim"), 450);
+        syncThemeButton();
+        clearTimeout(themeAnimationTimeout);
+        themeAnimationTimeout = setTimeout(() => root.classList.remove("theme-anim"), 700);
     });
 }
 
