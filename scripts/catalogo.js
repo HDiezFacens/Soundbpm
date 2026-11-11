@@ -19,6 +19,25 @@ const searchInput = document.getElementById("search-input");
 let carouselInterval;
 
 const searchCache = new Map();
+let spotifySearchCooldownUntil = 0;
+
+async function updateSpotifySearchCooldown(error) {
+    const response = error && error.context;
+    if (!response || response.status !== 429) return false;
+
+    let retryAfter = Number(response.headers?.get("Retry-After"));
+    if (!Number.isFinite(retryAfter) || retryAfter <= 0) retryAfter = 60;
+    try {
+        const body = await response.clone().json();
+        if (body?.error?.reason === "QUOTA_EXCEEDED" && !response.headers?.get("Retry-After")) {
+            retryAfter = 300;
+        }
+    } catch (_) {}
+
+    spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, Date.now() + retryAfter * 1000);
+    console.warn(`Spotify limitou as buscas. Nova tentativa em ${retryAfter}s.`);
+    return true;
+}
 
 async function fetchCatalogDataFromITunes(query) {
     try {
@@ -51,6 +70,10 @@ async function fetchCatalogData(query) {
         return searchCache.get(query);
     }
 
+    if (Date.now() < spotifySearchCooldownUntil) {
+        return await fetchCatalogDataFromITunes(query);
+    }
+
     try {
         if (!supabase) {
             throw new Error("Supabase não inicializado.");
@@ -60,11 +83,15 @@ async function fetchCatalogData(query) {
             body: { query }
         });
 
-        if (error || !data || !data.albums || !data.albums.items || data.albums.items.length === 0) {
+        if (error) {
+            await updateSpotifySearchCooldown(error);
+            console.warn("Spotify indisponível. Usando o catálogo de fallback.");
+            return await fetchCatalogDataFromITunes(query);
+        }
+
+        if (!data || !data.albums || !data.albums.items || data.albums.items.length === 0) {
             console.warn("Spotify indisponível ou sem resultados. Alternando para o iTunes...");
-            const iTunesResults = await fetchCatalogDataFromITunes(query);
-            searchCache.set(query, iTunesResults);
-            return iTunesResults;
+            return await fetchCatalogDataFromITunes(query);
         }
 
         const results = (data.albums.items || []).map(item => ({

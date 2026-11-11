@@ -577,9 +577,9 @@ async function convertTikTokWebmToMp4(webmBlob, statusText, progBar) {
         await ffmpeg.exec([
             "-i", "soundbpm-input.webm",
             "-map", "0:v:0", "-map", "0:a:0?",
-            "-vf", "fps=30,scale=540:960:flags=fast_bilinear",
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
+            "-vf", "fps=30,scale=720:1280:flags=lanczos",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
             "-movflags", "+faststart", "soundbpm-output.mp4"
         ], 120000);
         const output = await ffmpeg.readFile("soundbpm-output.mp4");
@@ -1211,10 +1211,18 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
             }
 
             let recorder;
+            const recorderOptions = {
+                videoBitsPerSecond: 8_000_000,
+                audioBitsPerSecond: 192_000
+            };
+            if (selectedMime) recorderOptions.mimeType = selectedMime;
             try {
-                recorder = new MediaRecorder(stream, selectedMime ? { mimeType: selectedMime } : {});
+                recorder = new MediaRecorder(stream, recorderOptions);
             } catch (e) {
-                recorder = new MediaRecorder(stream);
+                recorder = new MediaRecorder(stream, {
+                    videoBitsPerSecond: 8_000_000,
+                    audioBitsPerSecond: 192_000
+                });
             }
 
             const recordedChunks = [];
