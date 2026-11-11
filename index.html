@@ -50,12 +50,12 @@
                     <li><a href="#upcoming" class="nav-link">Lançamentos</a></li>
                     <li><a href="#people-page" id="nav-people-link" class="nav-link">Pessoas</a></li>
                     <li><a href="#ranking-page" id="nav-ranking-link" class="nav-link">Ranking</a></li>
-                    <li><a href="#community" class="nav-link">Comunidade</a></li>
+                    <li><a href="#diary-page" id="nav-community-link" class="nav-link">Comunidade</a></li>
                 </ul>
 
                 <!-- Seletor exclusivo para celulares / telas verticais -->
                 <div class="mobile-tab-selector">
-                    <select id="mobile-nav-dropdown" onchange="if(window.switchTab) { switchTab(this.value); } else { location.hash = this.value; }">
+                    <select id="mobile-nav-dropdown">
                         <option value="explore" selected>Início ▾</option>
                         <option value="dashboard">Minha Lista ▾</option>
                         <option value="albums-page">Álbuns ▾</option>
@@ -63,8 +63,7 @@
                         <option value="upcoming">Lançamentos ▾</option>
                         <option value="people-page">Pessoas ▾</option>
                         <option value="ranking-page">Ranking ▾</option>
-                        <option value="community">Comunidade ▾</option>
-                        <option value="diary-page">Diário Global ▾</option>
+                        <option value="diary-page">Comunidade ▾</option>
                     </select>
                 </div>
             </nav>
@@ -419,8 +418,8 @@
         <section id="trending" class="section-container">
             <div class="section-header-flex">
                 <div>
-                    <h2 id="section-main-title">Álbuns Populares Esta Semana</h2>
-                    <p id="section-main-subtitle">Os discos mais recentes e recomendados do catálogo.</p>
+                    <h2 id="section-main-title">Álbuns Populares &amp; Obras-Primas</h2>
+                    <p id="section-main-subtitle">Os álbuns mais aclamados e influentes da história e da atualidade.</p>
                 </div>
                 <a href="#" id="view-all-trending-link" class="view-more-link">Ver todos &rarr;</a>
             </div>
@@ -448,7 +447,7 @@
             <div class="section-header-flex">
                 <div>
                     <h2>Lançamentos Recentes & Destaques</h2>
-                    <p>Fique por dentro dos discos mais badalados que acabaram de chegar às plataformas.</p>
+                    <p>Lançamentos recentes de artistas brasileiros e internacionais, ordenados pela data de lançamento.</p>
                 </div>
                 <a href="#" id="view-more-upcoming-link" class="view-more-link">Ver mais &rarr;</a>
             </div>

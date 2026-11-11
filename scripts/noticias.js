@@ -150,60 +150,17 @@ async function loadNewsAndUpcoming() {
 
     if (upcomingContainer) {
         try {
-            const current2026Queries = [
-                "The Weeknd 2026", 
-                "Lady Gaga 2026", 
-                "Bad Bunny 2026", 
-                "Kendrick Lamar 2026", 
-                "Sabrina Carpenter 2026", 
-                "Billie Eilish 2026", 
-                "Tyler The Creator 2026", 
-                "Bruno Mars 2026", 
-                "Rosalia 2026", 
-                "Coldplay 2026", 
-                "Charli xcx 2026", 
-                "Post Malone 2026"
-            ];
-
-            const shuffledQueries = current2026Queries.sort(() => 0.5 - Math.random()).slice(0, 5);
-            let allAlbums = [];
-
-            for (const q of shuffledQueries) {
-                const results = await fetchCatalogData(q);
-                if (results && results.length > 0) {
-                    allAlbums.push(...results);
-                }
-            }
-
-            if (allAlbums.length === 0) {
-                allAlbums = await fetchCatalogData("2026");
-            }
-
-            allAlbums.sort((a, b) => {
-                const dateA = new Date(a.release_date || '2026-01-01');
-                const dateB = new Date(b.release_date || '2026-01-01');
-                return dateB - dateA;
-            });
-
-            const uniqueMap = new Map();
-            allAlbums.forEach(album => {
-                const albumName = album.name || album.collectionName;
-                if (albumName && !uniqueMap.has(albumName)) {
-                    const rawDate = album.release_date || '2026';
-                    const year = rawDate.split('-')[0] || '2026';
-
-                    uniqueMap.set(albumName, {
-                        collectionName: albumName,
-                        artistName: album.artistName || (album.artists ? album.artists.map(a => a.name).join(', ') : ''),
-                        artworkUrl100: album.artworkUrl100 || (album.images && album.images[0] ? album.images[0].url : ''),
-                        releaseDate: rawDate,
-                        releaseYear: year,
-                        collectionViewUrl: '#'
-                    });
-                }
-            });
-
-            allUpcomingItems = Array.from(uniqueMap.values());
+            const latestAlbums = window.fetchCurrentReleases
+                ? await window.fetchCurrentReleases()
+                : [];
+            allUpcomingItems = latestAlbums.map(album => ({
+                collectionName: album.collectionName,
+                artistName: album.artistName,
+                artworkUrl100: album.artworkUrl100,
+                releaseDate: album.releaseDate,
+                releaseYear: album.releaseYear,
+                collectionViewUrl: album.collectionViewUrl,
+            }));
             renderUpcomingList(4);
 
             const freshUpcomingLink = document.getElementById("view-more-upcoming-link");
@@ -250,17 +207,20 @@ async function loadNewsAndUpcoming() {
 
         upcomingContainer.innerHTML = itemsToDisplay.map((a) => {
             const cover = getHighResImage(a.artworkUrl100) || './Logo.png';
-            const year = a.releaseYear || '2026';
+            const releaseDate = a.releaseDate || a.releaseYear || "";
+            const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
+                ? new Date(`${releaseDate}T00:00:00`).toLocaleDateString("pt-BR")
+                : releaseDate;
             
             return `
             <div class="upcoming-card">
-                <img src="${cover}" alt="${a.collectionName}">
+                <img src="${gameEsc(cover)}" alt="${gameEsc(a.collectionName)}" loading="lazy">
                 <div class="upcoming-details">
-                    <h4 title="${a.collectionName}">${a.collectionName}</h4>
-                    <span class="upcoming-artist">${a.artistName}</span>
-                    <p>🔥 Lançamento Recente • ${year}</p>
+                    <h4 title="${gameEsc(a.collectionName)}">${gameEsc(a.collectionName)}</h4>
+                    <span class="upcoming-artist">${gameEsc(a.artistName)}</span>
+                    <p>🆕 Lançado em ${gameEsc(dateLabel)}</p>
                 </div>
-                <a href="${a.collectionViewUrl || '#'}" target="_blank" class="btn-notify">Ouvir</a>
+                <a href="${gameEsc(a.collectionViewUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn-notify">Ouvir no Spotify</a>
             </div>`;
         }).join('');
 
@@ -269,7 +229,4 @@ async function loadNewsAndUpcoming() {
         upcomingContainer.style.gap = "1rem";
     }
 }
-loadNewsAndUpcoming();
-
-
 window.loadNewsAndUpcoming = loadNewsAndUpcoming;

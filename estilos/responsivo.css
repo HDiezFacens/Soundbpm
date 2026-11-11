@@ -233,15 +233,79 @@
 
     /* ===== PERFIL NO CELULAR: organização e posicionamento ===== */
     #profile-page { overflow-x: hidden; }
+    .profile-hero-section { margin-top: 0 !important; min-height: 390px !important; }
+    .profile-user-bar { gap: 0.8rem !important; padding-top: 3.5rem !important; }
     #profile-username-display { font-size: 1.7rem !important; overflow-wrap: anywhere; }
     #profile-bio-display { max-width: 100% !important; text-align: center; }
     .profile-user-bar > div { width: 100%; }
     #profile-page .profile-title-line { justify-content: center !important; gap: 0.5rem; }
     #profile-page .profile-title-line button { margin: 0 !important; min-width: 0 !important; max-width: none !important; }
     #btn-edit-profile { align-self: center !important; margin: 0 auto !important; }
-    .profile-banner-actions { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 20px); gap: 0.4rem; }
+    .profile-banner-actions {
+        top: 0.5rem !important;
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        flex-wrap: wrap;
+        justify-content: center !important;
+        max-width: none !important;
+        gap: 0.4rem;
+    }
     #profile-page .profile-banner-actions button, #profile-page .profile-banner-actions label { min-width: 0 !important; max-width: none !important; margin: 0 !important; padding: 0.35rem 0.6rem !important; font-size: 0.7rem !important; }
     #profile-page h3 { font-size: 1.05rem; margin-bottom: 1rem !important; }
+    #profile-favorites-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.75rem !important; }
+    #profile-favorites-grid > .poster-card {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 280px;
+        min-width: 0;
+        justify-self: center;
+        box-sizing: border-box;
+        overflow: hidden;
+        border-radius: 10px;
+    }
+    #profile-favorites-grid > .poster-card > img {
+        display: block;
+        width: 100% !important;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 0 !important;
+    }
+    #profile-favorites-grid > .poster-card > h4 {
+        margin: 0.55rem 0 0 !important;
+        padding: 0 0.6rem 0.5rem;
+        font-size: 0.95rem !important;
+    }
+    #profile-page #profile-favorites-grid .remove-favorite-btn {
+        position: absolute !important;
+        top: 0.55rem !important;
+        right: 0.55rem !important;
+        left: auto !important;
+        bottom: auto !important;
+        display: grid !important;
+        place-items: center !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.28) !important;
+        border-radius: 50% !important;
+        background: rgba(14, 15, 22, 0.82) !important;
+        color: #fff !important;
+        font-size: 1.25rem !important;
+        line-height: 1 !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+    }
+    #profile-page #profile-favorites-grid .remove-favorite-btn:hover,
+    #profile-page #profile-favorites-grid .remove-favorite-btn:focus-visible {
+        background: var(--accent-gold) !important;
+        border-color: var(--accent-gold) !important;
+        color: #161616 !important;
+    }
     #profile-reviews-list .diary-item { gap: 0.8rem !important; padding: 0.8rem !important; }
     #profile-reviews-list .diary-item > img { width: 52px !important; height: 52px !important; flex-shrink: 0; }
     #profile-reviews-list .diary-item > div { min-width: 0; }

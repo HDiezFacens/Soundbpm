@@ -140,6 +140,46 @@ async function fetchCatalogData(query) {
     }
 }
 
+let currentReleasesPromise = null;
+window.fetchCurrentReleases = function() {
+    if (currentReleasesPromise) return currentReleasesPromise;
+
+    currentReleasesPromise = (async () => {
+        const { data, error } = await window.invokeSpotifySearch({ query: "tag:new" });
+        if (error) throw error;
+
+        const seen = new Set();
+        const items = data?.albums?.items || [];
+        return items
+            .filter(album => album.name && album.release_date && !Number.isNaN(Date.parse(album.release_date)))
+            .sort((a, b) => new Date(b.release_date) - new Date(a.release_date))
+            .filter(album => {
+                const artistNames = (album.artists || []).map(artist => artist.name).join(", ");
+                const key = `${album.name}::${artistNames}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .map(album => ({
+                ...album,
+                collectionName: album.name,
+                artistName: (album.artists || []).map(artist => artist.name).join(", "),
+                artworkUrl100: album.images?.[0]?.url || "",
+                releaseDate: album.release_date,
+                releaseYear: album.release_date.split("-")[0],
+                isCurrentRelease: true,
+                collectionId: album.id,
+                collectionViewUrl: album.external_urls?.spotify || (album.id ? `https://open.spotify.com/album/${album.id}` : "#"),
+            }));
+    })().catch(error => {
+        currentReleasesPromise = null;
+        console.warn("Não foi possível atualizar os lançamentos recentes:", error);
+        return [];
+    });
+
+    return currentReleasesPromise;
+};
+
 async function fetchRealTrendingAlbums() {
     const acclaimedMasterpieces = [
         { query: "Pink Floyd Dark Side of the Moon", synopsis: "Uma experiência sonora transcendental sobre o tempo, a loucura e a condição humana." },
@@ -187,12 +227,12 @@ async function loadPopularContent() {
     const albums = await fetchRealTrendingAlbums();
     
     if (albums && albums.length > 0) {
-        renderAlbums(albums);
+        renderAlbums(albums.slice(0, 8));
         setupHeroCarousel(albums.slice(0, 5));
     } else {
         if (trendingGrid) {
             trendingGrid.innerHTML = `
-                <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Não foi possível carregar os álbuns no momento.</p>
+                <p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Não foi possível carregar os álbuns em destaque.</p>
             `;
         }
     }
@@ -207,6 +247,13 @@ window.createAlbumCardHTML = function(album) {
     const safeName = albumName.replace(/'/g, "\\'");
     const safeArtist = artistName.replace(/'/g, "\\'");
     const safeImage = imageUrl.replace(/'/g, "\\'");
+    const releaseDate = album.releaseDate || album.release_date || "";
+    const releaseDateLabel = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
+        ? new Date(`${releaseDate}T00:00:00`).toLocaleDateString("pt-BR")
+        : releaseDate;
+    const cardMeta = album.isCurrentRelease
+        ? `🆕 Lançado em ${gameEsc(releaseDateLabel)}`
+        : `★★★★★ <span class="numeric-score">${(Math.random() * 0.4 + 4.6).toFixed(1)}</span>`;
 
     return `
         <div class="poster-card" data-collection-id="${collectionId}">
@@ -222,7 +269,7 @@ window.createAlbumCardHTML = function(album) {
             <div class="poster-info" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
                 <h3>${albumName}</h3>
                 <span class="poster-artist">${artistName}</span>
-                <div class="poster-rating-stars">★★★★★ <span class="numeric-score">${(Math.random() * 0.4 + 4.6).toFixed(1)}</span></div>
+                <div class="poster-rating-stars">${cardMeta}</div>
             </div>
         </div>
     `;
@@ -267,7 +314,11 @@ function updateHeroContent(album) {
         if (album.synopsis) {
             heroDesc.textContent = `"${album.synopsis}" — Lançado em ${releaseYear}.`;
         } else {
-            heroDesc.textContent = `Ouça o álbum de ${artists}. Lançado em ${releaseYear}. Avalie e catalogue no SoundBPM.`;
+            const releaseDate = album.releaseDate || album.release_date || releaseYear;
+            const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
+                ? new Date(`${releaseDate}T00:00:00`).toLocaleDateString("pt-BR")
+                : releaseDate;
+            heroDesc.textContent = `Lançado em ${dateLabel} por ${artists}. Conheça, avalie e catalogue no SoundBPM.`;
         }
     }
 }

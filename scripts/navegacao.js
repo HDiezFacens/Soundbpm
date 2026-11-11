@@ -86,6 +86,7 @@ if (mobileDropdown) {
 const navHomeLink = document.getElementById("nav-home-link");
 const dashLink = document.getElementById("nav-dashboard-link");
 const navAlbumsLink = document.getElementById("nav-albums-link");
+const navCommunityLink = document.getElementById("nav-community-link");
 const exploreCatalogBtn = document.getElementById("explore-catalog-btn"); 
 
 if (navHomeLink) {
@@ -108,6 +109,15 @@ if (navAlbumsLink) {
         e.preventDefault();
         navigateTo("albums-page");
         loadAlbumsPageContent("__TRENDING__");
+    });
+}
+
+if (navCommunityLink) {
+    navCommunityLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        navigateTo("diary-page");
+        const mobileDropdown = document.getElementById("mobile-nav-dropdown");
+        if (mobileDropdown) mobileDropdown.value = "diary-page";
     });
 }
 
