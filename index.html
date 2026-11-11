@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SoundBPM - Diário musical, catálogo de álbuns, notícias e avaliações de faixas.">
     <title>SoundBPM • O diário e catálogo para suas avaliações musicais</title>
+    <link rel="preload" as="image" href="./Logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,10 +24,83 @@
     <link rel="stylesheet" href="estilos/responsivo.css">
     
     <!-- Biblioteca necessária para a função de partilhar nos Stories do Instagram -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        (() => {
+            const startedAt = performance.now();
+            let closing = false;
+            window.finishSoundbpmLoader = () => {
+                const loader = document.getElementById("app-loader");
+                if (!loader || closing) return;
+                closing = true;
+                const wait = Math.max(0, 2400 - (performance.now() - startedAt));
+                setTimeout(() => {
+                    loader.classList.add("is-hidden");
+                    setTimeout(() => loader.remove(), 500);
+                }, wait);
+            };
+            document.addEventListener("DOMContentLoaded", window.finishSoundbpmLoader, { once: true });
+            setTimeout(window.finishSoundbpmLoader, 8000);
+
+            window.playSoundbpmIntro = async () => {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return false;
+                let context;
+                try {
+                    context = new AudioContext();
+                    await context.resume();
+                    if (context.state !== "running") {
+                        context.close();
+                        return false;
+                    }
+                    const master = context.createGain();
+                    master.gain.setValueAtTime(0.0001, context.currentTime);
+                    master.gain.exponentialRampToValueAtTime(0.11, context.currentTime + 0.035);
+                    master.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.9);
+                    master.connect(context.destination);
+                    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+                        const start = context.currentTime + index * 0.12;
+                        const note = context.createOscillator();
+                        const volume = context.createGain();
+                        note.type = "sine";
+                        note.frequency.value = frequency;
+                        volume.gain.setValueAtTime(0.0001, start);
+                        volume.gain.exponentialRampToValueAtTime(0.48, start + 0.025);
+                        volume.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+                        note.connect(volume).connect(master);
+                        note.start(start);
+                        note.stop(start + 0.44);
+                    });
+                    setTimeout(() => context.close(), 1200);
+                    return true;
+                } catch (error) {
+                    if (context) context.close();
+                    return false;
+                }
+            };
+
+            document.addEventListener("DOMContentLoaded", () => {
+                window.playSoundbpmIntro();
+            }, { once: true });
+        })();
+    </script>
     <script>try { if (localStorage.getItem("soundbpm_theme") === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}</script>
 </head>
 <body>
+
+    <div id="app-loader" class="app-loader" role="status" aria-live="polite" aria-label="Carregando SoundBPM">
+        <div class="app-loader-content">
+            <div class="app-loader-disc-wrap">
+                <span class="app-loader-orbit app-loader-orbit-one" aria-hidden="true"></span>
+                <span class="app-loader-orbit app-loader-orbit-two" aria-hidden="true"></span>
+                <img class="app-loader-logo" src="./Logo.png" alt="SoundBPM">
+            </div>
+            <span class="app-loader-name">Sound<span>BPM</span></span>
+            <div class="app-loader-equalizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="app-loader-caption">Preparando seu som</span>
+            <span class="app-loader-track" aria-hidden="true"><span></span></span>
+        </div>
+    </div>
 
     <header class="site-header">
         <div class="header-container">
