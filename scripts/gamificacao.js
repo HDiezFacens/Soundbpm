@@ -521,6 +521,77 @@ window.shareToInstagramStory = async function (albumName, artistName, coverUrl, 
 // 3. Gerador de Vídeo Animado para TikTok / Reels (Review Faixa a Faixa com Vinil e Áudio)
 let tiktokAnimId = null;
 let tiktokAudioObj = null;
+let tiktokFfmpeg = null;
+let tiktokFfmpegLoadPromise = null;
+
+async function loadTikTokFfmpeg(statusText) {
+    if (tiktokFfmpeg) return tiktokFfmpeg;
+    if (!tiktokFfmpegLoadPromise) {
+        tiktokFfmpegLoadPromise = (async () => {
+            if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) {
+                throw new Error("O conversor MP4 não foi carregado.");
+            }
+
+            const ffmpeg = new window.FFmpegWASM.FFmpeg();
+            const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+            if (statusText) statusText.textContent = "Preparando conversor MP4 (download inicial ~31 MB)...";
+            const coreJsResponse = await fetch(`${coreBase}/ffmpeg-core.js`);
+            const wasmResponse = await fetch(`${coreBase}/ffmpeg-core.wasm`);
+            if (!coreJsResponse.ok || !wasmResponse.ok) {
+                throw new Error("Não foi possível baixar o conversor MP4.");
+            }
+
+            const coreJsUrl = URL.createObjectURL(await coreJsResponse.blob());
+            const wasmUrl = URL.createObjectURL(await wasmResponse.blob());
+            try {
+                await ffmpeg.load({ coreURL: coreJsUrl, wasmURL: wasmUrl });
+            } finally {
+                URL.revokeObjectURL(coreJsUrl);
+                URL.revokeObjectURL(wasmUrl);
+            }
+            tiktokFfmpeg = ffmpeg;
+            return ffmpeg;
+        })().catch(error => {
+            tiktokFfmpegLoadPromise = null;
+            throw error;
+        });
+    }
+    return tiktokFfmpegLoadPromise;
+}
+
+async function convertTikTokWebmToMp4(webmBlob, statusText, progBar) {
+    const ffmpeg = await loadTikTokFfmpeg(statusText);
+    if (statusText) statusText.textContent = "Convertendo vídeo para MP4 (0%)...";
+    if (progBar) progBar.style.width = "0%";
+    const input = new Uint8Array(await webmBlob.arrayBuffer());
+    await ffmpeg.writeFile("soundbpm-input.webm", input);
+    const progressHandler = ({ progress }) => {
+        if (statusText && Number.isFinite(progress)) {
+            const pct = Math.min(99, Math.max(0, Math.round(progress * 100)));
+            statusText.textContent = `Convertendo vídeo para MP4 (${pct}%)...`;
+            if (progBar) progBar.style.width = `${pct}%`;
+        }
+    };
+    ffmpeg.on("progress", progressHandler);
+    try {
+        await ffmpeg.exec([
+            "-i", "soundbpm-input.webm",
+            "-map", "0:v:0", "-map", "0:a:0?",
+            "-vf", "fps=30,scale=540:960:flags=fast_bilinear",
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart", "soundbpm-output.mp4"
+        ], 120000);
+        const output = await ffmpeg.readFile("soundbpm-output.mp4");
+        return new Blob([output], { type: "video/mp4" });
+    } finally {
+        ffmpeg.off("progress", progressHandler);
+        await Promise.all([
+            ffmpeg.deleteFile("soundbpm-input.webm").catch(() => {}),
+            ffmpeg.deleteFile("soundbpm-output.mp4").catch(() => {})
+        ]);
+    }
+}
 
 // Helper para extrair as faixas da avaliação se houver
 function extractTrackRatings(rawReviewText) {
@@ -618,14 +689,17 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
     }
 
     if (audioUrl) {
-        tiktokAudioObj = new Audio(audioUrl);
+        tiktokAudioObj = new Audio();
         tiktokAudioObj.crossOrigin = "anonymous";
         tiktokAudioObj.loop = true;
+        tiktokAudioObj.src = audioUrl;
     }
 
     // Controle de tempo da animação
     let animStartTime = performance.now();
     let angle = 0;
+    let canvasCaptureTrack = null;
+    let lastCapturedFrameTime = 0;
     const cw = canvas.width;  // 720
     const ch = canvas.height; // 1280
 
@@ -862,6 +936,11 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
         ctx.font = "600 18px Inter, sans-serif";
         ctx.fillText("AVALIE E DESCUBRA MÚSICA NO SOUNDBPM", 360, 1220);
 
+        // Alguns navegadores não atualizam de forma confiável a captura automática do canvas.
+        if (canvasCaptureTrack && canvasCaptureTrack.requestFrame && now - lastCapturedFrameTime >= 1000 / 30) {
+            canvasCaptureTrack.requestFrame();
+            lastCapturedFrameTime = now;
+        }
         tiktokAnimId = requestAnimationFrame(drawFrame);
     }
 
@@ -1087,43 +1166,38 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
             animStartTime = performance.now();
 
             // Captura o stream de 30 FPS do Canvas
-            const stream = canvas.captureStream(30);
+            const stream = canvas.captureStream(0);
+            canvasCaptureTrack = stream.getVideoTracks()[0] || null;
 
             // Cria trilha de áudio segura via Web Audio API
             let audioCtx = null;
-            let osc = null;
+            let musicSource = null;
+            let musicGain = null;
+            let audioConnected = false;
             try {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === "suspended") await audioCtx.resume();
 
                 const audioDest = audioCtx.createMediaStreamDestination();
-
-                // Gera um tom de fundo harmônico leve em volume sutil para garantir sincronismo
-                osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = "sine";
-                osc.frequency.setValueAtTime(55, audioCtx.currentTime); // 55Hz - rumble suave de vinil
-                gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioDest);
-                osc.start();
-
-                // Conecta a trilha de áudio no stream do vídeo
-                audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track));
-
-                // Se houver música, toca no player local para o usuário escutar durante a gravação
                 if (tiktokAudioObj) {
+                    // Encaminha a prévia musical tanto ao arquivo quanto aos alto-falantes.
+                    musicSource = audioCtx.createMediaElementSource(tiktokAudioObj);
+                    musicGain = audioCtx.createGain();
+                    musicGain.gain.value = 0.85;
+                    musicSource.connect(musicGain);
+                    musicGain.connect(audioDest);
+                    musicGain.connect(audioCtx.destination);
+                    audioDest.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+                    audioConnected = true;
                     tiktokAudioObj.currentTime = 0;
-                    tiktokAudioObj.play().catch(e => console.log(e));
+                    await tiktokAudioObj.play();
                 }
             } catch (aErr) {
-                console.warn("Áudio synth error:", aErr);
+                console.warn("Não foi possível incluir a prévia musical no vídeo:", aErr);
             }
 
-            // Seleciona formato suportado
+            // Grava em WebM, que mantém a animação neste navegador, e converte para MP4 depois.
             const mimeTypes = [
-                "video/mp4;codecs=avc1,mp4a.40.2",
-                "video/mp4",
                 "video/webm;codecs=vp9,opus",
                 "video/webm;codecs=vp8,opus",
                 "video/webm"
@@ -1150,15 +1224,21 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
 
             recorder.onstop = async () => {
                 if (tiktokAudioObj) tiktokAudioObj.pause();
-                if (osc) { try { osc.stop(); } catch(e){} }
+                stream.getTracks().forEach(track => track.stop());
                 if (audioCtx) { try { audioCtx.close(); } catch(e){} }
 
-                const isMp4 = selectedMime.includes("mp4");
-                const ext = isMp4 ? "mp4" : "webm";
-                const rawBlob = new Blob(recordedChunks, { type: selectedMime || "video/webm" });
+                const rawBlob = new Blob(recordedChunks, { type: recorder.mimeType || selectedMime || "video/webm" });
+                let downloadBlob = rawBlob;
+                let ext = "webm";
+                try {
+                    downloadBlob = await convertTikTokWebmToMp4(rawBlob, statusText, progBar);
+                    ext = "mp4";
+                } catch (conversionError) {
+                    console.error("Falha ao converter WebM para MP4:", conversionError);
+                }
 
-                // Dispara o download automático do arquivo de vídeo com a duração correta
-                const url = URL.createObjectURL(rawBlob);
+                // Em caso de falha do conversor, ainda entrega o WebM gravado corretamente.
+                const url = URL.createObjectURL(downloadBlob);
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = `soundbpm_${hasTrackByTrack ? "faixa_a_faixa_" : ""}${albumName.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
@@ -1170,8 +1250,16 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
                 if (statusOverlay) statusOverlay.style.display = "none";
                 recordBtn.disabled = false;
                 if (cancelBtn) cancelBtn.disabled = false;
-                if (window.gameToast) window.gameToast("Vídeo gravado e baixado com sucesso! ✨");
+                if (window.gameToast) {
+                    window.gameToast(ext === "mp4"
+                        ? "Vídeo convertido para MP4 e baixado! ✨"
+                        : "Conversão indisponível; vídeo baixado em WebM.");
+                }
             };
+
+            if (tiktokAudioObj && !audioConnected) {
+                console.warn("O vídeo será gravado sem música porque o áudio não pôde ser conectado.");
+            }
 
             // Inicia gravando com timeslice de 100ms para emissão contínua de dados
             recorder.start(100);
