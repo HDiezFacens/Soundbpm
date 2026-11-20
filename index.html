@@ -718,6 +718,17 @@
                 </div>
             </div>
 
+            <div id="tiktok-audio-picker" style="display: none; text-align: left; margin: 0 auto 1rem; max-width: 360px;">
+                <label for="tiktok-audio-track" style="display: block; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.35rem;">Música do vídeo</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <select id="tiktok-audio-track" style="min-width: 0; flex: 1; padding: 0.65rem; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-base); color: var(--text-main); font: inherit; font-size: 0.82rem;">
+                        <option value="">Carregando prévias...</option>
+                    </select>
+                    <button id="tiktok-audio-preview-btn" type="button" class="btn-secondary-dark" style="padding: 0.55rem 0.7rem; white-space: nowrap;">▶ Ouvir</button>
+                </div>
+                <p id="tiktok-audio-status" style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem;"></p>
+            </div>
+
             <div style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
                 <button id="btn-start-record-tiktok" class="btn-primary-gold" style="padding: 0.6rem 1.4rem; font-size: 0.9rem; font-weight: 700;">
                     🎥 Gravar e Baixar Vídeo (10s)

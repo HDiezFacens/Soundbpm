@@ -248,8 +248,181 @@ if (simulateBtn) {
 let soundbpmAudio = null;
 let isAudioPlaying = false;
 let currentTrackData = null;
+let previewPlaybackRequestId = 0;
 
-window.playMockTrack = async function(track, artist, image, audioPreviewUrl = null) {
+function normalizePreviewText(value) {
+    return String(value || "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/\([^)]*\)|\[[^\]]*\]/g, " ")
+        .replace(/\b(feat\.?|ft\.?|featuring|remaster(ed)?|deluxe edition|bonus track|explicit|radio edit)\b/g, " ")
+        .replace(/\b(19|20)\d{2}\b/g, " ")
+        .replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+
+function previewArtistMatches(candidateArtist, requestedArtist) {
+    const candidate = normalizePreviewText(candidateArtist);
+    const splitArtists = value => String(value || "")
+        .split(/,|&|\b(?:feat|ft)\.?\s*|\bfeaturing\b|\band\b/i)
+        .map(normalizePreviewText).filter(Boolean);
+    const candidateArtists = splitArtists(candidateArtist);
+    const requested = normalizePreviewText(requestedArtist);
+    const requestedArtists = splitArtists(requestedArtist);
+    return !!candidate && (candidate === requested || candidateArtists.some(artist => requestedArtists.includes(artist)));
+}
+
+function previewAlbumMatches(candidateAlbum, requestedAlbum) {
+    const candidate = normalizePreviewText(candidateAlbum);
+    const requested = normalizePreviewText(requestedAlbum);
+    return !!candidate && !!requested && (candidate === requested || candidate.includes(requested) || requested.includes(candidate));
+}
+
+async function findITunesAlbumResult(albumName, artist) {
+    const query = `${albumName} ${artist}`.trim();
+    const results = await searchITunesResults(query, "album", 50);
+    const candidates = results.filter(result =>
+        result.collectionId && previewAlbumMatches(result.collectionName, albumName));
+    const artistMatches = candidates.filter(result => previewArtistMatches(result.artistName, artist));
+    const bestCandidates = artistMatches.length ? artistMatches : (candidates.length === 1 ? candidates : []);
+    const result = bestCandidates
+        .sort((a, b) => Number(normalizePreviewText(b.collectionName) === normalizePreviewText(albumName)) -
+            Number(normalizePreviewText(a.collectionName) === normalizePreviewText(albumName)))[0] || null;
+    if (result) return result;
+
+    // IDs oficiais da Apple para os dois álbuns relatados; usados só quando a busca textual não encontra o álbum.
+    const normalizedAlbum = normalizePreviewText(albumName);
+    const isMatue = normalizePreviewText(artist).includes("matue");
+    const knownAppleAlbumId = isMatue && normalizedAlbum.includes("xtranho")
+        ? "1859250096"
+        : isMatue && normalizedAlbum.includes("maquina do tempo")
+            ? "1531375015"
+            : "";
+    return knownAppleAlbumId
+        ? { collectionId: knownAppleAlbumId, collectionName: albumName, artistName: artist }
+        : null;
+}
+
+async function searchITunesResults(term, entity, limit) {
+    const results = [];
+    for (const country of ["br", "us"]) {
+        try {
+            const url = `https://itunes.apple.com/search?country=${country}&term=${encodeURIComponent(term)}&entity=${entity}&limit=${limit}`;
+            const response = await fetch(url);
+            if (!response.ok) continue;
+            const data = await response.json();
+            results.push(...(data.results || []));
+        } catch (error) {
+            console.warn(`Busca do iTunes (${country}) falhou:`, error);
+        }
+    }
+    return results;
+}
+
+async function lookupITunesAlbumTracks(collectionId) {
+    let lastResults = [];
+    for (const country of ["br", "us"]) {
+        try {
+            const response = await fetch(`https://itunes.apple.com/lookup?country=${country}&id=${encodeURIComponent(collectionId)}&entity=song`);
+            if (!response.ok) continue;
+            const data = await response.json();
+            const results = data.results || [];
+            if (results.some(result => result.wrapperType === "track" && result.previewUrl)) return results;
+            if (results.length) lastResults = results;
+        } catch (error) {
+            console.warn(`Consulta do álbum no iTunes (${country}) falhou:`, error);
+        }
+    }
+    return lastResults;
+}
+
+window.getITunesAlbumPreviews = async function(albumName, artist) {
+    try {
+        const album = await findITunesAlbumResult(albumName, artist);
+        if (!album) return [];
+        const tracks = (await lookupITunesAlbumTracks(album.collectionId))
+            .filter(result => result.wrapperType === "track" && result.previewUrl);
+        return tracks.map(track => ({
+            previewUrl: track.previewUrl,
+            trackName: track.trackName,
+            artistName: track.artistName || album.artistName,
+            collectionName: album.collectionName,
+            collectionId: album.collectionId,
+            trackNumber: track.trackNumber
+        }));
+    } catch (error) {
+        console.warn("Não foi possível listar prévias dentro do álbum:", error);
+        return [];
+    }
+};
+
+window.findITunesAlbumPreview = async function(albumName, artist, preferredTrackNames = []) {
+    const tracks = await window.getITunesAlbumPreviews(albumName, artist);
+    const preferred = preferredTrackNames
+        .map(name => tracks.find(track => normalizePreviewText(track.trackName) === normalizePreviewText(name)))
+        .find(Boolean);
+    const track = preferred || tracks[0];
+    return track || null;
+};
+
+window.findITunesTrackPreview = async function(track, artist, albumName = "", trackNumber = null) {
+    try {
+        if (albumName) {
+            const album = await findITunesAlbumResult(albumName, artist);
+            if (album) {
+                const albumData = await lookupITunesAlbumTracks(album.collectionId);
+                const albumTracks = albumData.filter(result => result.wrapperType === "track" && result.previewUrl);
+                const albumTrack = albumTracks.find(result =>
+                    normalizePreviewText(result.trackName) === normalizePreviewText(track)
+                ) || (trackNumber ? albumTracks.find(result => Number(result.trackNumber) === Number(trackNumber)) : null);
+                if (albumTrack) return albumTrack.previewUrl;
+            }
+        }
+
+        const query = `${track} ${artist}`.trim();
+        const results = await searchITunesResults(query, "song", 50);
+        const exactTracks = results.filter(result =>
+            result.previewUrl &&
+            normalizePreviewText(result.trackName) === normalizePreviewText(track) &&
+            previewArtistMatches(result.artistName, artist)
+        );
+        const matchingAlbumTrack = albumName
+            ? exactTracks.find(result => previewAlbumMatches(result.collectionName, albumName)) ||
+                (exactTracks.length === 1 ? exactTracks[0] : null)
+            : exactTracks[0];
+        return matchingAlbumTrack?.previewUrl || null;
+    } catch (error) {
+        console.warn("Não foi possível localizar uma prévia exata no iTunes:", error);
+        return null;
+    }
+};
+
+window.playAlbumPreview = async function(collectionId, albumName, artist, image) {
+    const requestId = ++previewPlaybackRequestId;
+    try {
+        // Usa a mesma lista de faixas que alimenta o seletor de música do vídeo.
+        const tracks = await window.getITunesAlbumPreviews(albumName, artist);
+        if (requestId !== previewPlaybackRequestId) return;
+        const albumTrack = tracks[0];
+        if (!albumTrack) {
+            if (window.gameToast) window.gameToast("Não encontrei uma prévia desse álbum no iTunes.");
+            return;
+        }
+        await window.playMockTrack(
+            albumTrack.trackName,
+            albumTrack.artistName || artist,
+            image,
+            albumTrack.previewUrl,
+            albumTrack.collectionName || albumName
+        );
+    } catch (error) {
+        if (requestId !== previewPlaybackRequestId) return;
+        console.warn("Falha ao buscar faixa de prévia do álbum:", error);
+        if (window.gameToast) window.gameToast("Não foi possível localizar uma prévia para este álbum.");
+    }
+};
+
+window.playMockTrack = async function(track, artist, image, audioPreviewUrl = null, albumName = "", trackNumber = null) {
+    const requestId = ++previewPlaybackRequestId;
     const playerTrack = document.getElementById("player-track");
     const playerArtist = document.getElementById("player-artist");
     const playerImg = document.getElementById("player-img");
@@ -280,56 +453,50 @@ window.playMockTrack = async function(track, artist, image, audioPreviewUrl = nu
     if (playBtn) playBtn.textContent = "⏳";
 
     let previewUrl = audioPreviewUrl;
-
-    // Se não tiver preview direto, busca na API pública do iTunes por uma amostra de 30s
-    if (!previewUrl) {
-        try {
-            const query = `${track} ${artist}`.trim();
-            const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
-            const data = await res.json();
-            if (data.results && data.results.length > 0 && data.results[0].previewUrl) {
-                previewUrl = data.results[0].previewUrl;
-            }
-        } catch (e) {
-            console.warn("Falha ao buscar prévia sonora no iTunes:", e);
-        }
-    }
+    if (!previewUrl) previewUrl = await window.findITunesTrackPreview(track, artist, albumName, trackNumber);
+    if (requestId !== previewPlaybackRequestId) return;
 
     if (previewUrl) {
         try {
-            soundbpmAudio = new Audio(previewUrl);
-            soundbpmAudio.volume = 0.85;
+            const audio = new Audio(previewUrl);
+            soundbpmAudio = audio;
+            audio.volume = 0.85;
 
-            soundbpmAudio.onplay = () => {
+            audio.onplay = () => {
+                if (soundbpmAudio !== audio) return;
                 isAudioPlaying = true;
                 if (playBtn) playBtn.textContent = "⏸";
             };
 
-            soundbpmAudio.onpause = () => {
+            audio.onpause = () => {
+                if (soundbpmAudio !== audio) return;
                 isAudioPlaying = false;
                 if (playBtn) playBtn.textContent = "▶";
             };
 
-            soundbpmAudio.onended = () => {
+            audio.onended = () => {
+                if (soundbpmAudio !== audio) return;
                 isAudioPlaying = false;
                 if (playBtn) playBtn.textContent = "▶";
             };
 
-            soundbpmAudio.onerror = () => {
+            audio.onerror = () => {
+                if (soundbpmAudio !== audio) return;
                 isAudioPlaying = false;
                 if (playBtn) playBtn.textContent = "▶";
-                if (window.gameToast) window.gameToast("Prévia indisponível. Clique em 'Spotify' ↗");
+                if (window.gameToast) window.gameToast("Essa prévia não está tocando. Tente outra faixa ou abra no Spotify.");
             };
 
-            await soundbpmAudio.play();
-            if (window.gameToast) window.gameToast(`Tocando prévia de "${track}" 🎵`);
+            await audio.play();
         } catch (playErr) {
+            if (requestId !== previewPlaybackRequestId) return;
             console.log("Autoplay bloqueado pelo navegador ou erro:", playErr);
             isAudioPlaying = false;
             if (playBtn) playBtn.textContent = "▶";
-            if (window.gameToast) window.gameToast("Clique no ▶ para iniciar ou em 'Spotify' ↗");
+            if (window.gameToast) window.gameToast("O navegador bloqueou a prévia. Toque novamente para tentar.");
         }
     } else {
+        if (requestId !== previewPlaybackRequestId) return;
         if (playBtn) playBtn.textContent = "▶";
         if (window.gameToast) window.gameToast("Prévia de 30s não encontrada. Clique em 'Spotify' para ouvir completa! 🎧");
     }

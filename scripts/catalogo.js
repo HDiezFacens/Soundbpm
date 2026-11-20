@@ -247,6 +247,7 @@ window.createAlbumCardHTML = function(album) {
     const safeName = albumName.replace(/'/g, "\\'");
     const safeArtist = artistName.replace(/'/g, "\\'");
     const safeImage = imageUrl.replace(/'/g, "\\'");
+    const safeCollectionId = String(collectionId).replace(/'/g, "\\'");
     const releaseDate = album.releaseDate || album.release_date || "";
     const releaseDateLabel = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
         ? new Date(`${releaseDate}T00:00:00`).toLocaleDateString("pt-BR")
@@ -263,7 +264,7 @@ window.createAlbumCardHTML = function(album) {
                     <button class="action-icon-btn" title="Avaliar Álbum" onclick="openReviewModal('${safeName}', '${safeArtist}', '${safeImage}', '${collectionId}')">★</button>
                     <button class="action-icon-btn btn-fav-action" title="Favoritar" onclick="toggleFavorite('${safeName}', '${safeArtist}', '${safeImage}', this)">♥</button>
                     <button class="action-icon-btn" title="Adicionar à Fila de Desejos" onclick="addToBacklog('${safeName}', '${safeArtist}', '${safeImage}')">＋</button>
-                    <button class="action-icon-btn" title="Tocar" onclick="playMockTrack('${safeName}', '${safeArtist}', '${safeImage}')">▶</button>
+                    <button class="action-icon-btn" title="Ouvir prévia do álbum" onclick="playAlbumPreview('${safeCollectionId}', '${safeName}', '${safeArtist}', '${safeImage}')">▶</button>
                 </div>
             </div>
             <div class="poster-info" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
@@ -378,15 +379,18 @@ window.openAlbumPage = async function(collectionId, albumName, artistName, cover
                     const mins = Math.floor(totalSecs / 60);
                     const secs = String(totalSecs % 60).padStart(2, '0');
                     const songNameSafe = (s.name || '').replace(/'/g, "\\'");
-                    const songArtistSafe = (artistName || '').replace(/'/g, "\\'");
                     const songCoverSafe = (coverUrl || '').replace(/'/g, "\\'");
+                    const songAlbumSafe = albumName.replace(/'/g, "\\'");
                     const previewUrlSafe = (s.preview_url || '');
+                    const trackNumberSafe = Number(s.track_number) || 0;
+                    const trackArtists = (s.artists || []).map(a => a.name).join(', ') || artistName;
+                    const trackArtistSafe = trackArtists.replace(/'/g, "\\'");
                     return `
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 0.45rem 0; border-bottom: 1px solid var(--border-subtle);">
                         <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${idx+1}. ${s.name}</span>
                         <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
                             <span style="color: var(--text-muted); font-size: 0.8rem;">${mins}:${secs}</span>
-                            <button class="action-icon-btn" style="width:26px; height:26px; font-size:0.75rem; line-height: 1;" title="Ouvir faixa" onclick="playMockTrack('${songNameSafe}', '${songArtistSafe}', '${songCoverSafe}', '${previewUrlSafe}')">▶</button>
+                            <button class="action-icon-btn" style="width:26px; height:26px; font-size:0.75rem; line-height: 1;" title="Ouvir faixa" onclick="playMockTrack('${songNameSafe}', '${trackArtistSafe}', '${songCoverSafe}', '${previewUrlSafe}', '${songAlbumSafe}', ${trackNumberSafe})">▶</button>
                         </div>
                     </div>
                 `;

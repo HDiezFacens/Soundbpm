@@ -609,6 +609,10 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
     const recordBtn = document.getElementById("btn-start-record-tiktok");
     const cancelBtn = document.getElementById("btn-cancel-tiktok");
     const closeBtn = document.getElementById("close-tiktok-video-modal");
+    const audioPicker = document.getElementById("tiktok-audio-picker");
+    const audioSelect = document.getElementById("tiktok-audio-track");
+    const audioPreviewBtn = document.getElementById("tiktok-audio-preview-btn");
+    const audioStatus = document.getElementById("tiktok-audio-status");
 
     if (!modal || !canvas) return;
 
@@ -658,24 +662,81 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
         userAvatarUrl ? loadImg(userAvatarUrl) : Promise.resolve(null)
     ]);
 
-    // Busca prévia de áudio
+    // Lista as prévias do álbum para o usuário escolher qual entra no vídeo.
+    let audioOptions = [];
     let audioUrl = null;
     try {
-        const query = `${albumName} ${artistName}`.trim();
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`);
-        const data = await res.json();
-        if (data.results && data.results.length > 0 && data.results[0].previewUrl) {
-            audioUrl = data.results[0].previewUrl;
+        audioOptions = await window.getITunesAlbumPreviews?.(albumName, artistName) || [];
+
+        // Se o álbum não estiver listado, tenta as faixas avaliadas individualmente.
+        if (!audioOptions.length) {
+            for (const track of trackList) {
+                const previewUrl = await window.findITunesTrackPreview?.(track.name, artistName, albumName);
+                if (previewUrl) audioOptions.push({
+                    previewUrl,
+                    trackName: track.name,
+                    artistName,
+                    collectionName: albumName
+                });
+            }
         }
     } catch (e) {
-        console.warn("Erro ao buscar áudio do TikTok:", e);
+        console.warn("Erro ao buscar prévias musicais do vídeo:", e);
     }
 
-    if (audioUrl) {
-        tiktokAudioObj = new Audio();
-        tiktokAudioObj.crossOrigin = "anonymous";
-        tiktokAudioObj.loop = true;
-        tiktokAudioObj.src = audioUrl;
+    if (audioPicker) audioPicker.style.display = audioOptions.length ? "block" : "none";
+    if (audioOptions.length && audioSelect) {
+        audioSelect.replaceChildren(...audioOptions.map((option, index) => {
+            const item = document.createElement("option");
+            item.value = String(index);
+            item.textContent = `${option.trackName} — ${option.artistName}`;
+            return item;
+        }));
+
+        const preferredIndex = trackList.length
+            ? audioOptions.findIndex(option => trackList.some(track =>
+                String(option.trackName).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() ===
+                String(track.name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()))
+            : -1;
+        audioSelect.value = String(preferredIndex >= 0 ? preferredIndex : 0);
+
+        const setSelectedAudio = () => {
+            const selectedOption = audioOptions[Number(audioSelect.value)];
+            if (!selectedOption) return;
+            audioUrl = selectedOption.previewUrl;
+            if (tiktokAudioObj) tiktokAudioObj.pause();
+            tiktokAudioObj = new Audio(audioUrl);
+            tiktokAudioObj.crossOrigin = "anonymous";
+            tiktokAudioObj.loop = false;
+            tiktokAudioObj.onended = () => {
+                if (audioPreviewBtn) audioPreviewBtn.textContent = "▶ Ouvir";
+            };
+            if (audioStatus) audioStatus.textContent = `Selecionada: ${selectedOption.trackName}`;
+            if (audioPreviewBtn) audioPreviewBtn.textContent = "▶ Ouvir";
+        };
+
+        setSelectedAudio();
+        audioSelect.onchange = setSelectedAudio;
+        if (audioPreviewBtn) {
+            audioPreviewBtn.disabled = false;
+            audioPreviewBtn.onclick = async () => {
+                if (!tiktokAudioObj) return;
+                if (!tiktokAudioObj.paused) {
+                    tiktokAudioObj.pause();
+                    audioPreviewBtn.textContent = "▶ Ouvir";
+                    return;
+                }
+                try {
+                    tiktokAudioObj.currentTime = 0;
+                    await tiktokAudioObj.play();
+                    audioPreviewBtn.textContent = "⏸ Pausar";
+                } catch (error) {
+                    if (window.gameToast) window.gameToast("Não foi possível tocar esta prévia neste momento.");
+                }
+            };
+        }
+    } else if (statusText) {
+        statusText.textContent = "Não achei uma prévia disponível deste álbum; este vídeo pode ficar sem música.";
     }
 
     // Controle de tempo da animação
@@ -1119,9 +1180,13 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
     if (statusOverlay) statusOverlay.style.display = "none";
     if (recordBtn) {
         recordBtn.disabled = false;
-        recordBtn.textContent = hasTrackByTrack 
-            ? `🎥 Gravar Vídeo Faixa a Faixa (${totalSecs}s)` 
-            : `🎥 Gravar Vídeo TikTok (${totalSecs}s)`;
+        const audioWarning = audioUrl ? "" : " • sem música";
+        recordBtn.textContent = hasTrackByTrack
+            ? `🎥 Gravar Vídeo Faixa a Faixa (${totalSecs}s)${audioWarning}`
+            : `🎥 Gravar Vídeo TikTok (${totalSecs}s)${audioWarning}`;
+        recordBtn.title = audioUrl
+            ? "O vídeo incluirá a prévia selecionada."
+            : "Nenhuma prévia foi encontrada; este vídeo será exportado sem áudio.";
     }
 
     // Fechar modal
@@ -1141,9 +1206,19 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
         recordBtn.onclick = async () => {
             recordBtn.disabled = true;
             if (cancelBtn) cancelBtn.disabled = true;
+            if (audioSelect) audioSelect.disabled = true;
+            if (audioPreviewBtn) audioPreviewBtn.disabled = true;
             if (statusOverlay) statusOverlay.style.display = "flex";
             if (spinner) spinner.style.display = "block";
             if (progWrap) progWrap.style.display = "block";
+
+            // Cada gravação recebe um elemento novo para criar uma trilha de áudio limpa no MediaRecorder.
+            if (audioUrl) {
+                if (tiktokAudioObj) tiktokAudioObj.pause();
+                tiktokAudioObj = new Audio(audioUrl);
+                tiktokAudioObj.crossOrigin = "anonymous";
+                tiktokAudioObj.loop = true;
+            }
 
             // Reinicia animação do início exato (t = 0) para o vídeo ser gravado desde a abertura
             animStartTime = performance.now();
@@ -1164,6 +1239,8 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
                 const audioDest = audioCtx.createMediaStreamDestination();
                 if (tiktokAudioObj) {
                     // Encaminha a prévia musical tanto ao arquivo quanto aos alto-falantes.
+                    tiktokAudioObj.pause();
+                    tiktokAudioObj.loop = true;
                     musicSource = audioCtx.createMediaElementSource(tiktokAudioObj);
                     musicGain = audioCtx.createGain();
                     musicGain.gain.value = 0.85;
@@ -1241,6 +1318,8 @@ window.generateTikTokVideo = async function(albumName, artistName, coverUrl, rat
                 if (statusOverlay) statusOverlay.style.display = "none";
                 recordBtn.disabled = false;
                 if (cancelBtn) cancelBtn.disabled = false;
+                if (audioSelect) audioSelect.disabled = false;
+                if (audioPreviewBtn) audioPreviewBtn.disabled = false;
                 if (window.gameToast) {
                     window.gameToast(ext === "mp4"
                         ? "Vídeo convertido para MP4 e baixado! ✨"
