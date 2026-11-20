@@ -40,6 +40,43 @@ window.SCOPES = SCOPES;
 const gameEsc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
 window.gameEsc = gameEsc;
+// Gera argumento seguro para handlers inline: primeiro escapa a string JavaScript,
+// depois codifica o atributo HTML que contém o handler.
+const gameJsArg = (value) => gameEsc("'" + String(value == null ? "" : value)
+    .replace(/\\/g, "\\\\").replace(/'/g, "\\'")
+    .replace(/\r/g, "\\r").replace(/\n/g, "\\n")
+    .replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029") + "'");
+window.gameJsArg = gameJsArg;
+
+window.moderateProfileContent = async function(payload) {
+    if (!supabaseClient) throw new Error("Supabase não inicializado.");
+    const { data, error } = await supabaseClient.functions.invoke("moderate-profile-content", { body: payload });
+    if (error) {
+        let message = data?.error;
+        try {
+            if (!message && error.context?.json) message = (await error.context.json())?.error;
+        } catch (_) {}
+        throw new Error(message || "A validação do conteúdo falhou. Tente novamente.");
+    }
+    if (!data?.ok) throw new Error(data?.error || "A validação do conteúdo falhou. Tente novamente.");
+    return data;
+};
+
+window.moderateProfileImage = async function(file, field, bannerPos = null) {
+    if (!file) throw new Error("Escolha uma imagem.");
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+        throw new Error("Use uma imagem JPEG, PNG ou WebP.");
+    }
+    if (file.size > 6 * 1024 * 1024) throw new Error("A imagem precisa ter até 6 MB.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return window.moderateProfileContent({
+        action: "image", field, mimeType: file.type, base64: btoa(binary), bannerPos
+    });
+};
 
 // Interceptador de Imagens em Alta Resolução
 // ===========================================================================

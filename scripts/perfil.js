@@ -127,14 +127,15 @@ window.loadUserProfile = async function(targetUserId = null) {
     if (favGrid) {
         if (favs && favs.length > 0) {
             favGrid.innerHTML = favs.map(f => {
-                const safeName = (f.album_name || '').replace(/'/g, "\\'");
-                const safeArtist = (f.artist_name || '').replace(/'/g, "\\'");
-                const safeCover = (f.cover_url || '').replace(/'/g, "\\'");
+                const safeName = gameJsArg(f.album_name || '');
+                const safeArtist = gameJsArg(f.artist_name || '');
+                const safeCover = gameJsArg(f.cover_url || '');
+                const safeAlbumId = gameJsArg('');
                 return `
-                <div class="poster-card" style="width: 150px; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
+                <div class="poster-card" style="width: 150px; position: relative; cursor: pointer;" onclick="openAlbumPage(${safeAlbumId}, ${safeName}, ${safeArtist}, ${safeCover})">
                     ${isMyProfile ? `<button class="remove-favorite-btn" onclick="event.stopPropagation(); removeProfileFavorite('${f.id}')" title="Remover favorito">&times;</button>` : ''}
-                    <img src="${f.cover_url}" alt="${f.album_name}" style="width: 100%; border-radius: 4px;">
-                    <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.album_name}</h4>
+                    <img src="${gameEsc(f.cover_url || '')}" alt="${gameEsc(f.album_name || '')}" style="width: 100%; border-radius: 4px;">
+                    <h4 style="font-size: 0.9rem; margin-top: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${gameEsc(f.album_name || '')}</h4>
                 </div>
             `;
             }).join('');
@@ -150,31 +151,32 @@ window.loadUserProfile = async function(targetUserId = null) {
             profileReviewsList.innerHTML = profileReviews.map(r => {
                 const stars = "★".repeat(Math.round(r.rating)) + "☆".repeat(5 - Math.round(r.rating));
                 const date = new Date(r.created_at).toLocaleDateString('pt-BR');
-                const safeName = (r.album_name || '').replace(/'/g, "\\'");
-                const safeArtist = (r.artist_name || '').replace(/'/g, "\\'");
-                const safeCover = (r.cover_url || '').replace(/'/g, "\\'");
+                const safeName = gameJsArg(r.album_name || '');
+                const safeArtist = gameJsArg(r.artist_name || '');
+                const safeCover = gameJsArg(r.cover_url || '');
+                const safeReviewText = gameJsArg(r.review_text || '');
                 
                 const shareButtonHtml = isMyProfile ? `
                     <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button onclick="event.stopPropagation(); shareToInstagramStory('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(gameEsc(r.review_text || '')).replace(/`/g, '\\`')}\`)" 
+                        <button onclick="event.stopPropagation(); shareToInstagramStory(${safeName}, ${safeArtist}, ${safeCover}, ${r.rating}, ${safeReviewText})" 
                             style="background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
                             📸 Instagram Story
                         </button>
-                        <button onclick="event.stopPropagation(); generateTikTokVideo('${safeName}', '${safeArtist}', '${safeCover}', ${r.rating}, \`${(gameEsc(r.review_text || '')).replace(/`/g, '\\`')}\`)" 
+                        <button onclick="event.stopPropagation(); generateTikTokVideo(${safeName}, ${safeArtist}, ${safeCover}, ${r.rating}, ${safeReviewText})" 
                             style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #000; font-weight: 700; border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(0,242,254,0.3);">
                             🎬 Vídeo TikTok / Reels
                         </button>
                     </div>` : '';
 
                 return `
-                <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative; cursor: pointer;" onclick="openAlbumPage('', '${safeName}', '${safeArtist}', '${safeCover}')">
-                    <img src="${r.cover_url}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
+                <div class="diary-item" style="background: var(--bg-card); padding: 1rem; border-radius: 6px; display: flex; gap: 1rem; align-items: flex-start; position: relative; cursor: pointer;" onclick="openAlbumPage('', ${safeName}, ${safeArtist}, ${safeCover})">
+                    <img src="${gameEsc(r.cover_url || '')}" alt="${gameEsc(r.album_name || '')}" style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover;">
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong>${r.album_name}</strong>
+                            <strong>${gameEsc(r.album_name || '')}</strong>
                             <span style="color: var(--accent-orange);">${stars} (${r.rating})</span>
                         </div>
-                        <span style="font-size: 0.8rem; color: var(--text-muted);">${r.artist_name} • ${date}</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">${gameEsc(r.artist_name || '')} • ${date}</span>
                         ${reviewBodyHtml(r.review_text, 'margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; white-space: pre-line;')}
                         
                         ${shareButtonHtml}
@@ -287,64 +289,36 @@ if (editProfileForm) {
         const newBio      = document.getElementById("edit-profile-bio").value.trim();
         const avatarFile  = document.getElementById("edit-profile-avatar").files[0];
 
-        let updatedFields = { id: session.user.id, username: newUsername, bio: newBio };
-
-        if (avatarFile) {
-            const ext      = avatarFile.name.split(".").pop();
-            const filePath = `${session.user.id}-${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage
-                .from("avatars").upload(filePath, avatarFile, { upsert: true });
-            if (!upErr) {
-                const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
-                updatedFields.avatar_url = pub.publicUrl;
-            } else {
-                console.error("Erro no upload da foto:", upErr);
-                alert("Erro ao fazer upload da foto: " + upErr.message);
-            }
-        }
-
         const bannerFile = document.getElementById("edit-profile-banner")?.files[0];
-        if (bannerFile) {
-            const bExt = bannerFile.name.split(".").pop() || "jpg";
-            const bPath = `banner-${session.user.id}-${Date.now()}.${bExt}`;
-            const { error: bErr } = await supabase.storage
-                .from("avatars").upload(bPath, bannerFile, { upsert: true });
-            if (!bErr) {
-                const { data: bPub } = supabase.storage.from("avatars").getPublicUrl(bPath);
-                if (bPub?.publicUrl) {
-                    updatedFields.banner_url = bPub.publicUrl;
-                    const savedPos = JSON.parse(localStorage.getItem(`soundbpm_banner_pos_${session.user.id}`) || '{"y":50,"scale":100,"height":220}');
-                    updatedFields.banner_pos = JSON.stringify(savedPos);
-                    localStorage.setItem(`soundbpm_banner_${session.user.id}`, JSON.stringify({ url: bPub.publicUrl, pos: savedPos }));
-                }
-            } else {
-                console.error("Erro no upload do banner:", bErr);
+        let avatarUrl = null;
+        try {
+            await window.moderateProfileContent({ action: "profile", username: newUsername, bio: newBio });
+            if (avatarFile) {
+                const result = await window.moderateProfileImage(avatarFile, "avatar_url");
+                avatarUrl = result.publicUrl;
             }
-        }
-
-        let { error } = await supabase.from("profiles").upsert([updatedFields]);
-        if (error && (error.message.includes("banner_url") || error.message.includes("banner_pos"))) {
-            const { banner_url, banner_pos, ...safeFields } = updatedFields;
-            const retry = await supabase.from("profiles").upsert([safeFields]);
-            error = retry.error;
+            if (bannerFile) {
+                const savedPos = localStorage.getItem(`soundbpm_banner_pos_${session.user.id}`) || '{"y":50,"scale":100,"height":220}';
+                const result = await window.moderateProfileImage(bannerFile, "banner_url", savedPos);
+                localStorage.setItem(`soundbpm_banner_${session.user.id}`, JSON.stringify({ url: result.publicUrl, pos: JSON.parse(savedPos) }));
+            }
+        } catch (error) {
+            submitBtn.textContent = "Salvar Alterações";
+            submitBtn.disabled = false;
+            alert(error.message || "Não foi possível validar o perfil. Tente novamente.");
+            return;
         }
 
         submitBtn.textContent = "Salvar Alterações";
         submitBtn.disabled = false;
 
-        if (error) {
-            alert("Erro ao salvar: " + error.message);
-        } else {
-            const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
-            localUser.username = newUsername;
-            if (updatedFields.avatar_url) localUser.avatar = updatedFields.avatar_url;
-            localStorage.setItem("soundbpm_user", JSON.stringify(localUser));
-
-            if (editProfileModal) editProfileModal.classList.remove("active");
-
-            await loadUserProfile();
-            updateLoginButtonState();
-        }
+        const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
+        localUser.username = newUsername;
+        if (avatarUrl) localUser.avatar = avatarUrl;
+        localStorage.setItem("soundbpm_user", JSON.stringify(localUser));
+        if (editProfileModal) editProfileModal.classList.remove("active");
+        await loadUserProfile();
+        updateLoginButtonState();
     });
 }
 
@@ -663,11 +637,18 @@ async function saveAndApplyBanner(file, pos) {
     const bannerImg = document.getElementById("profile-banner-img");
     const bannerPlaceholder = document.getElementById("profile-banner-placeholder");
     const bannerActions = document.getElementById("profile-banner-actions");
+    let finalUrl;
+    try {
+        const result = await window.moderateProfileImage(file, "banner_url", JSON.stringify(pos || {}));
+        finalUrl = result.publicUrl;
+    } catch (error) {
+        alert(error.message || "Não foi possível validar esse banner.");
+        return;
+    }
 
-    const previewUrl = URL.createObjectURL(file);
     if (bannerContainer) bannerContainer.style.height = `${pos?.height || 220}px`;
     if (bannerImg) {
-        bannerImg.src = previewUrl;
+        bannerImg.src = finalUrl;
         bannerImg.style.display = "block";
         bannerImg.style.objectPosition = `center ${pos?.y ?? 50}%`;
         bannerImg.style.transform = `scale(${(pos?.scale ?? 100) / 100})`;
@@ -681,39 +662,9 @@ async function saveAndApplyBanner(file, pos) {
         if (adjustBtn) adjustBtn.style.display = "inline-flex";
     }
 
-    localStorage.setItem(`soundbpm_banner_${myId}`, JSON.stringify({ url: previewUrl, pos }));
+    localStorage.setItem(`soundbpm_banner_${myId}`, JSON.stringify({ url: finalUrl, pos }));
     localStorage.setItem(`soundbpm_banner_pos_${myId}`, JSON.stringify(pos));
-
-    try {
-        const ext = "jpg";
-        const filePath = `banner-${myId}-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, file, {
-            upsert: true,
-            contentType: "image/jpeg"
-        });
-
-        let finalUrl = previewUrl;
-        if (!upErr) {
-            const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
-            if (pub?.publicUrl) finalUrl = pub.publicUrl;
-        }
-
-        localStorage.setItem(`soundbpm_banner_${myId}`, JSON.stringify({ url: finalUrl, pos }));
-
-        let updatedFields = {
-            banner_url: finalUrl,
-            banner_pos: JSON.stringify(pos)
-        };
-        let { error } = await supabase.from("profiles").update(updatedFields).eq("id", myId);
-        if (error) {
-            console.warn("Aviso ao salvar banner no Supabase:", error.message);
-        }
-
-        if (typeof gameToast === "function") gameToast("Banner dimensionado e salvo com sucesso! ✨");
-    } catch(err) {
-        console.error("Erro ao salvar banner:", err);
-        if (typeof gameToast === "function") gameToast("Banner dimensionado localmente! ✨");
-    }
+    if (typeof gameToast === "function") gameToast("Banner validado e salvo com sucesso! ✨");
 }
 
 function wireBannerControls() {
@@ -894,28 +845,13 @@ function wireBannerControls() {
 
             const avatarImg = document.getElementById("profile-avatar-img");
             const avatarWrap = document.getElementById("profile-avatar-wrap");
-            const previewUrl = URL.createObjectURL(croppedFile);
-            if (avatarImg) {
-                avatarImg.src = previewUrl;
-                avatarImg.style.display = "";
-            }
-            if (avatarWrap) avatarWrap.classList.add("tem-foto");
-
             try {
-                const ext = "jpg";
-                const filePath = `${myId}-${Date.now()}.${ext}`;
-                const { error: upErr } = await supabase.storage.from("avatars").upload(filePath, croppedFile, {
-                    upsert: true,
-                    contentType: "image/jpeg"
-                });
-
-                let finalUrl = previewUrl;
-                if (!upErr) {
-                    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(filePath);
-                    if (pub?.publicUrl) finalUrl = pub.publicUrl;
+                const { publicUrl: finalUrl } = await window.moderateProfileImage(croppedFile, "avatar_url");
+                if (avatarImg) {
+                    avatarImg.src = finalUrl;
+                    avatarImg.style.display = "";
                 }
-
-                await supabase.from("profiles").update({ avatar_url: finalUrl }).eq("id", myId);
+                if (avatarWrap) avatarWrap.classList.add("tem-foto");
 
                 const localUser = JSON.parse(localStorage.getItem("soundbpm_user") || "{}");
                 localUser.avatar = finalUrl;
@@ -925,7 +861,7 @@ function wireBannerControls() {
                 if (typeof gameToast === "function") gameToast("Foto de perfil atualizada com sucesso! ✨");
             } catch(err) {
                 console.error("Erro ao atualizar foto de perfil:", err);
-                if (typeof gameToast === "function") gameToast("Foto atualizada localmente! ✨");
+                if (typeof gameToast === "function") gameToast(err.message || "Não foi possível validar essa foto.");
             }
             directAvatarInput.value = "";
         });

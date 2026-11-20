@@ -244,32 +244,32 @@ window.createAlbumCardHTML = function(album) {
     const albumName = album.name || album.collectionName || 'Álbum';
     const collectionId = album.collectionId || album.id || '';
     
-    const safeName = albumName.replace(/'/g, "\\'");
-    const safeArtist = artistName.replace(/'/g, "\\'");
-    const safeImage = imageUrl.replace(/'/g, "\\'");
-    const safeCollectionId = String(collectionId).replace(/'/g, "\\'");
+    const safeName = gameJsArg(albumName);
+    const safeArtist = gameJsArg(artistName);
+    const safeImage = gameJsArg(imageUrl);
+    const safeCollectionId = gameJsArg(collectionId);
     const releaseDate = album.releaseDate || album.release_date || "";
     const releaseDateLabel = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate)
         ? new Date(`${releaseDate}T00:00:00`).toLocaleDateString("pt-BR")
         : releaseDate;
     const cardMeta = album.isCurrentRelease
         ? `🆕 Lançado em ${gameEsc(releaseDateLabel)}`
-        : `★★★★★ <span class="numeric-score">${(Math.random() * 0.4 + 4.6).toFixed(1)}</span>`;
+        : `🎧 Álbum em destaque`;
 
     return `
-        <div class="poster-card" data-collection-id="${collectionId}">
-            <div class="poster-image-wrap" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
-                <img src="${imageUrl}" alt="${albumName}">
+        <div class="poster-card" data-collection-id="${gameEsc(collectionId)}">
+            <div class="poster-image-wrap" onclick="openAlbumPage(${safeCollectionId}, ${safeName}, ${safeArtist}, ${safeImage})" style="cursor: pointer;">
+                <img src="${gameEsc(imageUrl)}" alt="${gameEsc(albumName)}">
                 <div class="poster-overlay-actions" onclick="event.stopPropagation()">
-                    <button class="action-icon-btn" title="Avaliar Álbum" onclick="openReviewModal('${safeName}', '${safeArtist}', '${safeImage}', '${collectionId}')">★</button>
-                    <button class="action-icon-btn btn-fav-action" title="Favoritar" onclick="toggleFavorite('${safeName}', '${safeArtist}', '${safeImage}', this)">♥</button>
-                    <button class="action-icon-btn" title="Adicionar à Fila de Desejos" onclick="addToBacklog('${safeName}', '${safeArtist}', '${safeImage}')">＋</button>
-                    <button class="action-icon-btn" title="Ouvir prévia do álbum" onclick="playAlbumPreview('${safeCollectionId}', '${safeName}', '${safeArtist}', '${safeImage}')">▶</button>
+                    <button class="action-icon-btn" title="Avaliar Álbum" onclick="openReviewModal(${safeName}, ${safeArtist}, ${safeImage}, ${safeCollectionId})">★</button>
+                    <button class="action-icon-btn btn-fav-action" title="Favoritar" onclick="toggleFavorite(${safeName}, ${safeArtist}, ${safeImage}, this)">♥</button>
+                    <button class="action-icon-btn" title="Adicionar à Fila de Desejos" onclick="addToBacklog(${safeName}, ${safeArtist}, ${safeImage})">＋</button>
+                    <button class="action-icon-btn" title="Ouvir prévia do álbum" onclick="playAlbumPreview(${safeCollectionId}, ${safeName}, ${safeArtist}, ${safeImage})">▶</button>
                 </div>
             </div>
-            <div class="poster-info" onclick="openAlbumPage('${collectionId}', '${safeName}', '${safeArtist}', '${safeImage}')" style="cursor: pointer;">
-                <h3>${albumName}</h3>
-                <span class="poster-artist">${artistName}</span>
+            <div class="poster-info" onclick="openAlbumPage(${safeCollectionId}, ${safeName}, ${safeArtist}, ${safeImage})" style="cursor: pointer;">
+                <h3>${gameEsc(albumName)}</h3>
+                <span class="poster-artist">${gameEsc(artistName)}</span>
                 <div class="poster-rating-stars">${cardMeta}</div>
             </div>
         </div>

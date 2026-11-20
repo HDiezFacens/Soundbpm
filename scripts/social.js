@@ -62,7 +62,7 @@ async function loadNotifications() {
         <div style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; ${unreadStyle}">
             ${avatarHtml(avatar, 38)}
             <div style="flex: 1;">
-                <p style="margin: 0 0 0.2rem 0; font-size: 0.9rem;">${n.message}</p>
+                <p style="margin: 0 0 0.2rem 0; font-size: 0.9rem;">${gameEsc(n.message)}</p>
                 <span style="font-size: 0.75rem; color: var(--text-muted);">${time}</span>
             </div>
             ${n.type === "friend_request" && !n.read ? `<button class="btn-notify" onclick="acceptFriendRequest('${n.from_user_id}', '${n.id}')" style="font-size:0.75rem; padding:0.3rem 0.6rem; flex-shrink:0;">Aceitar</button>` : ""}
@@ -124,7 +124,7 @@ async function loadPeoplePage() {
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${friend?.id}')">
                     ${avatarHtml(avatar, 52)}
                     <div style="flex:1;">
-                        <strong style="color: var(--accent-gold);">${friend?.username || "Usuário"}</strong>
+                        <strong style="color: var(--accent-gold);">${gameEsc(friend?.username || "Usuário")}</strong>
                     </div>
                     <button class="btn-secondary-dark" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); removeFriend('${friendshipId}')">Remover</button>
                 </div>`;
@@ -149,7 +149,7 @@ async function loadPeoplePage() {
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid #e74c3c33;">
                     ${avatarHtml(avatar, 52, "cursor:pointer;").replace('></', ' onclick="openUserProfile(\'${r.requester?.id}\')" ></')}
                     <div style="flex:1;">
-                        <strong style="color: var(--accent-gold); cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">${r.requester?.username || "Usuário"}</strong>
+                        <strong style="color: var(--accent-gold); cursor: pointer;" onclick="openUserProfile('${r.requester?.id}')">${gameEsc(r.requester?.username || "Usuário")}</strong>
                         <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">Quer ser seu amigo</p>
                     </div>
                     <button class="btn-primary-gold" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="acceptFriendRequest('${r.requester_id}', null, '${r.id}')">Aceitar</button>
@@ -165,9 +165,11 @@ async function loadPeoplePage() {
 const peopleSearch = document.getElementById("people-search-input");
 if (peopleSearch) {
     let searchTimeout;
+    let peopleSearchRequestId = 0;
     peopleSearch.addEventListener("input", (e) => {
         clearTimeout(searchTimeout);
         const query = e.target.value.trim();
+        const requestId = ++peopleSearchRequestId;
         const resultsDiv = document.getElementById("people-search-results");
         if (!query) { if (resultsDiv) resultsDiv.innerHTML = ""; return; }
 
@@ -181,6 +183,9 @@ if (peopleSearch) {
                 .select("id, username, avatar_url, bio")
                 .ilike("username", `%${query}%`)
                 .limit(8);
+
+            // Evita que a resposta de uma busca antiga sobrescreva a mais recente.
+            if (requestId !== peopleSearchRequestId || peopleSearch.value.trim() !== query) return;
 
             const { data: rels } = myId ? await supabase.from("friendships").select("requester_id, addressee_id, status").or(`requester_id.eq.${myId},addressee_id.eq.${myId}`) : { data: [] };
             const relMap = new Map((rels || []).map(r => [r.requester_id === myId ? r.addressee_id : r.requester_id, r.status]));
@@ -197,8 +202,8 @@ if (peopleSearch) {
                 <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-card); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); cursor: pointer;" onclick="openUserProfile('${p.id}')">
                     ${avatarHtml(avatar, 52)}
                     <div style="flex:1;">
-                        <strong style="color: var(--accent-gold);">${p.username || "Usuário"}</strong>
-                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${p.bio || ""}</p>
+                        <strong style="color: var(--accent-gold);">${gameEsc(p.username || "Usuário")}</strong>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0 0 0;">${gameEsc(p.bio || "")}</p>
                     </div>
                     ${relMap.get(p.id) === "accepted" ? '<span style="color: var(--accent-gold); font-size:0.8rem; font-weight:700;">✓ Amigos</span>' : relMap.get(p.id) === "pending" ? '<span style="color: var(--text-muted); font-size:0.8rem;">Pendente</span>' : `<button class="btn-notify" style="font-size:0.8rem; padding:0.4rem 0.8rem;" onclick="event.stopPropagation(); sendFriendRequest('${p.id}', this)">+ Adicionar</button>`}
                 </div>`;

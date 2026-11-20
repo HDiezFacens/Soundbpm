@@ -61,27 +61,35 @@ async function ensureProfileFromSignup(session) {
         const key = "soundbpm_pending_" + (user.email || "").toLowerCase();
         let pending = null;
         try { pending = JSON.parse(localStorage.getItem(key)); } catch (e) {}
-        if (!meta.username && !pending) return;
+        if (!pending && !meta.username) return true;
 
         const { data: profile } = await supabase.from("profiles").select("username, bio, avatar_url").eq("id", user.id).maybeSingle();
         const emailPrefix = (user.email || "").split("@")[0];
-        const fields = { id: user.id };
+        const requestedUsername = pending?.username || meta.username;
 
-        if (!profile?.username || profile.username === emailPrefix) fields.username = meta.username || pending?.username;
-        if (!profile?.bio) fields.bio = meta.bio || "Explorando o mundo da música.";
-        if (!profile?.avatar_url && pending?.avatar) {
-            const blob = await (await fetch(pending.avatar)).blob();
-            const path = `${user.id}-${Date.now()}.jpg`;
-            const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: blob.type || "image/jpeg" });
-            if (!upErr) fields.avatar_url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
-            else console.error("Erro ao enviar a foto do cadastro:", upErr);
+        if ((pending?.username || !profile?.username || profile.username === emailPrefix) && requestedUsername) {
+            await window.moderateProfileContent({
+                action: "profile", username: requestedUsername, bio: meta.bio || "Explorando o mundo da música."
+            });
+        } else if (!profile) {
+            await window.moderateProfileContent({
+                action: "profile", username: emailPrefix || "Mófilo", bio: "Explorando o mundo da música."
+            });
         }
-        if (Object.keys(fields).length > 1) {
-            const { error } = await supabase.from("profiles").upsert([fields]);
-            if (error) { console.error("Erro ao criar o perfil:", error); return; }
+
+        if (!profile?.avatar_url && pending?.avatar) {
+            const response = await fetch(pending.avatar);
+            const blob = await response.blob();
+            const imageFile = new File([blob], "signup-avatar.jpg", { type: blob.type || "image/jpeg" });
+            await window.moderateProfileImage(imageFile, "avatar_url");
         }
         localStorage.removeItem(key);
-    } catch (e) { console.error("ensureProfileFromSignup:", e); }
+        return true;
+    } catch (e) {
+        console.error("ensureProfileFromSignup:", e);
+        localStorage.removeItem(key);
+        return false;
+    }
 }
 
 
@@ -110,7 +118,8 @@ if (authForm) {
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
-                options: { emailRedirectTo: location.href.split(/[?#]/)[0], data: { username: username, bio: "Explorando o mundo da música." } }
+                // O apelido fica pendente no navegador até a validação autenticada pelo servidor.
+                options: { emailRedirectTo: location.href.split(/[?#]/)[0], data: { bio: "Explorando o mundo da música." } }
             });
 
             if (signUpError) {
@@ -138,30 +147,13 @@ if (authForm) {
             const { data: { session } } = await supabase.auth.getSession();
             
             if (session && session.user) {
-                const userId = session.user.id;
-                let avatarUrl = "";
-                
-                if (avatarField && avatarField.files && avatarField.files.length > 0) {
-                    const file = avatarField.files[0];
-                    const fileExt = file.name.split('.').pop();
-                    const filePath = `${userId}-${Math.random()}.${fileExt}`;
-                    
-                    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-                    if (!uploadError) {
-                        const { data: pubData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-                        avatarUrl = pubData.publicUrl;
-                    }
+                const profileReady = await ensureProfileFromSignup(session);
+                if (!profileReady) {
+                    submitBtn.textContent = oldText;
+                    submitBtn.disabled = false;
+                    alert("A conta foi criada, mas o nome ou a foto não passou pela validação. Entre novamente e escolha outro conteúdo.");
+                    return;
                 }
-
-                await supabase.from('profiles').upsert([
-                    { id: userId, username: username, avatar_url: avatarUrl, bio: "Explorando o mundo da música." }
-                ]);
-
-                localStorage.setItem("soundbpm_user", JSON.stringify({
-                    email: email,
-                    username: username,
-                    avatar: avatarUrl
-                }));
             }
             
             submitBtn.textContent = oldText;
