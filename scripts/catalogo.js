@@ -19,51 +19,14 @@ const searchInput = document.getElementById("search-input");
 let carouselInterval;
 
 const searchCache = new Map();
-const SPOTIFY_COOLDOWN_STORAGE_KEY = "soundbpm_spotify_search_cooldown_until";
-let spotifySearchCooldownUntil = Number(localStorage.getItem(SPOTIFY_COOLDOWN_STORAGE_KEY)) || 0;
-
-function getSpotifySearchCooldownUntil() {
-    const storedUntil = Number(localStorage.getItem(SPOTIFY_COOLDOWN_STORAGE_KEY)) || 0;
-    spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, storedUntil);
-    return spotifySearchCooldownUntil;
-}
-
-async function updateSpotifySearchCooldown(error) {
-    const response = error && error.context;
-    if (!response || response.status !== 429) return false;
-
-    let retryAfter = Number(response.headers?.get("Retry-After"));
-    if (!Number.isFinite(retryAfter) || retryAfter <= 0) retryAfter = 60;
-    try {
-        const body = await response.clone().json();
-        if (body?.error?.reason === "QUOTA_EXCEEDED" && !response.headers?.get("Retry-After")) {
-            retryAfter = 3600;
-        }
-    } catch (_) {}
-
-    spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, Date.now() + retryAfter * 1000);
-    localStorage.setItem(SPOTIFY_COOLDOWN_STORAGE_KEY, String(spotifySearchCooldownUntil));
-    console.warn(`Spotify limitou as buscas. Nova tentativa em ${retryAfter}s.`);
-    return true;
-}
 
 window.invokeSpotifySearch = async function(body) {
-    if (getSpotifySearchCooldownUntil() > Date.now()) {
-        return { data: null, error: new Error("Busca do Spotify temporariamente pausada pelo limite de uso.") };
-    }
     if (!supabase) {
         return { data: null, error: new Error("Supabase não inicializado.") };
     }
-
-    const result = await supabase.functions.invoke("spotify-search", { body });
-    if (result.error) {
-        await updateSpotifySearchCooldown(result.error);
-    } else if (result.data?.error?.reason === "QUOTA_EXCEEDED") {
-        const retryAfter = 3600;
-        spotifySearchCooldownUntil = Math.max(spotifySearchCooldownUntil, Date.now() + retryAfter * 1000);
-        localStorage.setItem(SPOTIFY_COOLDOWN_STORAGE_KEY, String(spotifySearchCooldownUntil));
-    }
-    return result;
+    // A Edge Function pode servir uma resposta compartilhada em cache mesmo
+    // quando o Spotify está limitando novas chamadas; não bloquear no navegador.
+    return await supabase.functions.invoke("spotify-search", { body });
 };
 
 async function fetchCatalogDataFromITunes(query) {
@@ -97,10 +60,6 @@ async function fetchCatalogData(query) {
         return searchCache.get(query);
     }
 
-    if (getSpotifySearchCooldownUntil() > Date.now()) {
-        return await fetchCatalogDataFromITunes(query);
-    }
-
     try {
         if (!supabase) {
             throw new Error("Supabase não inicializado.");
@@ -109,7 +68,6 @@ async function fetchCatalogData(query) {
         const { data, error } = await window.invokeSpotifySearch({ query });
 
         if (error) {
-            await updateSpotifySearchCooldown(error);
             console.warn("Spotify indisponível. Usando o catálogo de fallback.");
             return await fetchCatalogDataFromITunes(query);
         }

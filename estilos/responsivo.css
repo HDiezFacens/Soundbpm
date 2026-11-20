@@ -107,6 +107,17 @@
         margin-left: calc(50% - 50vw);
     }
 
+    .hero-features-row {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+        padding-top: 1.25rem;
+    }
+
+    .hero-feature {
+        min-height: 0;
+        padding: 0.8rem 1rem;
+    }
+
     .upcoming-grid,
     .news-grid,
     .dashboard-grid {

@@ -34,6 +34,95 @@
     text-align: center;
 }
 
+#login-modal .modal-card {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+}
+
+.auth-forgot-password {
+    display: block;
+    margin: -0.75rem 0 1rem auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent-gold);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.auth-forgot-password:hover { text-decoration: underline; }
+
+.auth-email-message {
+    display: block;
+    min-height: 0;
+    margin-top: 0.35rem;
+    color: var(--accent-gold);
+    font-size: 0.78rem;
+    text-align: left;
+}
+
+.social-auth-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 0.15rem;
+}
+
+.social-auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.25rem 0 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.social-auth-divider::before,
+.social-auth-divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--border-subtle);
+}
+
+.social-auth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    width: 100%;
+    min-height: 46px;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.social-auth-btn svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+}
+
+.social-auth-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.social-auth-google {
+    background: #fff;
+    color: #202124;
+}
+
+.social-auth-google:hover:not(:disabled) {
+    background: #f3f4f6;
+}
+
 .close-modal {
     position: absolute;
     top: 1rem;

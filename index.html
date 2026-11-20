@@ -176,18 +176,18 @@
                     <button class="btn-primary-gold" id="hero-start-diary-btn">Comece seu Diário Grátis</button>
                     <button class="btn-secondary-dark" id="explore-catalog-btn">Explorar Catálogo</button>
                 </div>
-                <div class="hero-stats-row">
-                    <div class="stat-box">
-                        <strong>54.290</strong>
-                        <span>Álbuns catalogados</span>
+                <div class="hero-features-row">
+                    <div class="hero-feature">
+                        <strong>Catálogo internacional</strong>
+                        <span>Clássicos e lançamentos para descobrir.</span>
                     </div>
-                    <div class="stat-box">
-                        <strong>1.4M</strong>
-                        <span>Avaliações registradas</span>
+                    <div class="hero-feature">
+                        <strong>Avalie faixa a faixa</strong>
+                        <span>Monte a nota do álbum com suas próprias avaliações.</span>
                     </div>
-                    <div class="stat-box">
-                        <strong>Comunidade</strong>
-                        <span>Ativa & Global</span>
+                    <div class="hero-feature">
+                        <strong>Diário musical</strong>
+                        <span>Registre suas resenhas e compartilhe com a comunidade.</span>
                     </div>
                 </div>
             </div>
@@ -207,41 +207,6 @@
                 </div>
             </div>
 
-            <!-- OPÇÃO SECUNDÁRIA: Integração e Atividade do Spotify -->
-            <div style="border-top: 1px solid var(--border-subtle); padding-top: 2.5rem;">
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 1.2rem; color: var(--text-muted); margin-bottom: 0.3rem;">Atividade & Conexão Spotify</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted);">Recurso secundário para visualizar histórico e recomendações da plataforma.</p>
-                </div>
-
-                <!-- Banner de Conexão Spotify -->
-                <div id="spotify-connect-banner" style="background: var(--bg-card); padding: 1.2rem; border-radius: 8px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h4 style="margin: 0 0 0.2rem 0; color: var(--accent-gold); font-size: 0.95rem;">Conecte sua conta do Spotify</h4>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Veja seus álbuns ouvidos recentemente e receba recomendações.</p>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <button id="dashboard-spotify-connect-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem;">Conectar Spotify</button>
-                        <button id="dashboard-simulate-btn" class="btn-secondary-dark" style="padding: 0.5rem 1rem; cursor: pointer; font-size: 0.85rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulado</button>
-                    </div>
-                </div>
-
-                <!-- Secundário: Ouvidos Recentemente -->
-                <div style="margin-bottom: 2.5rem;">
-                    <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted);">Ouvidos Recentemente</h4>
-                    <div id="recent-scrobbles" class="poster-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
-                        <p style="color: var(--text-muted); font-size: 0.85rem;">Nenhum histórico carregado.</p>
-                    </div>
-                </div>
-
-                <!-- Secundário: Recomendações -->
-                <div>
-                    <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-muted);">Recomendações</h4>
-                    <div id="personal-recs" class="poster-grid" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
-                        <p style="color: var(--text-muted); font-size: 0.85rem;">Nenhuma recomendação carregada.</p>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- Página de Perfil (Ordem solicitada: Favoritos, Diário, Estatísticas, Gamificação, Atividade) -->
@@ -346,6 +311,11 @@
                             <span id="modal-banner-name" style="font-size: 0.8rem; color: var(--accent-gold); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
                         </div>
                     </div>
+                    <div style="margin-bottom: 1.2rem; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 8px;">
+                        <strong style="display: block; margin-bottom: 0.35rem;">Acesso à conta</strong>
+                        <p id="google-link-status" style="color: var(--text-muted); font-size: 0.85rem; margin: 0 0 0.75rem;">Associe o Google para entrar nesta mesma conta SoundBPM.</p>
+                        <button type="button" id="btn-link-google" class="btn-secondary-dark" style="width: 100%;">Vincular conta Google</button>
+                    </div>
                     <button type="submit" id="edit-profile-submit" class="btn-primary-gold" style="width: 100%; padding: 0.9rem;">Salvar Alterações</button>
                 </form>
             </div>
@@ -425,6 +395,99 @@
                 </div>
                 <div id="video-grid" class="vd-grid"></div>
                 <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="video-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
+            </div>
+        </section>
+
+        <!-- ══ PÁGINAS INSTITUCIONAIS ══ -->
+        <section id="terms-page" class="section-container legal-page" style="display: none;">
+            <a href="#explore" class="legal-back-link" data-route-page="home">← Voltar ao início</a>
+            <header class="legal-page-header">
+                <span class="hero-badge">Institucional</span>
+                <h1>Termos de Uso</h1>
+                <p>Regras para usar o SoundBPM e participar da comunidade.</p>
+                <small>Atualizado em 20 de novembro de 2026</small>
+            </header>
+            <article class="legal-card">
+                <h2>1. Sobre o SoundBPM</h2>
+                <p>O SoundBPM é uma plataforma para descobrir álbuns, registrar avaliações e resenhas, organizar favoritos e interagir com outros fãs de música. Ao usar o site ou criar uma conta, você concorda com estes termos.</p>
+
+                <h2>2. Sua conta e suas publicações</h2>
+                <p>Você é responsável pelas informações e conteúdos que publica e por manter a segurança da sua conta. Resenhas, notas, comentários, vídeos, nome de usuário e imagens de perfil podem ficar visíveis publicamente no site.</p>
+                <p>Você mantém os direitos sobre o conteúdo que cria. Ao publicá-lo, permite que o SoundBPM o armazene e exiba dentro da plataforma para oferecer o diário e os recursos da comunidade. Você pode remover publicações pelos controles disponíveis no site ou pedir ajuda ao suporte.</p>
+
+                <h2>3. Uso respeitoso e permitido</h2>
+                <p>Não publique conteúdo ilegal, pornográfico, discriminatório, ameaçador, abusivo ou que viole direitos de outras pessoas. Não use o site para assediar, enviar spam, tentar acessar contas alheias, interferir no funcionamento do serviço ou contornar seus controles de segurança.</p>
+
+                <h2>4. Moderação e medidas</h2>
+                <p>O SoundBPM pode analisar e remover conteúdo que viole estes termos, restringir recursos ou suspender contas em caso de abuso. Algumas informações de perfil e imagens passam por uma verificação automatizada antes de serem salvas. A análise automatizada pode falhar; decisões podem ser contestadas pelo canal de suporte.</p>
+
+                <h2>5. Serviços e conteúdo de terceiros</h2>
+                <p>O catálogo e algumas integrações dependem de serviços externos, como Spotify e Apple/iTunes. As marcas, capas, metadados, links e serviços externos pertencem aos respectivos titulares e também podem estar sujeitos às regras deles. A disponibilidade desses serviços pode mudar sem controle do SoundBPM.</p>
+
+                <h2>6. Disponibilidade e alterações</h2>
+                <p>Recursos podem ser corrigidos, atualizados ou descontinuados. Estes termos também podem mudar; a versão atual ficará publicada nesta página com sua data de atualização.</p>
+
+                <h2>7. Contato</h2>
+                <p>Para dúvidas sobre estes termos, use a página <a href="#contact-page" data-route-page="contact-page">Contato e Suporte</a>.</p>
+            </article>
+        </section>
+
+        <section id="privacy-page" class="section-container legal-page" style="display: none;">
+            <a href="#explore" class="legal-back-link" data-route-page="home">← Voltar ao início</a>
+            <header class="legal-page-header">
+                <span class="hero-badge">Institucional</span>
+                <h1>Política de Privacidade</h1>
+                <p>Como o SoundBPM usa informações necessárias para oferecer o serviço.</p>
+                <small>Atualizada em 20 de novembro de 2026</small>
+            </header>
+            <article class="legal-card">
+                <h2>1. Quem trata os dados</h2>
+                <p>O controlador responsável pela operação do SoundBPM é Henry Diez Rocha Moreno. Para contato sobre privacidade, escreva para <a href="mailto:soundbpmm@gmail.com">soundbpmm@gmail.com</a>.</p>
+
+                <h2>2. Informações tratadas</h2>
+                <ul>
+                    <li><strong>Conta:</strong> e-mail de cadastro e dados de autenticação gerenciados pelo Supabase.</li>
+                    <li><strong>Login com Google:</strong> se você escolher essa opção, o Google e o Supabase compartilham os dados necessários para autenticar sua conta, como identificador e e-mail disponível.</li>
+                    <li><strong>Perfil:</strong> nome de usuário, biografia, foto e banner.</li>
+                    <li><strong>Atividade:</strong> avaliações, resenhas, favoritos, lista de desejos, amizades, curtidas, comentários, vídeos e dados de progresso no site.</li>
+                    <li><strong>Verificação de perfil:</strong> nome de usuário e imagens de avatar/banner podem ser enviados ao serviço de moderação automatizada para análise antes de salvar.</li>
+                </ul>
+
+                <h2>3. Para que usamos as informações</h2>
+                <p>Usamos esses dados para criar e proteger contas, exibir perfis e publicações, manter avaliações e recursos sociais, moderar informações de perfil e corrigir falhas do serviço.</p>
+
+                <h2>4. Onde os dados são processados</h2>
+                <p>O SoundBPM usa Supabase para autenticação, banco de dados e armazenamento. A busca do catálogo consulta serviços como Spotify e Apple/iTunes usando a integração do próprio SoundBPM; o site não pede que você conecte sua conta pessoal do Spotify nesta versão. Nome de usuário e imagens submetidos à verificação de perfil são encaminhados ao serviço de moderação da OpenAI. Esses fornecedores processam informações conforme seus próprios termos e políticas.</p>
+
+                <h2>5. Conteúdo público e integrações</h2>
+                <p>Seu nome de usuário, imagem de perfil e conteúdo publicado no diário ou na comunidade podem ser vistos por outras pessoas. A conexão pessoal com o Spotify não está disponível nesta versão do SoundBPM.</p>
+
+                <h2>6. Retenção e direitos</h2>
+                <p>As informações são mantidas enquanto forem necessárias para operar a conta e os recursos do site, ou para cumprir obrigações aplicáveis. Você pode excluir sua conta e os dados associados pela opção disponível no perfil ou solicitar confirmação, acesso, correção ou anonimização pelo e-mail <a href="mailto:soundbpmm@gmail.com">soundbpmm@gmail.com</a>.</p>
+
+                <h2>7. Atualizações desta política</h2>
+                <p>Podemos atualizar esta política quando os recursos ou tratamentos mudarem. A versão atual e sua data ficam disponíveis nesta página.</p>
+            </article>
+        </section>
+
+        <section id="contact-page" class="section-container legal-page" style="display: none;">
+            <a href="#explore" class="legal-back-link" data-route-page="home">← Voltar ao início</a>
+            <header class="legal-page-header">
+                <span class="hero-badge">Institucional</span>
+                <h1>Contato e Suporte</h1>
+                <p>Ajuda com sua conta, conteúdo publicado ou privacidade.</p>
+            </header>
+            <div class="legal-card contact-card">
+                <div class="contact-icon" aria-hidden="true">✉</div>
+                <h2>Fale com o SoundBPM</h2>
+                <p>Para suporte, denúncias de conteúdo ou pedidos relacionados aos seus dados pessoais, envie um e-mail para:</p>
+                <p class="contact-email"><a href="mailto:soundbpmm@gmail.com">soundbpmm@gmail.com</a></p>
+                <p>Não envie senhas, códigos de autenticação ou tokens de acesso em pedidos de suporte.</p>
+                <div class="contact-topics">
+                    <span>Conta e acesso</span>
+                    <span>Denúncia de conteúdo</span>
+                    <span>Privacidade e dados pessoais</span>
+                </div>
             </div>
         </section>
 
@@ -554,7 +617,6 @@
                     <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como funcionam XP, classificações e conquistas?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Cada resenha vale 10 XP, mais 5 XP se o texto tiver 50 caracteres ou mais, e cada álbum favoritado vale 3 XP. Conforme o XP cresce você sobe de classificação, de Ouvinte até Lenda, e desbloqueia conquistas e títulos que aparecem no seu perfil.</div></div></div></div>
                     <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>O que é a sequência de login 🔥?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>A cada 20 horas libera-se um novo dia de sequência. Se você voltar entre 20 e 44 horas depois, a sequência continua; passando disso, ela recomeça do dia 1. Ela aparece no seu perfil e na aba “Maior sequência” do Ranking.</div></div></div></div>
                     <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como adiciono amigos?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Na página Pessoas, busque pelo nome e envie um pedido de amizade, ou use o botão direto no perfil da pessoa. Quando ela aceitar, vocês passam a aparecer como amigos e o contador do perfil é atualizado.</div></div></div></div>
-                    <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Como conecto minha conta do Spotify?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Use o “Spotify Connect” no rodapé ou no seu Painel. Depois de autorizar, o site importa seus álbuns ouvidos recentemente e sugere faixas recomendadas.</div></div></div></div>
                     <div class="acc"><button class="acc-head" type="button" aria-expanded="false"><span>Posso compartilhar meu perfil e minhas atividades?</span><svg class="acc-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="acc-body"><div class="acc-inner"><div>Sim. No perfil há o botão “Compartilhar perfil”, e cada item da Atividade Recente tem seu próprio botão de compartilhar.</div></div></div></div>
                 </div>
             </div>
@@ -583,17 +645,19 @@
                 </ul>
             </div>
             <div class="footer-col">
-                <h4>Integrações</h4>
+                <h4>Comunidade</h4>
                 <ul>
-                    <li><a href="#" id="footer-spotify-connect">Spotify Connect</a></li>
+                    <li><a href="#diary-page" data-route-page="diary-page">Diário Global</a></li>
+                    <li><a href="#people-page" data-route-page="people-page">Pessoas</a></li>
+                    <li><a href="#ranking-page" data-route-page="ranking-page">Ranking</a></li>
                 </ul>
             </div>
             <div class="footer-col">
                 <h4>Institucional</h4>
                 <ul>
-                    <li><a href="#termos">Termos de Uso</a></li>
-                    <li><a href="#privacidade">Política de Privacidade</a></li>
-                    <li><a href="#contato">Contato e Suporte</a></li>
+                    <li><a href="#terms-page" data-route-page="terms-page">Termos de Uso</a></li>
+                    <li><a href="#privacy-page" data-route-page="privacy-page">Política de Privacidade</a></li>
+                    <li><a href="#contact-page" data-route-page="contact-page">Contato e Suporte</a></li>
                 </ul>
             </div>
         </div>
@@ -658,6 +722,7 @@
                 <div style="margin-bottom: 1rem;">
                     <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">E-mail</label>
                     <input type="email" id="auth-email" required placeholder="seu@email.com" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                    <small id="auth-email-message" class="auth-email-message" role="status" aria-live="polite"></small>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
@@ -665,15 +730,37 @@
                     <input type="password" id="auth-password" required placeholder="Sua senha segura" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
                 </div>
 
+                <button type="button" id="forgot-password-btn" class="auth-forgot-password">Esqueci minha senha</button>
+
                 <button type="submit" id="auth-submit-btn" class="btn-primary-gold" style="width: 100%; padding: 0.9rem; margin-bottom: 1rem;">Entrar na Conta</button>
             </form>
 
-            <div style="border-top: 1px solid var(--border-subtle); padding-top: 1.2rem; text-align: center;">
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem;">Ferramenta de Teste:</p>
-                <div class="login-options" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn-login-option" id="simulate-login-btn" style="font-size: 0.8rem; padding: 0.5rem 0.8rem; border-color: var(--accent-gold); color: var(--accent-gold);">Modo Simulador</button>
-                </div>
+            <div class="social-auth-options" aria-label="Entrar ou criar conta com Google">
+                <div class="social-auth-divider"><span>ou continue com</span></div>
+                <button type="button" id="google-auth-btn" class="social-auth-btn social-auth-google">
+                    <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11c-.5 2.5-1.9 4.7-4 6.1v5h6.5c3.8-3.5 6.1-8.6 6.1-14.8Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.5-5c-1.8 1.2-4 2-7 2-5.3 0-9.8-3.6-11.4-8.4H6v5.2C9.4 39.6 16.2 44 24 44Z"/><path fill="#FBBC05" d="M12.6 27.8a12 12 0 0 1 0-7.6V15H6a20 20 0 0 0 0 18l6.6-5.2Z"/><path fill="#EA4335" d="M24 11.8c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 5.8 29.5 4 24 4 16.2 4 9.4 8.4 6 15l6.6 5.2c1.6-4.8 6.1-8.4 11.4-8.4Z"/></svg>
+                    <span>Continuar com Google</span>
+                </button>
             </div>
+
+        </div>
+    </div>
+
+    <div id="password-recovery-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="password-recovery-title">
+        <div class="modal-card">
+            <h2 id="password-recovery-title">Criar nova senha</h2>
+            <p>Escolha uma senha nova para sua conta SoundBPM.</p>
+            <form id="password-recovery-form">
+                <div style="margin-bottom: 1rem; text-align: left;">
+                    <label for="new-password" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Nova senha</label>
+                    <input type="password" id="new-password" required minlength="8" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                </div>
+                <div style="margin-bottom: 1.25rem; text-align: left;">
+                    <label for="confirm-new-password" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Confirmar nova senha</label>
+                    <input type="password" id="confirm-new-password" required minlength="8" autocomplete="new-password" placeholder="Digite a senha novamente" style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-main);">
+                </div>
+                <button type="submit" id="save-new-password-btn" class="btn-primary-gold" style="width: 100%; padding: 0.9rem;">Salvar nova senha</button>
+            </form>
         </div>
     </div>
 

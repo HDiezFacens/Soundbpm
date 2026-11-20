@@ -77,28 +77,36 @@
 
 
 
-.hero-stats-row {
-    display: flex;
-    justify-content: center;
-    gap: 3rem;
+.hero-features-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
     border-top: 1px solid var(--border-subtle);
     padding-top: 2rem;
 }
 
-.stat-box {
+.hero-feature {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 88px;
+    padding: 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-card);
 }
 
-.stat-box strong {
-    font-size: 1.4rem;
+.hero-feature strong {
+    font-size: 1rem;
     font-weight: 800;
+    color: var(--accent-gold);
 }
 
-.stat-box span {
-    font-size: 0.8rem;
+.hero-feature span {
+    font-size: 0.82rem;
     color: var(--text-muted);
-    text-transform: uppercase;
+    line-height: 1.45;
 }
 
 

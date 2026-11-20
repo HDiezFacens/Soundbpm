@@ -17,7 +17,104 @@ const tabRegisterBtn = document.getElementById("tab-register-btn");
 const usernameFieldWrap = document.getElementById("username-field-wrap");
 const authSubmitBtn = document.getElementById("auth-submit-btn");
 const authForm = document.getElementById("auth-form");
+const googleAuthBtn = document.getElementById("google-auth-btn");
+const forgotPasswordBtn = document.getElementById("forgot-password-btn");
+const passwordRecoveryModal = document.getElementById("password-recovery-modal");
+const passwordRecoveryForm = document.getElementById("password-recovery-form");
+const saveNewPasswordBtn = document.getElementById("save-new-password-btn");
+const linkGoogleBtn = document.getElementById("btn-link-google");
+const googleLinkStatus = document.getElementById("google-link-status");
 let isRegisterMode = false;
+let googleProfileSetupOpenedForUserId = null;
+
+function openGoogleProfileSetup(session, profile = null) {
+    if (!session?.user || googleProfileSetupOpenedForUserId === session.user.id) return;
+    googleProfileSetupOpenedForUserId = session.user.id;
+
+    if (window.navigateTo) window.navigateTo("profile-page");
+    const usernameInput = document.getElementById("edit-profile-username");
+    const bioInput = document.getElementById("edit-profile-bio");
+    if (usernameInput) usernameInput.value = profile?.username || session.user.user_metadata?.full_name || "";
+    if (bioInput) bioInput.value = profile?.bio || "Explorando o mundo da música.";
+    const editProfileModal = document.getElementById("edit-profile-modal");
+    if (editProfileModal) editProfileModal.classList.add("active");
+    if (window.loadUserProfile) window.loadUserProfile();
+    if (window.gameToast) window.gameToast("Continue configurando seu perfil.");
+}
+
+async function refreshGoogleLinkStatus() {
+    if (!supabase || !googleLinkStatus || !linkGoogleBtn) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        googleLinkStatus.textContent = "Entre na sua conta SoundBPM antes de associar o Google.";
+        linkGoogleBtn.disabled = true;
+        return;
+    }
+    const { data, error } = await supabase.auth.getUserIdentities();
+    if (error) {
+        googleLinkStatus.textContent = "Não foi possível verificar as contas vinculadas.";
+        return;
+    }
+    const linked = data?.identities?.some(identity => identity.provider === "google");
+    googleLinkStatus.textContent = linked
+        ? "Uma conta Google já está vinculada a esta conta SoundBPM."
+        : "Associe o Google para entrar nesta mesma conta SoundBPM.";
+    linkGoogleBtn.textContent = linked ? "Google já vinculado" : "Vincular conta Google";
+    linkGoogleBtn.disabled = linked;
+}
+window.refreshGoogleLinkStatus = refreshGoogleLinkStatus;
+
+if (linkGoogleBtn) {
+    linkGoogleBtn.addEventListener("click", async () => {
+        if (!supabase) return alert("Supabase não inicializado.");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return alert("Entre primeiro na conta SoundBPM que deseja manter.");
+
+        linkGoogleBtn.disabled = true;
+        linkGoogleBtn.textContent = "Abrindo Google...";
+        const redirectTo = `${window.location.origin}${window.location.pathname}?soundbpm_google_link=1`;
+        const { error } = await supabase.auth.linkIdentity({
+            provider: "google",
+            options: { redirectTo }
+        });
+        if (error) {
+            alert(`Não foi possível vincular o Google: ${error.message}. Se o projeto exigir vínculo manual, habilite essa opção nas configurações de autenticação do Supabase.`);
+            await refreshGoogleLinkStatus();
+        }
+    });
+}
+
+async function startGoogleAuth(button) {
+    if (!supabase) {
+        alert("Supabase não inicializado.");
+        return;
+    }
+
+    const originalText = button.querySelector("span")?.textContent || button.textContent;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    if (button.querySelector("span")) button.querySelector("span").textContent = "Redirecionando...";
+
+    localStorage.setItem("soundbpm_google_auth_pending", JSON.stringify({
+        startedAt: Date.now(),
+        intent: isRegisterMode ? "signup" : "signin"
+    }));
+    const redirectTo = `${window.location.origin}${window.location.pathname}?soundbpm_google_${isRegisterMode ? "signup" : "login"}=1`;
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: { redirectTo }
+        });
+        if (error) throw error;
+    } catch (error) {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        if (button.querySelector("span")) button.querySelector("span").textContent = originalText;
+        alert(`Não foi possível continuar com Google: ${error.message}`);
+    }
+}
+
+if (googleAuthBtn) googleAuthBtn.addEventListener("click", () => startGoogleAuth(googleAuthBtn));
 
 
 // 1. Alternância entre Abas Login e Cadastro
@@ -30,7 +127,10 @@ if (tabLoginBtn && tabRegisterBtn) {
         tabRegisterBtn.style.color = "var(--text-muted)";
         tabRegisterBtn.style.fontWeight = "600";
         if (usernameFieldWrap) usernameFieldWrap.style.display = "none";
+        if (forgotPasswordBtn) forgotPasswordBtn.style.display = "block";
         if (authSubmitBtn) authSubmitBtn.textContent = "Entrar na Conta";
+        const googleLabel = googleAuthBtn?.querySelector("span");
+        if (googleLabel) googleLabel.textContent = "Continuar com Google";
     });
 
     tabRegisterBtn.addEventListener("click", (e) => {
@@ -41,7 +141,75 @@ if (tabLoginBtn && tabRegisterBtn) {
         tabLoginBtn.style.color = "var(--text-muted)";
         tabLoginBtn.style.fontWeight = "600";
         if (usernameFieldWrap) usernameFieldWrap.style.display = "block";
+        if (forgotPasswordBtn) forgotPasswordBtn.style.display = "none";
         if (authSubmitBtn) authSubmitBtn.textContent = "Criar Conta Gratuita";
+        const googleLabel = googleAuthBtn?.querySelector("span");
+        if (googleLabel) googleLabel.textContent = "Criar conta com Google";
+    });
+}
+
+if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener("click", async () => {
+        if (!supabase) return alert("Supabase não inicializado.");
+        const emailInput = document.getElementById("auth-email");
+        const emailMessage = document.getElementById("auth-email-message");
+        const email = emailInput?.value.trim();
+        if (!email) {
+            if (emailMessage) emailMessage.textContent = "Digite seu e-mail aqui e clique em “Esqueci minha senha” novamente.";
+            emailInput?.setAttribute("aria-invalid", "true");
+            emailInput?.focus();
+            return;
+        }
+        if (emailMessage) emailMessage.textContent = "";
+        emailInput?.removeAttribute("aria-invalid");
+
+        forgotPasswordBtn.disabled = true;
+        const originalText = forgotPasswordBtn.textContent;
+        forgotPasswordBtn.textContent = "Enviando link...";
+        try {
+            const redirectTo = `${window.location.origin}${window.location.pathname}?soundbpm_password_recovery=1`;
+            const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) throw error;
+            alert("Se esse e-mail estiver cadastrado, você receberá um link para criar uma nova senha.");
+        } catch (error) {
+            alert(`Não foi possível enviar o link de recuperação: ${error.message}`);
+        } finally {
+            forgotPasswordBtn.disabled = false;
+            forgotPasswordBtn.textContent = originalText;
+        }
+    });
+}
+
+document.getElementById("auth-email")?.addEventListener("input", () => {
+    const emailMessage = document.getElementById("auth-email-message");
+    if (emailMessage) emailMessage.textContent = "";
+    document.getElementById("auth-email")?.removeAttribute("aria-invalid");
+});
+
+if (passwordRecoveryForm) {
+    passwordRecoveryForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!supabase) return alert("Supabase não inicializado.");
+        const password = document.getElementById("new-password").value;
+        const confirmPassword = document.getElementById("confirm-new-password").value;
+        if (password.length < 8) return alert("A senha precisa ter pelo menos 8 caracteres.");
+        if (password !== confirmPassword) return alert("As senhas não coincidem.");
+
+        saveNewPasswordBtn.disabled = true;
+        saveNewPasswordBtn.textContent = "Salvando...";
+        try {
+            const { error } = await supabase.auth.updateUser({ password });
+            if (error) throw error;
+            passwordRecoveryModal?.classList.remove("active");
+            try { await supabase.auth.signOut(); } catch (_) {}
+            alert("Senha atualizada. Agora entre com sua nova senha.");
+            if (modal) modal.classList.add("active");
+        } catch (error) {
+            alert(`Não foi possível atualizar a senha: ${error.message}`);
+        } finally {
+            saveNewPasswordBtn.disabled = false;
+            saveNewPasswordBtn.textContent = "Salvar nova senha";
+        }
     });
 }
 
@@ -61,19 +229,19 @@ async function ensureProfileFromSignup(session) {
         const key = "soundbpm_pending_" + (user.email || "").toLowerCase();
         let pending = null;
         try { pending = JSON.parse(localStorage.getItem(key)); } catch (e) {}
-        if (!pending && !meta.username) return true;
 
-        const { data: profile } = await supabase.from("profiles").select("username, bio, avatar_url").eq("id", user.id).maybeSingle();
+        const { data: profile, error: profileError } = await supabase.from("profiles").select("username, bio, avatar_url").eq("id", user.id).maybeSingle();
+        if (profileError) throw profileError;
         const emailPrefix = (user.email || "").split("@")[0];
-        const requestedUsername = pending?.username || meta.username;
+        const providerName = meta.username || meta.preferred_username || meta.user_name || meta.full_name || meta.name;
+        const candidateName = providerName ? String(providerName).trim().slice(0, 24) : "";
+        const generatedDefaultName = `Membro-${user.id.slice(0, 6)}`;
+        const requestedUsername = pending?.username || (candidateName.length >= 2 ? candidateName : generatedDefaultName);
+        const isPlaceholderName = !profile?.username || profile.username === emailPrefix || profile.username === generatedDefaultName;
 
-        if ((pending?.username || !profile?.username || profile.username === emailPrefix) && requestedUsername) {
+        if (!profile || (pending?.username && pending.username !== profile.username) || (isPlaceholderName && requestedUsername !== profile?.username)) {
             await window.moderateProfileContent({
                 action: "profile", username: requestedUsername, bio: meta.bio || "Explorando o mundo da música."
-            });
-        } else if (!profile) {
-            await window.moderateProfileContent({
-                action: "profile", username: emailPrefix || "Mófilo", bio: "Explorando o mundo da música."
             });
         }
 
@@ -263,11 +431,52 @@ window.resetLoginButtonState = resetLoginButtonState;
 async function checkSupabaseSession() {
     if (!supabase) return;
     const { data: { session } } = await supabase.auth.getSession();
+    const url = new URL(window.location.href);
+    let googleAuthPending = null;
+    try { googleAuthPending = JSON.parse(localStorage.getItem("soundbpm_google_auth_pending") || "null"); } catch (_) {}
+    const localGoogleAuthPending = Number(googleAuthPending?.startedAt) > 0 &&
+        Date.now() - Number(googleAuthPending.startedAt) < 10 * 60 * 1000;
+    const isGoogleSignupIntent = url.searchParams.has("soundbpm_google_signup") ||
+        (localGoogleAuthPending && googleAuthPending.intent === "signup");
+    const isGoogleAuthReturn = isGoogleSignupIntent || url.searchParams.has("soundbpm_google_login") || localGoogleAuthPending;
+    if (!session && !isGoogleAuthReturn) localStorage.removeItem("soundbpm_google_auth_pending");
 
     if (session) {
-        await ensureProfileFromSignup(session);
+        localStorage.removeItem("soundbpm_google_auth_pending");
+        const createdAt = Date.parse(session.user.created_at || "");
+        const lastSignInAt = Date.parse(session.user.last_sign_in_at || "");
+        const authMetadata = session.user.app_metadata || {};
+        const isGoogleAccount = authMetadata.provider === "google" ||
+            authMetadata.providers?.includes("google") ||
+            session.user.identities?.some(identity => identity.provider === "google");
+        const isFreshGoogleUser = isGoogleAccount && Number.isFinite(createdAt) &&
+            Number.isFinite(lastSignInAt) && Math.abs(lastSignInAt - createdAt) < 5 * 60 * 1000;
+        if (isGoogleSignupIntent || isFreshGoogleUser) {
+            openGoogleProfileSetup(session);
+        }
+
+        let existingProfile = null;
+        if (isGoogleAuthReturn || isFreshGoogleUser) {
+            const { data } = await supabase
+                .from("profiles")
+                .select("id, username, bio")
+                .eq("id", session.user.id)
+                .maybeSingle();
+            existingProfile = data;
+            const emailPrefix = (session.user.email || "").split("@")[0];
+            const generatedName = `Membro-${session.user.id.slice(0, 6)}`;
+            const isIncompleteGoogleProfile = !existingProfile || !existingProfile.username ||
+                existingProfile.username === emailPrefix || existingProfile.username === generatedName ||
+                !existingProfile.bio || existingProfile.bio === "Explorando o mundo da música.";
+            if (isIncompleteGoogleProfile) openGoogleProfileSetup(session, existingProfile);
+        }
+
+        const profileReady = await ensureProfileFromSignup(session);
+        if (!profileReady && window.gameToast) {
+            window.gameToast("Sua conta entrou, mas não foi possível preparar o perfil. Tente atualizar a página.");
+        }
         const { data: profile } = await supabase
-            .from("profiles").select("username, avatar_url").eq("id", session.user.id).single();
+            .from("profiles").select("username, avatar_url, bio").eq("id", session.user.id).maybeSingle();
 
         const username = profile?.username || session.user.email?.split("@")[0] || "Meu Perfil";
         const avatar   = profile?.avatar_url || "";
@@ -278,10 +487,64 @@ async function checkSupabaseSession() {
             avatar: avatar
         }));
         await updateLoginButtonState();
+        try { await refreshGoogleLinkStatus(); } catch (error) { console.warn("Não foi possível atualizar o estado do vínculo Google:", error); }
+
+        url.searchParams.delete("soundbpm_google_signup");
+        url.searchParams.delete("soundbpm_google_login");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     } else {
         resetLoginButtonState();
+    }
+
+    if (url.searchParams.has("soundbpm_google_link")) {
+        const { data: { session: returnedSession } } = await supabase.auth.getSession();
+        const { data: identities } = returnedSession
+            ? await supabase.auth.getUserIdentities()
+            : { data: null };
+        const linked = identities?.identities?.some(identity => identity.provider === "google");
+        if (window.gameToast) {
+            window.gameToast(linked
+                ? "Google vinculado à sua conta SoundBPM."
+                : "Não foi possível concluir o vínculo. Confira se o vínculo manual está habilitado no Supabase.");
+        }
+        url.searchParams.delete("soundbpm_google_link");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     }
 }
 
 
 window.checkSupabaseSession = checkSupabaseSession;
+
+// OAuth pode restaurar a sessão depois da inicialização do cabeçalho.
+// Atualize o botão assim que o Supabase confirmar a sessão, sem fazer consultas
+// dentro do callback síncrono de onAuthStateChange.
+if (supabase) {
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "PASSWORD_RECOVERY" && session) {
+            passwordRecoveryModal?.classList.add("active");
+            return;
+        }
+        if (!session || !["INITIAL_SESSION", "SIGNED_IN", "TOKEN_REFRESHED"].includes(event)) return;
+        const pendingGoogleAuth = localStorage.getItem("soundbpm_google_auth_pending");
+        window.setTimeout(async () => {
+            try {
+                if (event === "SIGNED_IN" && pendingGoogleAuth && window.checkSupabaseSession) {
+                    await window.checkSupabaseSession();
+                }
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("username, avatar_url")
+                    .eq("id", session.user.id)
+                    .maybeSingle();
+                localStorage.setItem("soundbpm_user", JSON.stringify({
+                    email: session.user.email,
+                    username: profile?.username || session.user.email?.split("@")[0] || "Meu Perfil",
+                    avatar: profile?.avatar_url || ""
+                }));
+                await updateLoginButtonState();
+            } catch (error) {
+                console.warn("Não foi possível atualizar o cabeçalho após autenticação:", error);
+            }
+        }, 0);
+    });
+}

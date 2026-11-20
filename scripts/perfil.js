@@ -193,6 +193,7 @@ window.loadUserProfile = async function(targetUserId = null) {
     renderProfileExtras({ userId: userIdToLoad, myId, mine: isMyProfile, name: displayName, profile, reviews: profileReviews || [], favs: favs || [] });
 
     let logoutBtn = document.getElementById("btn-logout-profile");
+    let deleteAccountBtn = document.getElementById("btn-delete-account");
     if (isMyProfile) {
         if (!logoutBtn) {
             logoutBtn = document.createElement("button");
@@ -210,8 +211,41 @@ window.loadUserProfile = async function(targetUserId = null) {
         } else {
             logoutBtn.style.display = "block";
         }
+
+        if (!deleteAccountBtn) {
+            deleteAccountBtn = document.createElement("button");
+            deleteAccountBtn.id = "btn-delete-account";
+            deleteAccountBtn.type = "button";
+            deleteAccountBtn.textContent = "Excluir Conta";
+            deleteAccountBtn.style.cssText = "display:block;margin-top:0.75rem;padding:0.65rem 1rem;border:1px solid #e05252;border-radius:8px;background:transparent;color:#ff7777;font-weight:700;cursor:pointer;";
+            deleteAccountBtn.addEventListener("click", async () => {
+                if (!confirm("Excluir sua conta SoundBPM permanentemente? Seu perfil, avaliações, resenhas, favoritos, amizades, comentários e vídeos serão removidos.")) return;
+                if (prompt('Para confirmar, digite EXCLUIR:') !== "EXCLUIR") return;
+
+                deleteAccountBtn.disabled = true;
+                deleteAccountBtn.textContent = "Excluindo conta...";
+                try {
+                    const { data, error } = await supabase.functions.invoke("delete-account", { body: {} });
+                    if (error) throw new Error(data?.error || error.message || "Falha ao excluir conta.");
+                    if (!data?.ok) throw new Error(data?.error || "O servidor não confirmou a exclusão.");
+
+                    await supabase.auth.signOut({ scope: "local" });
+                    Object.keys(localStorage).filter(key => /soundbpm|spotify_access_token|sb_streak_|sb_title_/i.test(key))
+                        .forEach(key => localStorage.removeItem(key));
+                    window.location.replace(window.location.pathname);
+                } catch (error) {
+                    alert(`Não foi possível excluir a conta: ${error.message}`);
+                    deleteAccountBtn.disabled = false;
+                    deleteAccountBtn.textContent = "Excluir Conta";
+                }
+            });
+            document.getElementById("profile-page").appendChild(deleteAccountBtn);
+        } else {
+            deleteAccountBtn.style.display = "block";
+        }
     } else {
         if (logoutBtn) logoutBtn.style.display = "none";
+        if (deleteAccountBtn) deleteAccountBtn.style.display = "none";
     }
 };
 
@@ -263,6 +297,7 @@ document.addEventListener("click", async (e) => {
             if (bInput) bInput.value = profile.bio || "";
         }
         if (editProfileModal) editProfileModal.classList.add("active");
+        if (window.refreshGoogleLinkStatus) await window.refreshGoogleLinkStatus();
     }
 });
 

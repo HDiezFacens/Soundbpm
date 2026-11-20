@@ -28,6 +28,7 @@ async function generateCodeChallenge(codeVerifier) {
 
 // 2. Fluxo de Autorização do Spotify
 async function connectToSpotify() {
+    if (!window.SPOTIFY_ACCOUNT_CONNECT_ENABLED) return;
     const codeVerifier = await generateRandomString(64);
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     localStorage.setItem('code_verifier', codeVerifier);
@@ -64,6 +65,7 @@ if (footerSpotify) {
 
 // 4. Tratamento do Callback do Spotify
 window.handleSpotifyCallback = async function() {
+if (!window.SPOTIFY_ACCOUNT_CONNECT_ENABLED) return;
 const urlParams = new URLSearchParams(window.location.search);
 const code = urlParams.get('code');
 
@@ -129,6 +131,11 @@ window.fetchFromSpotify = fetchFromSpotify;
 
 // 6. Preenchimento do Dashboard Musical do Spotify
 window.populateDashboard = async function() {
+    if (!window.SPOTIFY_ACCOUNT_CONNECT_ENABLED) {
+        if (typeof loadDashboardBacklog === 'function') await loadDashboardBacklog();
+        return;
+    }
+
     const scrobblesContainer = document.getElementById("recent-scrobbles");
     const recsContainer = document.getElementById("personal-recs");
     const connectBanner = document.getElementById("spotify-connect-banner");
@@ -234,7 +241,7 @@ window.populateDashboard = async function() {
 // 7. Simulação e Web Player com Reprodução Real de Áudio e Spotify
 const simulateBtn = document.getElementById("simulate-login-btn");
 const webPlayer = document.getElementById("web-player");
-if (simulateBtn) {
+if (simulateBtn && window.SPOTIFY_ACCOUNT_CONNECT_ENABLED) {
     simulateBtn.addEventListener("click", () => {
         localStorage.setItem("spotify_access_token", "simulated_token");
         if (modal) modal.classList.remove("active");

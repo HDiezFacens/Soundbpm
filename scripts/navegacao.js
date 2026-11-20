@@ -7,7 +7,7 @@ var supabase = window.supabaseClient;
 
 // 1. Roteador SPA e Histórico
 const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page", "diary-page"];
+const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page", "diary-page", "terms-page", "privacy-page", "contact-page"];
 
 window.navigateTo = function(pageId, pushHistory = true) {
     if (pageId === "home" || pageId === "explore") {
@@ -44,6 +44,22 @@ window.navigateTo = function(pageId, pushHistory = true) {
 window.addEventListener("popstate", (event) => {
     const pageId = event.state?.page || "home";
     navigateTo(pageId, false);
+});
+
+const initialPage = window.location.hash.slice(1);
+if (["terms-page", "privacy-page", "contact-page"].includes(initialPage)) {
+    history.replaceState({ page: initialPage }, "", window.location.href);
+    navigateTo(initialPage, false);
+}
+
+document.querySelectorAll("[data-route-page]").forEach(link => {
+    link.addEventListener("click", event => {
+        event.preventDefault();
+        const pageId = link.dataset.routePage;
+        navigateTo(pageId);
+        if (pageId === "people-page" && window.loadPeoplePage) window.loadPeoplePage();
+        if (pageId === "ranking-page" && window.loadRankingPage) window.loadRankingPage();
+    });
 });
 
 

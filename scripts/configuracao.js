@@ -33,6 +33,8 @@ const SCOPES = "user-read-private user-read-email user-read-recently-played user
 window.SPOTIFY_CLIENT_ID = SPOTIFY_CLIENT_ID;
 window.REDIRECT_URI = REDIRECT_URI;
 window.SCOPES = SCOPES;
+// Conexão de contas individuais fica desativada no lançamento público.
+window.SPOTIFY_ACCOUNT_CONNECT_ENABLED = false;
 
 // 4. Utilitários Globais
 // Sanitização contra XSS
