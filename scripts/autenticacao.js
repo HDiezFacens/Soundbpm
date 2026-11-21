@@ -255,7 +255,6 @@ async function ensureProfileFromSignup(session) {
         return true;
     } catch (e) {
         console.error("ensureProfileFromSignup:", e);
-        localStorage.removeItem(key);
         return false;
     }
 }
@@ -287,7 +286,13 @@ if (authForm) {
                 email: email,
                 password: password,
                 // O apelido fica pendente no navegador até a validação autenticada pelo servidor.
-                options: { emailRedirectTo: location.href.split(/[?#]/)[0], data: { bio: "Explorando o mundo da música." } }
+                options: {
+                    emailRedirectTo: location.href.split(/[?#]/)[0],
+                    data: {
+                        username: username.trim().slice(0, 24),
+                        bio: "Explorando o mundo da música."
+                    }
+                }
             });
 
             if (signUpError) {
@@ -493,6 +498,8 @@ async function checkSupabaseSession() {
         url.searchParams.delete("soundbpm_google_login");
         window.history.replaceState({}, "", url.pathname + url.search + url.hash);
     } else {
+        // Não deixe dados antigos do navegador fazerem a interface parecer autenticada.
+        localStorage.removeItem("soundbpm_user");
         resetLoginButtonState();
     }
 
