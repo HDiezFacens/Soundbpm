@@ -125,6 +125,7 @@
                     <li><a href="#people-page" id="nav-people-link" class="nav-link">Pessoas</a></li>
                     <li><a href="#ranking-page" id="nav-ranking-link" class="nav-link">Ranking</a></li>
                     <li><a href="#diary-page" id="nav-community-link" class="nav-link">Comunidade</a></li>
+                    <li><a href="#videos-page" id="nav-videos-link" class="nav-link" data-route-page="videos-page">Reviews</a></li>
                 </ul>
 
                 <!-- Seletor exclusivo para celulares / telas verticais -->
@@ -138,6 +139,7 @@
                         <option value="people-page">Pessoas ▾</option>
                         <option value="ranking-page">Ranking ▾</option>
                         <option value="diary-page">Comunidade ▾</option>
+                        <option value="videos-page">Reviews ▾</option>
                     </select>
                 </div>
             </nav>
@@ -199,6 +201,18 @@
                 <h2>Minha Lista • Fila de Desejos</h2>
                 <p style="color: var(--text-muted);">Organize aqui os álbuns que você salvou para escutar e resenhar em breve.</p>
             </div>
+
+            <section class="random-discovery" aria-labelledby="random-discovery-title">
+                <div class="random-discovery-intro">
+                    <span class="random-discovery-eyebrow">🎲 DESCOBERTA MUSICAL</span>
+                    <h3 id="random-discovery-title">Sem ideia do que ouvir?</h3>
+                    <p>Deixe o SoundBPM escolher um álbum para sua próxima escuta.</p>
+                    <button type="button" id="recommend-random-album" class="btn-primary-gold">Surpreenda-me</button>
+                </div>
+                <div id="random-album-result" class="random-album-result" aria-live="polite">
+                    <div class="random-album-placeholder"><span>♫</span><p>Sua próxima descoberta aparece aqui.</p></div>
+                </div>
+            </section>
 
             <!-- FOCO PRINCIPAL: Fila de Desejos (Backlog) -->
             <div style="margin-bottom: 3.5rem;">
@@ -377,25 +391,29 @@
             <div class="section-header-flex">
                 <div>
                     <h2>Diário Global</h2>
-                    <p>Todas as resenhas e vídeos publicados pela comunidade do SoundBPM.</p>
+                    <p>Resenhas e avaliações compartilhadas pela comunidade do SoundBPM.</p>
                 </div>
             </div>
-            <div class="diary-tabs">
-                <button type="button" class="diary-tab active" data-tab="reviews">Resenhas</button>
-                <button type="button" class="diary-tab" data-tab="videos">Vídeos</button>
-            </div>
-            <div id="diary-reviews-panel">
-                <div id="diary-list" class="cm-list"></div>
-                <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="diary-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
-            </div>
-            <div id="diary-videos-panel" style="display: none;">
-                <div class="vd-toolbar">
-                    <p>Publique até 60 segundos de reação, review ou performance em vídeo.</p>
-                    <button type="button" id="btn-publish-video" class="btn-primary-gold">🎬 Publicar vídeo</button>
+            <div id="diary-list" class="cm-list"></div>
+            <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="diary-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
+        </section>
+
+        <!-- ══ PÁGINA DE VÍDEOS CURTOS ══ -->
+        <section id="videos-page" class="section-container videos-page" style="display: none;">
+            <div class="videos-page-head">
+                <div>
+                    <span class="videos-eyebrow">COMUNIDADE SOUNDBPM</span>
+                    <h1>Reviews em vídeo</h1>
+                    <p>Descubra reviews, primeiras impressões e momentos musicais da comunidade.</p>
                 </div>
-                <div id="video-grid" class="vd-grid"></div>
-                <div style="text-align: center; margin-top: 1.5rem;"><button type="button" id="video-more" class="btn-secondary-dark" style="display: none;">Carregar mais</button></div>
+                <button type="button" id="btn-publish-video" class="btn-primary-gold">＋ Publicar vídeo</button>
             </div>
+            <div class="video-feed-stage">
+                <div id="video-feed" class="video-feed" aria-label="Feed de vídeos da comunidade">
+                    <p class="video-feed-empty">Carregando vídeos...</p>
+                </div>
+            </div>
+            <div class="video-feed-more-wrap"><button type="button" id="video-more" class="btn-secondary-dark" style="display: none;">Carregar mais vídeos</button></div>
         </section>
 
         <!-- ══ PÁGINAS INSTITUCIONAIS ══ -->
@@ -600,7 +618,10 @@
                     <h2>Resenhas Mais Bem Avaliadas</h2>
                     <p>As 3 resenhas em destaque da comunidade. Curta e comente para ajudar uma resenha a subir.</p>
                 </div>
-                <a href="#diary-page" id="view-global-diary-link" class="view-more-link">Ver diário global &rarr;</a>
+                <div class="community-home-links">
+                    <a href="#diary-page" id="view-global-diary-link" class="view-more-link">Ver diário global &rarr;</a>
+                    <a href="#videos-page" class="view-more-link" data-route-page="videos-page">Ver reviews em vídeo &rarr;</a>
+                </div>
             </div>
 
             <div id="home-top-reviews" class="cm-list"><p class="cm-empty">Carregando resenhas...</p></div>
@@ -648,6 +669,7 @@
                 <h4>Comunidade</h4>
                 <ul>
                     <li><a href="#diary-page" data-route-page="diary-page">Diário Global</a></li>
+                    <li><a href="#videos-page" data-route-page="videos-page">Reviews em vídeo</a></li>
                     <li><a href="#people-page" data-route-page="people-page">Pessoas</a></li>
                     <li><a href="#ranking-page" data-route-page="ranking-page">Ranking</a></li>
                 </ul>

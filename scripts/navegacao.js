@@ -7,7 +7,7 @@ var supabase = window.supabaseClient;
 
 // 1. Roteador SPA e Histórico
 const homeSections = ["explore", "trending", "news", "upcoming", "community"];
-const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page", "diary-page", "terms-page", "privacy-page", "contact-page"];
+const allPages = ["dashboard", "albums-page", "profile-page", "people-page", "album-detail-page", "ranking-page", "diary-page", "videos-page", "terms-page", "privacy-page", "contact-page"];
 
 window.navigateTo = function(pageId, pushHistory = true) {
     if (pageId === "home" || pageId === "explore") {
@@ -47,7 +47,7 @@ window.addEventListener("popstate", (event) => {
 });
 
 const initialPage = window.location.hash.slice(1);
-if (["terms-page", "privacy-page", "contact-page"].includes(initialPage)) {
+if (["videos-page", "terms-page", "privacy-page", "contact-page"].includes(initialPage)) {
     history.replaceState({ page: initialPage }, "", window.location.href);
     navigateTo(initialPage, false);
 }
@@ -57,6 +57,8 @@ document.querySelectorAll("[data-route-page]").forEach(link => {
         event.preventDefault();
         const pageId = link.dataset.routePage;
         navigateTo(pageId);
+        const mobileDropdown = document.getElementById("mobile-nav-dropdown");
+        if (mobileDropdown) mobileDropdown.value = pageId;
         if (pageId === "people-page" && window.loadPeoplePage) window.loadPeoplePage();
         if (pageId === "ranking-page" && window.loadRankingPage) window.loadRankingPage();
     });

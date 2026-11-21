@@ -9,13 +9,9 @@ const navBase = window.navigateTo;
 window.navigateTo = function (pageId, pushHistory = true) {
     if (navBase) navBase(pageId, pushHistory);
     if (pageId === "diary-page") {
-        document.querySelectorAll(".diary-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === "reviews"));
-        const revP = document.getElementById("diary-reviews-panel");
-        const vidP = document.getElementById("diary-videos-panel");
-        if (revP) revP.style.display = "";
-        if (vidP) vidP.style.display = "none";
         if (window.loadDiaryPage) window.loadDiaryPage(true);
     }
+    if (pageId === "videos-page" && window.loadVideos) window.loadVideos(true);
     if (pageId === "home" || pageId === "explore") {
         if (window.loadHomeTopReviews) window.loadHomeTopReviews();
     }
@@ -37,6 +33,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.loadPopularContent) window.loadPopularContent();
     if (window.loadNewsAndUpcoming) window.loadNewsAndUpcoming();
     if (window.loadHomeTopReviews) window.loadHomeTopReviews();
+
+    if (window.location.hash.slice(1) === "videos-page") {
+        window.navigateTo("videos-page", false);
+    }
 
     // 5. Trata Link Direto de Perfil Compartilhado (?u=USER_ID)
     const urlParams = new URLSearchParams(window.location.search);

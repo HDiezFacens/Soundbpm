@@ -621,4 +621,162 @@ window.removeFromBacklog = async function(id) {
     }
 };
 
+const randomAlbumSeeds = [
+    { album: "Clube da Esquina", artist: "Milton Nascimento", query: "Clube da Esquina Milton Nascimento Lô Borges", note: "Um disco brasileiro expansivo, cheio de encontros entre MPB, rock e música latino-americana." },
+    { album: "Acabou Chorare", artist: "Novos Baianos", query: "Acabou Chorare Novos Baianos", note: "Samba, violão e psicodelia se encontram em um dos grandes discos coletivos da música brasileira." },
+    { album: "Sobrevivendo no Inferno", artist: "Racionais MC's", query: "Sobrevivendo no Inferno Racionais MCs", note: "Um retrato poderoso da vida nas periferias de São Paulo, contado com precisão e urgência." },
+    { album: "A Tábua de Esmeralda", artist: "Jorge Ben Jor", query: "A Tábua de Esmeralda Jorge Ben Jor", note: "Samba-rock, alquimia e balanço em uma das obras mais singulares de Jorge Ben." },
+    { album: "Elis & Tom", artist: "Elis Regina", query: "Elis e Tom Elis Regina Antonio Carlos Jobim", note: "A voz de Elis Regina encontra as canções e os arranjos delicados de Tom Jobim." },
+    { album: "Construção", artist: "Chico Buarque", query: "Construção Chico Buarque", note: "Canções de arquitetura impecável que observam o cotidiano e as tensões do Brasil urbano." },
+    { album: "Transa", artist: "Caetano Veloso", query: "Transa Caetano Veloso", note: "Um álbum gravado no exílio, com mistura inventiva de rock, MPB e canções em inglês." },
+    { album: "Bom Mesmo É Estar Debaixo D'Água", artist: "Luedji Luna", query: "Bom Mesmo É Estar Debaixo D'Água Luedji Luna", note: "Neo-soul e jazz em canções íntimas sobre afeto, identidade e pertencimento." },
+    { album: "CAJU", artist: "Liniker", query: "CAJU Liniker", note: "Um álbum amplo e cheio de cor, com soul, pop e a voz marcante de Liniker." },
+    { album: "Abbey Road", artist: "The Beatles", query: "Abbey Road The Beatles", note: "Um lado final em forma de medley e algumas das gravações mais reconhecíveis dos Beatles." },
+    { album: "Rumours", artist: "Fleetwood Mac", query: "Rumours Fleetwood Mac", note: "Harmonias pop perfeitas e histórias de relacionamentos em transformação." },
+    { album: "OK Computer", artist: "Radiohead", query: "OK Computer Radiohead", note: "Rock alternativo inquieto que transforma alienação e tecnologia em paisagens sonoras." },
+    { album: "Discovery", artist: "Daft Punk", query: "Discovery Daft Punk", note: "French house, disco e samples luminosos em uma viagem eletrônica irresistível." },
+    { album: "Back to Black", artist: "Amy Winehouse", query: "Back to Black Amy Winehouse", note: "Soul retrô, letras confessionais e interpretações que ficam na memória." },
+    { album: "good kid, m.A.A.d city", artist: "Kendrick Lamar", query: "good kid m.A.A.d city Kendrick Lamar", note: "Uma narrativa de amadurecimento em Compton, construída como um filme em forma de álbum." },
+    { album: "Blonde", artist: "Frank Ocean", query: "Blonde Frank Ocean", note: "R&B minimalista e fragmentos de memória em uma escuta íntima e atmosférica." },
+    { album: "Lemonade", artist: "Beyoncé", query: "Lemonade Beyoncé", note: "Uma sequência de estilos e emoções que transforma experiência pessoal em declaração artística." },
+    { album: "The Miseducation of Lauryn Hill", artist: "Lauryn Hill", query: "The Miseducation of Lauryn Hill", note: "Hip-hop e soul em canções sobre amor, crescimento e autonomia." },
+    { album: "Songs in the Key of Life", artist: "Stevie Wonder", query: "Songs in the Key of Life Stevie Wonder", note: "Uma celebração generosa de soul, funk e pop, repleta de melodias inesquecíveis." },
+    { album: "Voodoo", artist: "D'Angelo", query: "Voodoo D'Angelo", note: "Grooves profundos e soul moderno que recompensa uma audição sem pressa." }
+];
+
+let lastRandomAlbumKey = "";
+let currentRandomAlbum = null;
+const randomAlbumButton = document.getElementById("recommend-random-album");
+const randomAlbumResult = document.getElementById("random-album-result");
+
+function normalizeRandomAlbumText(value) {
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+async function recommendRandomAlbum() {
+    if (!supabase || !randomAlbumButton || !randomAlbumResult) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        gameToast ? gameToast("Entre na sua conta para receber e salvar uma recomendação.") : alert("Entre na sua conta para receber e salvar uma recomendação.");
+        document.getElementById("login-modal")?.classList.add("active");
+        return;
+    }
+
+    randomAlbumButton.disabled = true;
+    randomAlbumButton.textContent = "Procurando um álbum...";
+    randomAlbumResult.innerHTML = `<div class="random-album-placeholder"><span class="random-album-spinner">♫</span><p>Escolhendo sua próxima escuta...</p></div>`;
+
+    const { data: backlog, error: backlogError } = await supabase
+        .from("backlog").select("album_name").eq("user_id", session.user.id);
+    if (backlogError) {
+        console.error("Não foi possível consultar a fila antes da recomendação:", backlogError);
+        randomAlbumResult.innerHTML = `<div class="random-album-placeholder"><p>Não consegui consultar sua fila agora. Tente novamente.</p></div>`;
+        randomAlbumButton.disabled = false;
+        randomAlbumButton.textContent = "Tentar novamente";
+        return;
+    }
+
+    const queuedAlbums = new Set((backlog || []).map(item => normalizeRandomAlbumText(item.album_name)));
+    const availableSeeds = randomAlbumSeeds.filter(seed => !queuedAlbums.has(normalizeRandomAlbumText(seed.album)));
+    const candidates = availableSeeds
+        .filter(seed => seed.album !== lastRandomAlbumKey)
+        .sort(() => Math.random() - 0.5);
+    if (!candidates.length && availableSeeds.length) {
+        candidates.push(...availableSeeds.sort(() => Math.random() - 0.5));
+    }
+
+    for (const seed of candidates.slice(0, 5)) {
+        const results = await fetchCatalogData(seed.query);
+        const wantedTitle = normalizeRandomAlbumText(seed.album);
+        const wantedArtist = normalizeRandomAlbumText(seed.artist.split(",")[0]);
+        const exact = results.find(album => normalizeRandomAlbumText(album.name) === wantedTitle && normalizeRandomAlbumText(album.artistName).includes(wantedArtist));
+        const close = results.find(album => normalizeRandomAlbumText(album.name).includes(wantedTitle) && normalizeRandomAlbumText(album.artistName).includes(wantedArtist));
+        const album = exact || close;
+        if (!album) continue;
+
+        currentRandomAlbum = { ...album, recommendationNote: seed.note };
+        lastRandomAlbumKey = seed.album;
+        const safeName = gameEsc(album.name || album.collectionName || seed.album);
+        const safeArtist = gameEsc(album.artistName || seed.artist);
+        const safeCover = gameEsc(getHighResImage(album));
+        randomAlbumResult.innerHTML = `
+            <article class="random-album-card">
+                <img class="random-album-cover" src="${safeCover}" alt="Capa de ${safeName}" loading="lazy">
+                <div class="random-album-info">
+                    <span class="random-album-label">SUGESTÃO ALEATÓRIA</span>
+                    <h4>${safeName}</h4>
+                    <p class="random-album-artist">${safeArtist}</p>
+                    <p class="random-album-note">${gameEsc(seed.note)}</p>
+                    <div class="random-album-actions">
+                        <button type="button" class="btn-secondary-dark" data-random-action="preview">▶ Ouvir prévia</button>
+                        <button type="button" class="btn-primary-gold" data-random-action="add">＋ Adicionar à fila</button>
+                    </div>
+                </div>
+            </article>`;
+        randomAlbumButton.textContent = "🎲 Me recomenda outro";
+        randomAlbumButton.disabled = false;
+        return;
+    }
+
+    currentRandomAlbum = null;
+    if (!candidates.length) {
+        randomAlbumResult.innerHTML = `<div class="random-album-placeholder"><span>✓</span><p>Essas sugestões já estão na sua fila. Explore o catálogo para encontrar mais álbuns.</p></div>`;
+        randomAlbumButton.textContent = "Sugestões já adicionadas";
+        randomAlbumButton.disabled = true;
+    } else {
+        randomAlbumResult.innerHTML = `<div class="random-album-placeholder"><p>Não encontrei uma sugestão agora. Tente de novo em instantes.</p></div>`;
+        randomAlbumButton.textContent = "Tentar novamente";
+    }
+    randomAlbumButton.disabled = false;
+}
+
+if (randomAlbumButton) randomAlbumButton.addEventListener("click", recommendRandomAlbum);
+if (randomAlbumResult) randomAlbumResult.addEventListener("click", async event => {
+    const button = event.target.closest("[data-random-action]");
+    if (!button || !currentRandomAlbum) return;
+    if (button.dataset.randomAction === "preview") {
+        if (window.playAlbumPreview) window.playAlbumPreview(currentRandomAlbum.collectionId || currentRandomAlbum.id, currentRandomAlbum.name, currentRandomAlbum.artistName, getHighResImage(currentRandomAlbum));
+        return;
+    }
+    if (button.dataset.randomAction !== "add") return;
+
+    button.disabled = true;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        button.disabled = false;
+        document.getElementById("login-modal")?.classList.add("active");
+        return;
+    }
+    const albumName = currentRandomAlbum.name || currentRandomAlbum.collectionName;
+    const artistName = currentRandomAlbum.artistName || "Artista desconhecido";
+    const { data: existing, error: lookupError } = await supabase.from("backlog")
+        .select("id").eq("user_id", session.user.id).eq("album_name", albumName).limit(1).maybeSingle();
+    if (lookupError) {
+        button.disabled = false;
+        gameToast ? gameToast("Não consegui verificar sua fila. Tente novamente.") : alert("Não consegui verificar sua fila. Tente novamente.");
+        return;
+    }
+    if (existing) {
+        button.textContent = "✓ Já está na sua fila";
+        gameToast ? gameToast("Esse álbum já está na sua fila.") : alert("Esse álbum já está na sua fila.");
+        return;
+    }
+
+    const { error } = await supabase.from("backlog").insert([{
+        user_id: session.user.id,
+        album_name: albumName,
+        artist_name: artistName,
+        cover_url: getHighResImage(currentRandomAlbum)
+    }]);
+    if (error) {
+        console.error("Erro ao adicionar recomendação à fila:", error);
+        button.disabled = false;
+        gameToast ? gameToast("Não foi possível adicionar o álbum à fila.") : alert("Não foi possível adicionar o álbum à fila.");
+        return;
+    }
+    button.textContent = "✓ Adicionado à fila";
+    gameToast ? gameToast("Álbum adicionado à sua fila de desejos.") : alert("Álbum adicionado à sua fila de desejos.");
+    window.loadDashboardBacklog();
+});
+
 

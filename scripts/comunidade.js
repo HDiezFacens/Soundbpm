@@ -151,29 +151,118 @@ async function loadDiaryPage(reset) {
     more.style.display = diaryState.done ? "none" : "";
 }
 
-const vdState = { offset: 0, loading: false }, VD_PAGE = 12, vdItems = new Map();
+const vdState = { offset: 0, loading: false }, VD_PAGE = 8, vdItems = new Map();
+let vdHasMore = true;
+let vdObserver = null;
+
+function observeVideoFeed(feed) {
+    if (!feed || !("IntersectionObserver" in window)) return;
+    if (!vdObserver) {
+        vdObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                const video = entry.target.querySelector(".vf-video");
+                if (!video) return;
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.62) {
+                    feed.querySelectorAll(".vf-video").forEach(other => {
+                        if (other !== video) other.pause();
+                    });
+                    video.play().catch(() => {});
+                    if (entry.target.hasAttribute("data-load-trigger")) {
+                        entry.target.removeAttribute("data-load-trigger");
+                        if (vdHasMore && !vdState.loading) loadVideos(false);
+                    }
+                } else {
+                    video.pause();
+                }
+            });
+        }, { root: feed, threshold: [0, 0.62, 0.9] });
+    }
+    feed.querySelectorAll(".vf-item").forEach(item => {
+        const video = item.querySelector(".vf-video");
+        video?.addEventListener("play", () => {
+            item.classList.remove("is-paused");
+            const playButton = item.querySelector('[data-act="play"]');
+            if (playButton) {
+                playButton.querySelector(".vf-action-icon").textContent = "Ⅱ";
+                playButton.querySelector("small").textContent = "Pausar";
+                playButton.setAttribute("aria-label", "Pausar vídeo");
+            }
+        });
+        video?.addEventListener("pause", () => {
+            item.classList.add("is-paused");
+            const playButton = item.querySelector('[data-act="play"]');
+            if (playButton) {
+                playButton.querySelector(".vf-action-icon").textContent = "▶";
+                playButton.querySelector("small").textContent = "Reproduzir";
+                playButton.setAttribute("aria-label", "Reproduzir vídeo");
+            }
+        });
+        vdObserver.observe(item);
+    });
+}
+
 async function loadVideos(reset) {
-    const grid = document.getElementById("video-grid"), more = document.getElementById("video-more");
-    if (!grid || vdState.loading) return;
+    const feed = document.getElementById("video-feed"), more = document.getElementById("video-more");
+    if (!feed || !supabase || vdState.loading) return;
     vdState.loading = true;
-    if (reset) { vdState.offset = 0; vdItems.clear(); grid.innerHTML = `<p class="cm-empty">Carregando vídeos...</p>`; }
+    if (reset) {
+        vdState.offset = 0;
+        vdItems.clear();
+        vdHasMore = true;
+        if (vdObserver) vdObserver.disconnect();
+        feed.scrollTop = 0;
+        feed.innerHTML = `<p class="video-feed-empty">Carregando vídeos...</p>`;
+    }
     await cmGetMe();
     const { data, error } = await supabase.from("videos").select("*").order("created_at", { ascending: false }).range(vdState.offset, vdState.offset + VD_PAGE - 1);
     vdState.loading = false;
-    if (error) { grid.innerHTML = `<p class="cm-empty">${CM_SQL_HINT}</p>`; more.style.display = "none"; return; }
-    if (reset) grid.innerHTML = "";
-    if (!data.length && reset) { grid.innerHTML = `<p class="cm-empty">Nenhum vídeo ainda. Publique o primeiro!</p>`; more.style.display = "none"; return; }
+    if (error) {
+        feed.innerHTML = `<div class="video-feed-empty"><strong>Não foi possível carregar os vídeos.</strong><span>${CM_SQL_HINT}</span></div>`;
+    more.style.display = "none";
+        console.error(error);
+        return;
+    }
+    if (reset) feed.innerHTML = "";
+    if (!data.length && reset) {
+        feed.innerHTML = `<div class="video-feed-empty"><span class="video-empty-icon">♫</span><strong>Seu feed começa aqui</strong><span>Publique um review, uma descoberta ou um momento musical de até 60 segundos.</span><button type="button" class="btn-primary-gold" data-act="publish">＋ Publicar o primeiro vídeo</button></div>`;
+        more.style.display = "none";
+        return;
+    }
     const uids = [...new Set(data.map(v => v.user_id))];
     const { data: pf } = uids.length ? await supabase.from("profiles").select("id, username, avatar_url").in("id", uids) : { data: [] };
     const pm = new Map((pf || []).map(p => [p.id, p]));
-    grid.insertAdjacentHTML("beforeend", data.map(v => {
+    feed.insertAdjacentHTML("beforeend", data.map(v => {
         v.user = pm.get(v.user_id) || {}; vdItems.set(v.id, v);
-        return `<div class="vd-card" data-vid="${gameEsc(v.id)}"><video src="${gameEsc(v.video_url)}#t=0.1" preload="metadata" muted playsinline></video>
-            <div class="vd-shade"></div><span class="vd-play">▶</span>
-            <div class="vd-meta"><strong>${gameEsc(v.user.username || "Membro")}</strong>${v.caption ? `<span>${gameEsc(v.caption)}</span>` : ""}</div></div>`;
+        const uid = gameEsc(v.user_id), username = gameEsc(v.user.username || "Membro");
+        const avatar = v.user.avatar_url
+            ? `<img src="${gameEsc(v.user.avatar_url)}" alt="" loading="lazy">`
+            : `<span aria-hidden="true">♫</span>`;
+        const mine = cmMe && cmMe.id === v.user_id;
+        return `<article class="vf-item" data-vid="${gameEsc(v.id)}">
+            <video class="vf-video" src="${gameEsc(v.video_url)}#t=0.1" preload="metadata" muted playsinline loop aria-label="Vídeo de ${username}"></video>
+            <span class="vf-video-toggle" aria-hidden="true">▶</span>
+            <div class="vf-topline"><span>♫</span> SOUNDBPM <i></i> VÍDEOS DA COMUNIDADE</div>
+            <div class="vf-gradient"></div>
+            <div class="vf-overlay">
+                <div class="vf-copy">
+                    <button type="button" class="vf-author" data-act="author" data-uid="${uid}">${avatar}<strong>${username}</strong><span>· ${gameEsc(timeAgo(v.created_at))}</span></button>
+                    ${v.tag ? `<div class="vf-tag">♫ ${gameEsc(v.tag)}</div>` : ""}
+                    ${v.caption ? `<p class="vf-caption">${gameEsc(v.caption)}</p>` : `<p class="vf-caption vf-caption-muted">Um momento musical da comunidade.</p>`}
+                </div>
+                <div class="vf-actions">
+                    <button type="button" class="vf-action" data-act="play" aria-label="Pausar vídeo"><span class="vf-action-icon">Ⅱ</span><small>Pausar</small></button>
+                    <button type="button" class="vf-action" data-act="sound" aria-label="Ativar som do vídeo"><span class="vf-action-icon">🔇</span><small>Som</small></button>
+                    ${mine ? `<button type="button" class="vf-action vf-delete" data-act="delete" aria-label="Excluir vídeo"><span class="vf-action-icon">🗑</span><small>Excluir</small></button>` : ""}
+                </div>
+            </div>
+        </article>`;
     }).join(""));
     vdState.offset += data.length;
-    more.style.display = data.length < VD_PAGE ? "none" : "";
+    vdHasMore = data.length === VD_PAGE;
+    more.style.display = vdHasMore && !("IntersectionObserver" in window) ? "" : "none";
+    const loadTrigger = feed.querySelector(".vf-item:last-of-type");
+    if (loadTrigger && vdHasMore) loadTrigger.setAttribute("data-load-trigger", "");
+    observeVideoFeed(feed);
 }
 
 function openModalShell(html) {
@@ -189,24 +278,42 @@ function openModalShell(html) {
     return { ov, close };
 }
 
-function openVideoPlayer(v) {
-    const mine = cmMe && cmMe.id === v.user_id;
-    const { ov, close } = openModalShell(`
-        <video class="vd-player" src="${gameEsc(v.video_url)}" controls autoplay playsinline loop></video>
-        <div class="vd-info"><strong class="cm-user" data-uid="${gameEsc(v.user_id)}">${gameEsc(v.user.username || "Membro")}</strong> <span class="cm-when">${timeAgo(v.created_at)}</span>
-            ${v.tag ? `<div class="vd-tag">🎵 ${gameEsc(v.tag)}</div>` : ""}${v.caption ? `<p>${gameEsc(v.caption)}</p>` : ""}</div>
-        <div class="crop-actions">${mine ? `<button type="button" class="btn-secondary-dark vd-del">Excluir</button>` : ""}<button type="button" class="btn-primary-gold vd-close">Fechar</button></div>`);
-    ov.querySelector(".vd-close").addEventListener("click", close);
-    ov.querySelector(".cm-user").addEventListener("click", () => { close(); window.openUserProfile(v.user_id); });
-    const del = ov.querySelector(".vd-del");
-    if (del) del.addEventListener("click", async () => {
-        if (!confirm("Excluir este vídeo?")) return;
-        await supabase.storage.from("videos").remove([v.storage_path]);
-        const { error } = await supabase.from("videos").delete().eq("id", v.id);
-        if (error) { gameToast("Não foi possível excluir o vídeo."); return; }
-        close(); loadVideos(true); gameToast("Vídeo excluído.");
-    });
+async function deleteCommunityVideo(v) {
+    if (!confirm("Excluir este vídeo?")) return;
+    const { error: storageError } = await supabase.storage.from("videos").remove([v.storage_path]);
+    if (storageError) { gameToast("Não foi possível excluir o arquivo de vídeo."); return; }
+    const { error } = await supabase.from("videos").delete().eq("id", v.id);
+    if (error) { gameToast("Não foi possível excluir este vídeo."); console.error(error); return; }
+    gameToast("Vídeo excluído.");
+    loadVideos(true);
 }
+
+const videoFeed = document.getElementById("video-feed");
+if (videoFeed) videoFeed.addEventListener("click", async (e) => {
+    const action = e.target.closest("[data-act]");
+    const item = e.target.closest(".vf-item");
+    if (action?.dataset.act === "publish") { openVideoUpload(); return; }
+    if (!item) return;
+    const video = item.querySelector(".vf-video"), v = vdItems.get(item.dataset.vid);
+    if (!video || !v) return;
+    if (action?.dataset.act === "author") {
+        if (window.openUserProfile) window.openUserProfile(v.user_id);
+        return;
+    }
+    if (action?.dataset.act === "sound") {
+        video.muted = !video.muted;
+        const soundButton = action;
+        soundButton.querySelector(".vf-action-icon").textContent = video.muted ? "🔇" : "🔊";
+        soundButton.setAttribute("aria-label", video.muted ? "Ativar som do vídeo" : "Desativar som do vídeo");
+        if (!video.paused) video.play().catch(() => {});
+        return;
+    }
+    if (action?.dataset.act === "delete") { await deleteCommunityVideo(v); return; }
+    if (!action || action.dataset.act === "play") {
+        if (video.paused) video.play().catch(() => {}); else video.pause();
+        item.classList.toggle("is-paused", video.paused);
+    }
+});
 
 async function openVideoUpload() {
     const me = await cmGetMe();
@@ -251,23 +358,13 @@ async function openVideoUpload() {
         close(); gameToast("Vídeo publicado!"); loadVideos(true);
     });
 }
-window.openVideoPlayer = openVideoPlayer;
 window.openVideoUpload = openVideoUpload;
 
-document.querySelectorAll(".diary-tab").forEach(tab => tab.addEventListener("click", () => {
-    document.querySelectorAll(".diary-tab").forEach(t => t.classList.toggle("active", t === tab));
-    const vids = tab.dataset.tab === "videos";
-    document.getElementById("diary-reviews-panel").style.display = vids ? "none" : "";
-    document.getElementById("diary-videos-panel").style.display = vids ? "" : "none";
-    if (vids) loadVideos(true); else loadDiaryPage(true);
-}));
 const diaryMore = document.getElementById("diary-more"), videoMore = document.getElementById("video-more");
 if (diaryMore) diaryMore.addEventListener("click", () => loadDiaryPage(false));
 if (videoMore) videoMore.addEventListener("click", () => loadVideos(false));
 const publishBtn = document.getElementById("btn-publish-video");
 if (publishBtn) publishBtn.addEventListener("click", openVideoUpload);
-const videoGrid = document.getElementById("video-grid");
-if (videoGrid) videoGrid.addEventListener("click", (e) => { const c = e.target.closest(".vd-card"); if (c && vdItems.has(c.dataset.vid)) openVideoPlayer(vdItems.get(c.dataset.vid)); });
 const globalDiaryLink = document.getElementById("view-global-diary-link");
 if (globalDiaryLink) globalDiaryLink.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); navigateTo("diary-page"); });
 
