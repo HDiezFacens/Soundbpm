@@ -6,6 +6,78 @@ var supabase = window.supabaseClient;
 
 var gameToast = window.gameToast;
 
+const profileFriendsModal = document.getElementById("profile-friends-modal");
+const profileFriendsList = document.getElementById("profile-friends-list");
+const profileFriendsTitle = document.getElementById("profile-friends-title");
+
+function closeProfileFriendsModal() {
+    if (!profileFriendsModal) return;
+    profileFriendsModal.classList.remove("active");
+    profileFriendsModal.setAttribute("aria-hidden", "true");
+}
+
+async function showProfileFriends(userId, username) {
+    if (!supabase || !profileFriendsModal || !profileFriendsList) return;
+    profileFriendsTitle.textContent = `Amigos de ${username || "este perfil"}`;
+    profileFriendsList.innerHTML = `<p class="profile-friends-empty">Carregando amigos...</p>`;
+    profileFriendsModal.classList.add("active");
+    profileFriendsModal.setAttribute("aria-hidden", "false");
+
+    const { data, error } = await supabase.from("friendships")
+        .select("id, requester_id, addressee_id, requester:requester_id(id, username, avatar_url), addressee:addressee_id(id, username, avatar_url)")
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+        .eq("status", "accepted");
+
+    if (!profileFriendsModal.classList.contains("active")) return;
+    if (error) {
+        console.error("Erro ao carregar amigos do perfil:", error);
+        profileFriendsList.innerHTML = `<p class="profile-friends-empty">Não foi possível carregar os amigos agora.</p>`;
+        return;
+    }
+
+    const uniqueFriends = new Map();
+    (data || []).forEach(friendship => {
+        const friend = friendship.requester_id === userId ? friendship.addressee : friendship.requester;
+        if (friend?.id) uniqueFriends.set(friend.id, friend);
+    });
+    const friends = Array.from(uniqueFriends.values()).sort((a, b) =>
+        String(a.username || "Usuário").localeCompare(String(b.username || "Usuário"), "pt-BR", { sensitivity: "base" })
+    );
+
+    if (!friends.length) {
+        profileFriendsList.innerHTML = `<p class="profile-friends-empty">Este perfil ainda não tem amigos adicionados.</p>`;
+        return;
+    }
+
+    profileFriendsList.innerHTML = friends.map(friend => `
+        <button type="button" class="profile-friend-row" data-friend-user-id="${gameEsc(friend.id)}">
+            ${avatarHtml(friend.avatar_url || "", 46)}
+            <span class="profile-friend-row-info"><strong>${gameEsc(friend.username || "Usuário")}</strong><small>Ver perfil</small></span>
+            <span class="profile-friend-row-arrow" aria-hidden="true">›</span>
+        </button>`).join("");
+}
+
+document.addEventListener("click", event => {
+    const trigger = event.target.closest("[data-profile-friends-open]");
+    if (trigger) {
+        showProfileFriends(trigger.dataset.profileUserId, trigger.dataset.profileName);
+        return;
+    }
+    if (event.target.closest("[data-profile-friends-close]") || event.target === profileFriendsModal) {
+        closeProfileFriendsModal();
+        return;
+    }
+    const friendRow = event.target.closest("[data-friend-user-id]");
+    if (friendRow && profileFriendsList?.contains(friendRow)) {
+        closeProfileFriendsModal();
+        window.openUserProfile?.(friendRow.dataset.friendUserId);
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && profileFriendsModal?.classList.contains("active")) closeProfileFriendsModal();
+});
+
 // 1. Patamares, Insígnias, Níveis e Estatísticas do Perfil
 const GAME_TIERS = [
     { min: 0,    name: "Ouvinte",   icon: "🎧" },
@@ -340,7 +412,7 @@ async function renderProfileExtras(ctx) {
 
     const actions = document.getElementById("profile-actions");
     if (!actions) return;
-    actions.innerHTML = `<span class="title-chip">👥 ${friendIds.size} amigo${friendIds.size === 1 ? "" : "s"}</span>`;
+    actions.innerHTML = `<button type="button" class="title-chip profile-friends-trigger" data-profile-friends-open data-profile-user-id="${gameEsc(userId)}" data-profile-name="${gameEsc(name)}" aria-label="Ver ${friendIds.size} amigos de ${gameEsc(name)}">👥 ${friendIds.size} amigo${friendIds.size === 1 ? "" : "s"}</button>`;
     const add = (label, cls, fn, disabled) => {
         const b = document.createElement("button");
         b.className = cls; b.textContent = label; b.style.cssText = "font-size:0.8rem; padding:0.4rem 0.9rem;";

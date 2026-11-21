@@ -298,6 +298,16 @@
             <div id="profile-activity" style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 3rem;"></div>
         </section>
 
+        <div id="profile-friends-modal" class="modal-overlay" aria-hidden="true">
+            <div class="modal-card profile-friends-modal-card" role="dialog" aria-modal="true" aria-labelledby="profile-friends-title">
+                <button type="button" class="close-modal" data-profile-friends-close aria-label="Fechar lista de amigos">&times;</button>
+                <h3 id="profile-friends-title">Amigos do perfil</h3>
+                <div id="profile-friends-list" class="profile-friends-list" aria-live="polite">
+                    <p class="profile-friends-empty">Carregando amigos...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Editar Perfil -->
         <div id="edit-profile-modal" class="modal-overlay">
             <div class="modal-card">
