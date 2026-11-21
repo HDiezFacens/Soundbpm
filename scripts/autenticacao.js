@@ -252,11 +252,28 @@ async function ensureProfileFromSignup(session) {
             await window.moderateProfileImage(imageFile, "avatar_url");
         }
         localStorage.removeItem(key);
-        return true;
+        return { ok: true };
     } catch (e) {
         console.error("ensureProfileFromSignup:", e);
+        return { ok: false, error: e };
+    }
+}
+
+async function usernameAlreadyInUse(username) {
+    const normalized = String(username || "").trim().slice(0, 24);
+    if (!normalized || !supabase) return false;
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", normalized)
+        .limit(1);
+    if (error) {
+        // A checagem rápida é apenas uma ajuda visual; a Edge Function e a
+        // constraint UNIQUE do banco continuam sendo a validação definitiva.
+        console.warn("Não foi possível checar o nome antes do cadastro:", error);
         return false;
     }
+    return Boolean(data?.length);
 }
 
 
@@ -281,6 +298,14 @@ if (authForm) {
         if (isRegisterMode) {
             submitBtn.textContent = "Criando conta...";
             submitBtn.disabled = true;
+
+            if (await usernameAlreadyInUse(username)) {
+                submitBtn.textContent = oldText;
+                submitBtn.disabled = false;
+                alert("Esse nome de usuário já está sendo usado. Escolha outro para criar sua conta.");
+                usernameField?.focus();
+                return;
+            }
 
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email: email,
@@ -321,10 +346,10 @@ if (authForm) {
             
             if (session && session.user) {
                 const profileReady = await ensureProfileFromSignup(session);
-                if (!profileReady) {
+                if (!profileReady.ok) {
                     submitBtn.textContent = oldText;
                     submitBtn.disabled = false;
-                    alert("A conta foi criada, mas o nome ou a foto não passou pela validação. Entre novamente e escolha outro conteúdo.");
+                    alert(profileReady.error?.message || "A conta foi criada, mas não foi possível configurar o perfil. Entre novamente e tente outro nome ou imagem.");
                     return;
                 }
             }
@@ -477,8 +502,8 @@ async function checkSupabaseSession() {
         }
 
         const profileReady = await ensureProfileFromSignup(session);
-        if (!profileReady && window.gameToast) {
-            window.gameToast("Sua conta entrou, mas não foi possível preparar o perfil. Tente atualizar a página.");
+        if (!profileReady.ok && window.gameToast) {
+            window.gameToast(profileReady.error?.message || "Sua conta entrou, mas não foi possível preparar o perfil. Tente atualizar a página.");
         }
         const { data: profile } = await supabase
             .from("profiles").select("username, avatar_url, bio").eq("id", session.user.id).maybeSingle();

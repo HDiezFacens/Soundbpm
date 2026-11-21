@@ -17,7 +17,7 @@ create or replace function public.enforce_moderated_profile_content()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 declare
     is_approved boolean;
@@ -92,6 +92,9 @@ begin
     return NEW;
 end;
 $$;
+
+-- A função é executada pelo trigger, não diretamente por clientes da API.
+revoke all on function public.enforce_moderated_profile_content() from public, anon, authenticated;
 
 drop trigger if exists profiles_require_moderated_content on public.profiles;
 create trigger profiles_require_moderated_content

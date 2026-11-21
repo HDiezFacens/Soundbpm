@@ -51,6 +51,25 @@ Deno.serve(async (req) => {
       if (username.length < 2 || username.length > 24) {
         return json({ error: "O nome precisa ter entre 2 e 24 caracteres." }, 400);
       }
+
+      // Give the user a clear response before writing the moderation approval.
+      // The UNIQUE constraint remains the final guard against concurrent signups.
+      const usernameParams = new URLSearchParams({
+        username: `eq.${username}`,
+        id: `neq.${userId}`,
+        select: "id",
+        limit: "1",
+      });
+      const usernameCheck = await fetch(`${rest}/profiles?${usernameParams}`, { headers });
+      if (!usernameCheck.ok) throw new Error(`Falha ao verificar nome (${usernameCheck.status}).`);
+      const matchingProfiles = await usernameCheck.json();
+      if (matchingProfiles.length) {
+        return json({
+          code: "USERNAME_TAKEN",
+          error: "Esse nome de usuário já está sendo usado. Escolha outro.",
+        }, 409);
+      }
+
       const moderated = await moderate(openAiKey, [{
         type: "text",
         text: username,
@@ -68,7 +87,17 @@ Deno.serve(async (req) => {
         headers: { ...headers, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({ id: userId, username, bio: bio || "Explorando o mundo da música." }),
       });
-      if (!profileRes.ok) throw new Error(`Falha ao salvar o perfil (${profileRes.status}).`);
+      if (!profileRes.ok) {
+        let profileError: Record<string, unknown> = {};
+        try { profileError = await profileRes.json(); } catch { /* Usa status HTTP como fallback. */ }
+        if (profileError.code === "23505" || profileError.constraint === "profiles_username_key") {
+          return json({
+            code: "USERNAME_TAKEN",
+            error: "Esse nome de usuário acabou de ser escolhido por outra pessoa. Tente outro.",
+          }, 409);
+        }
+        throw new Error(`Falha ao salvar o perfil (${profileRes.status}).`);
+      }
       return json({ ok: true });
     }
 
